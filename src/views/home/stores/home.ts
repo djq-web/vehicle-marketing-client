@@ -12,6 +12,7 @@ export interface FeatureCard {
   description: string
   variant: 'cube' | 'book' | 'report' | 'flag' | 'diamond' | 'planet'
   active?: boolean
+  routeName?: string
 }
 
 export const useHomeStore = defineStore('home', {
@@ -30,7 +31,7 @@ export const useHomeStore = defineStore('home', {
       { date: '', title: '梦想一场面式营销数据分析表' },
     ] as ChatRecord[],
     features: [
-      { title: '品牌战略', description: '锚定方向，塑造品牌心智', variant: 'cube' },
+      { title: '品牌战略', description: '锚定方向，塑造品牌心智', variant: 'cube', routeName: 'brand-strategy' },
       { title: '核心指标', description: '数据驱动业务增长', variant: 'book' },
       { title: '营销运营', description: '全链路营销提效增长', variant: 'report' },
       { title: '营销日历', description: '精准把控营销节点', variant: 'flag' },
@@ -39,3 +40,4 @@ export const useHomeStore = defineStore('home', {
     ] as FeatureCard[],
   }),
 })
+
