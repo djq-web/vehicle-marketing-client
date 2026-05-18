@@ -26,6 +26,22 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/ecological-partner',
+    name: 'ecological-partner',
+    component: () => import('@/views/ecological-partner/EcologicalPartnerView.vue'),
+    meta: {
+      title: '生态伙伴看板',
+    },
+  },
+  {
+    path: '/market-feedback',
+    name: 'market-feedback',
+    component: () => import('@/views/market-feedback/MarketFeedbackView.vue'),
+    meta: {
+      title: '市场反馈看板',
+    },
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'not-found',
     component: () => import('@/views/not-found/NotFoundView.vue'),
