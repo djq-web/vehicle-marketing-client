@@ -42,6 +42,14 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/marketing-calendar',
+    name: 'marketing-calendar',
+    component: () => import('@/views/marketing-calendar/MarketingCalendarView.vue'),
+    meta: {
+      title: '营销日历看板',
+    },
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'not-found',
     component: () => import('@/views/not-found/NotFoundView.vue'),

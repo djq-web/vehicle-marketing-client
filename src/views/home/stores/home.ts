@@ -43,7 +43,12 @@ export const useHomeStore = defineStore("home", {
         description: "全链路营销提效增长",
         variant: "report",
       },
-      { title: "营销日历", description: "精准把控营销节点", variant: "flag" },
+      {
+        title: "营销日历",
+        description: "精准把控营销节点",
+        variant: "flag",
+        routeName: "marketing-calendar",
+      },
       {
         title: "市场反馈",
         description: "倾听用户优化策略",
