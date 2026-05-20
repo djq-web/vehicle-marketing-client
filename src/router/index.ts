@@ -18,6 +18,14 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/core-metrics',
+    name: 'core-metrics',
+    component: () => import('@/views/core-metrics/CoreMetricsView.vue'),
+    meta: {
+      title: '核心指标看板',
+    },
+  },
+  {
     path: '/brand-strategy',
     name: 'brand-strategy',
     component: () => import('@/views/brand-strategy/BrandStrategyView.vue'),
@@ -26,11 +34,19 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
-    path: '/ecological-partner',
-    name: 'ecological-partner',
-    component: () => import('@/views/ecological-partner/EcologicalPartnerView.vue'),
+    path: '/marketing-operations',
+    name: 'marketing-operations',
+    component: () => import('@/views/marketing-operations/MarketingOperationsView.vue'),
     meta: {
-      title: '生态伙伴看板',
+      title: '营销运营看板',
+    },
+  },
+  {
+    path: '/marketing-calendar',
+    name: 'marketing-calendar',
+    component: () => import('@/views/marketing-calendar/MarketingCalendarView.vue'),
+    meta: {
+      title: '营销日历看板',
     },
   },
   {
@@ -42,11 +58,11 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
-    path: '/marketing-calendar',
-    name: 'marketing-calendar',
-    component: () => import('@/views/marketing-calendar/MarketingCalendarView.vue'),
+    path: '/ecological-partner',
+    name: 'ecological-partner',
+    component: () => import('@/views/ecological-partner/EcologicalPartnerView.vue'),
     meta: {
-      title: '营销日历看板',
+      title: '生态伙伴看板',
     },
   },
   {

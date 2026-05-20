@@ -2,12 +2,16 @@
   <div class="home-page">
     <div class="top-strip"></div>
     <div class="workspace">
-      <AppSidebar :chats="homeStore.recentChats" />
+      <AppSidebar :chats="homeStore.recentChats" :collapsed="isSidebarCollapsed" />
       <main class="main-panel">
-        <button class="collapse-button" aria-label="折叠菜单">
-          <el-icon>
-            <Fold />
-          </el-icon>
+        <button
+          class="collapse-button"
+          type="button"
+          :class="{ collapsed: isSidebarCollapsed }"
+          :aria-label="isSidebarCollapsed ? '展开左侧菜单' : '折叠左侧菜单'"
+          @click="toggleSidebar"
+        >
+          <img :src="ExpandIcon" alt="" />
         </button>
 
         <section class="hero">
@@ -24,13 +28,18 @@
 </template>
 
 <script setup lang="ts">
-import { Fold } from '@element-plus/icons-vue'
+import ExpandIcon from '@/assets/svg/expandIcon.svg'
 import AppSidebar from './components/AppSidebar.vue'
 import ChatComposer from './components/ChatComposer.vue'
 import FeatureCard from './components/FeatureCard.vue'
 import { useHomeStore } from './stores/home'
 
 const homeStore = useHomeStore()
+const isSidebarCollapsed = ref(false)
+
+const toggleSidebar = () => {
+  isSidebarCollapsed.value = !isSidebarCollapsed.value
+}
 </script>
 
 <style scoped lang="scss">
@@ -61,11 +70,27 @@ const homeStore = useHomeStore()
   position: absolute;
   top: 13px;
   left: 15px;
+  z-index: 10;
   display: grid;
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   place-items: center;
-  color: #20242b;
+  border-radius: 6px;
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background: #eef4ff;
+  }
+
+  img {
+    width: 16px;
+    height: 16px;
+    transition: transform 0.22s ease;
+  }
+
+  &.collapsed img {
+    transform: rotate(180deg);
+  }
 }
 
 .hero {

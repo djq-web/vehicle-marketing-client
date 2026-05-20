@@ -12,12 +12,7 @@
     <section class="calendar-layout">
       <aside class="calendar-panel">
         <h2>时 间 选 择</h2>
-        <el-date-picker-panel
-          v-model="selectedDate"
-          class="date-panel"
-          type="date"
-          :border="false"
-        />
+        <el-date-picker-panel v-model="selectedDate" class="date-panel" type="date" :border="false" />
       </aside>
 
       <section class="schedule-panel">
@@ -30,18 +25,10 @@
         </header>
 
         <div class="schedule-list">
-          <button
-            v-for="item in scheduleItems"
-            :key="`${item.account}-${item.title}-${item.time}`"
-            class="schedule-card"
-            :class="{ active: item.active }"
-            type="button"
-          >
+          <button v-for="item in scheduleItems" :key="`${item.account}-${item.title}-${item.time}`"
+            class="schedule-card" :class="{ active: item.active }" type="button">
             <div class="method-cell">
-              <span
-                class="method-dot"
-                :style="{ background: item.color }"
-              ></span>
+              <span class="method-dot" :style="{ background: item.color }"></span>
               <span>{{ item.method }}</span>
             </div>
             <span>{{ item.platform }}</span>
@@ -162,6 +149,8 @@ const scheduleItems = [
   overflow-y: hidden;
   padding: 22px 32px 32px;
   background: #fff;
+  display: flex;
+  flex-direction: column;
 }
 
 .back-button {
@@ -204,7 +193,10 @@ const scheduleItems = [
   grid-template-columns: 372px minmax(0, 1fr);
   gap: 34px;
   max-width: 1560px;
+  width: 100%;
   margin: 32px auto 0;
+  flex: 1;
+  min-height: 0;
 }
 
 .calendar-panel {
@@ -286,6 +278,8 @@ const scheduleItems = [
 
 .schedule-panel {
   min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .schedule-head {
@@ -299,11 +293,13 @@ const scheduleItems = [
 }
 
 .schedule-list {
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 14px;
   max-height: 690px;
-  padding-right: 8px;
+  padding: 12px;
   overflow: auto;
 }
 

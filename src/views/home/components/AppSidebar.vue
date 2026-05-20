@@ -3,11 +3,13 @@
     <Transition name="sidebar-content">
       <div v-if="!collapsed" class="sidebar-content">
         <div class="brand-mark">
-          <div class="brand-circle">肆</div>
+          <img :src="logoIcon" alt="Logo" class="brand-logo" />
         </div>
 
         <el-button class="new-chat" round>
-          <el-icon><EditPen /></el-icon>
+          <el-icon class="new-chat-icon">
+            <EditPen />
+          </el-icon>
           创建新对话
         </el-button>
 
@@ -16,7 +18,9 @@
             <p v-if="chat.date" class="date-label">{{ chat.date }}</p>
             <div class="chat-item" :class="{ active: chat.active, muted: chat.muted }">
               <span>{{ chat.title }}</span>
-              <el-icon v-if="chat.muted"><MoreFilled /></el-icon>
+              <el-icon v-if="chat.muted">
+                <MoreFilled />
+              </el-icon>
             </div>
           </template>
         </div>
@@ -27,8 +31,11 @@
       <div v-if="!collapsed" ref="companyMenuRef" class="company-menu-wrap">
         <Transition name="menu-fade">
           <div v-if="isCompanyMenuVisible" class="settings-card">
-            <button v-for="item in settingItems" :key="item.label" class="setting-item" :class="{ active: item.active }" @click="handleSettingClick(item)">
-              <el-icon><component :is="item.icon" /></el-icon>
+            <button v-for="item in settingItems" :key="item.label" class="setting-item" :class="{ active: item.active }"
+              @click="handleSettingClick(item)">
+              <el-icon>
+                <component :is="item.icon" />
+              </el-icon>
               <span>{{ item.label }}</span>
             </button>
           </div>
@@ -46,6 +53,7 @@
 <script setup lang="ts">
 import { Cpu, EditPen, MoreFilled, Operation, QuestionFilled, Setting, SwitchButton } from '@element-plus/icons-vue'
 import type { ChatRecord } from '../stores/home'
+import logoIcon from '@/assets/svg/logoIcon.svg'
 
 defineProps<{
   chats: ChatRecord[]
@@ -120,37 +128,15 @@ onBeforeUnmount(() => {
 .brand-mark {
   display: flex;
   justify-content: center;
-  margin-bottom: 12px;
+  margin: 0 auto 14px;
+  width: 60px;
+  height: 60x;
+  border-radius: 60px;
+  border: 1px solid #e2e7ef;
 }
 
-.brand-circle {
-  position: relative;
-  display: grid;
-  width: 38px;
-  height: 38px;
-  place-items: center;
-  border: 1.5px solid #121212;
-  border-radius: 50%;
-  color: #111;
-  font-weight: 800;
-  transform: rotate(-18deg);
-
-  &::before,
-  &::after {
-    position: absolute;
-    width: 48px;
-    height: 1px;
-    content: '';
-    background: #111;
-  }
-
-  &::before {
-    transform: rotate(35deg);
-  }
-
-  &::after {
-    transform: rotate(-52deg);
-  }
+.brand-logo {
+  width: auto;
 }
 
 .new-chat.el-button {
@@ -163,6 +149,10 @@ onBeforeUnmount(() => {
   background: #ffffff;
   border: 1px solid #e2e7ef;
   box-shadow: 0 2px 7px rgb(25 40 78 / 10%);
+
+  .new-chat-icon {
+    margin-right: 6px;
+  }
 }
 
 .chat-list {
@@ -273,4 +263,3 @@ onBeforeUnmount(() => {
   transform: translateY(6px);
 }
 </style>
-
