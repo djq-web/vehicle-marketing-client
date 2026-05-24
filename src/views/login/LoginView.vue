@@ -38,7 +38,10 @@
           </label>
           <button type="button">忘记密码？</button>
         </div>
-        <button class="login-button" type="submit">登 录</button>
+        <p v-if="error" class="login-error">{{ error }}</p>
+        <button class="login-button" type="submit" :disabled="loading">
+          {{ loading ? '登录中...' : '登 录' }}
+        </button>
       </form>
     </section>
   </main>
@@ -46,16 +49,36 @@
 
 <script setup lang="ts">
 import { Lock, User } from '@element-plus/icons-vue'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const route = useRoute()
+const authStore = useAuthStore()
 const form = reactive({
   username: 'admin',
   password: '123456',
   remember: true,
 })
+const loading = ref(false)
+const error = ref('')
 
-const handleLogin = () => {
-  router.push('/')
+const handleLogin = async () => {
+  if (loading.value) {
+    return
+  }
+
+  loading.value = true
+  error.value = ''
+
+  try {
+    await authStore.login(form.username.trim(), form.password)
+    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/'
+    router.push(redirect)
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : '登录失败'
+  } finally {
+    loading.value = false
+  }
 }
 </script>
 
@@ -302,5 +325,16 @@ h1 {
   font-weight: 700;
   background: #409eff;
   border-radius: 4px;
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.72;
+  }
+}
+
+.login-error {
+  margin: -14px 0 14px;
+  color: #d93025;
+  font-size: 12px;
 }
 </style>

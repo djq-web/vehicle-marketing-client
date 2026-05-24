@@ -17,6 +17,10 @@ const props = defineProps<{
   feature: FeatureCard;
 }>();
 
+const emit = defineEmits<{
+  select: [feature: FeatureCard];
+}>();
+
 const router = useRouter();
 
 const featureVisualMap = {
@@ -24,7 +28,7 @@ const featureVisualMap = {
   book: new URL("../../../assets/svg/key-metrics.svg", import.meta.url).href,
   report: new URL(
     "../../../assets/svg/marketing-operations.svg",
-    import.meta.url
+    import.meta.url,
   ).href,
   flag: new URL("../../../assets/svg/marketing-calendar.svg", import.meta.url)
     .href,
@@ -35,13 +39,16 @@ const featureVisualMap = {
 } as const;
 
 const featureVisualSrc = computed(
-  () => featureVisualMap[props.feature.variant]
+  () => featureVisualMap[props.feature.variant],
 );
 
 const handleClick = () => {
   if (props.feature.routeName) {
     router.push({ name: props.feature.routeName });
+    return;
   }
+
+  emit("select", props.feature);
 };
 </script>
 
@@ -57,7 +64,9 @@ const handleClick = () => {
 
   &:hover {
     border-color: rgba(203, 222, 253, 1);
-    box-shadow: 0 0 0 1px #cfe3ff, 0 5px 14px rgb(43 133 255 / 22%);
+    box-shadow:
+      0 0 0 1px #cfe3ff,
+      0 5px 14px rgb(43 133 255 / 22%);
   }
 
   h3 {

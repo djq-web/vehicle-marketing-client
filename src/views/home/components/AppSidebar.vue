@@ -3,25 +3,29 @@
     <Transition name="sidebar-content">
       <div v-if="!collapsed" class="sidebar-content">
         <div class="brand-mark">
-          <img :src="logoIcon" alt="Logo" class="brand-logo" />
+          <div class="brand-circle">肆</div>
         </div>
 
-        <el-button class="new-chat" round>
-          <el-icon class="new-chat-icon">
-            <EditPen />
-          </el-icon>
+        <el-button class="new-chat" round @click="emit('createChat')">
+          <el-icon><EditPen /></el-icon>
           创建新对话
         </el-button>
 
         <div class="chat-list">
-          <template v-for="(chat, index) in chats" :key="`${chat.title}-${index}`">
+          <template
+            v-for="(chat, index) in chats"
+            :key="`${chat.title}-${index}`"
+          >
             <p v-if="chat.date" class="date-label">{{ chat.date }}</p>
-            <div class="chat-item" :class="{ active: chat.active, muted: chat.muted }">
+            <button
+              class="chat-item"
+              type="button"
+              :class="{ active: chat.active, muted: chat.muted }"
+              @click="chat.id && emit('selectChat', chat.id)"
+            >
               <span>{{ chat.title }}</span>
-              <el-icon v-if="chat.muted">
-                <MoreFilled />
-              </el-icon>
-            </div>
+              <el-icon v-if="chat.muted"><MoreFilled /></el-icon>
+            </button>
           </template>
         </div>
       </div>
@@ -31,11 +35,14 @@
       <div v-if="!collapsed" ref="companyMenuRef" class="company-menu-wrap">
         <Transition name="menu-fade">
           <div v-if="isCompanyMenuVisible" class="settings-card">
-            <button v-for="item in settingItems" :key="item.label" class="setting-item" :class="{ active: item.active }"
-              @click="handleSettingClick(item)">
-              <el-icon>
-                <component :is="item.icon" />
-              </el-icon>
+            <button
+              v-for="item in settingItems"
+              :key="item.label"
+              class="setting-item"
+              :class="{ active: item.active }"
+              @click="handleSettingClick(item)"
+            >
+              <el-icon><component :is="item.icon" /></el-icon>
               <span>{{ item.label }}</span>
             </button>
           </div>
@@ -43,7 +50,7 @@
 
         <button class="company" type="button" @click.stop="toggleCompanyMenu">
           <span class="avatar"></span>
-          <span>十二言星公司</span>
+          <span>{{ companyName || "车肆企业空间" }}</span>
         </button>
       </div>
     </Transition>
@@ -51,54 +58,74 @@
 </template>
 
 <script setup lang="ts">
-import { Cpu, EditPen, MoreFilled, Operation, QuestionFilled, Setting, SwitchButton } from '@element-plus/icons-vue'
-import type { ChatRecord } from '../stores/home'
-import logoIcon from '@/assets/svg/logoIcon.svg'
+import {
+  Cpu,
+  EditPen,
+  MoreFilled,
+  Operation,
+  QuestionFilled,
+  Setting,
+  SwitchButton,
+} from "@element-plus/icons-vue";
+import type { ChatRecord } from "../stores/home";
 
 defineProps<{
-  chats: ChatRecord[]
-  collapsed?: boolean
-}>()
+  chats: ChatRecord[];
+  collapsed?: boolean;
+  companyName?: string;
+}>();
 
-const router = useRouter()
-const isCompanyMenuVisible = ref(false)
-const companyMenuRef = ref<HTMLElement>()
+const emit = defineEmits<{
+  createChat: [];
+  selectChat: [id: string];
+  openSettings: [];
+}>();
+
+const router = useRouter();
+const isCompanyMenuVisible = ref(false);
+const companyMenuRef = ref<HTMLElement>();
 
 const settingItems = [
-  { label: '设置', icon: Setting, active: true },
-  { label: '管理后台', icon: Operation },
-  { label: '车肆官网', icon: Cpu },
-  { label: '问题反馈', icon: QuestionFilled },
-  { label: '退出登录', icon: SwitchButton, routeName: 'login' },
-]
+  { label: "设置", icon: Setting, active: true, action: "settings" },
+  { label: "管理后台", icon: Operation },
+  { label: "车肆官网", icon: Cpu },
+  { label: "问题反馈", icon: QuestionFilled },
+  { label: "退出登录", icon: SwitchButton, routeName: "login" },
+];
 
 const handleSettingClick = (item: (typeof settingItems)[number]) => {
-  if (item.routeName) {
-    router.push({ name: item.routeName })
+  if (item.action === "settings") {
+    emit("openSettings");
+    isCompanyMenuVisible.value = false;
+    return;
   }
 
-  isCompanyMenuVisible.value = false
-}
+  if (item.routeName) {
+    router.push({ name: item.routeName });
+  }
+
+  isCompanyMenuVisible.value = false;
+};
 
 const toggleCompanyMenu = () => {
-  isCompanyMenuVisible.value = !isCompanyMenuVisible.value
-}
+  isCompanyMenuVisible.value = !isCompanyMenuVisible.value;
+};
 
 const closeCompanyMenu = (event: MouseEvent) => {
-  const target = event.target as Node
+  const target = event.target as Node;
 
   if (!companyMenuRef.value?.contains(target)) {
-    isCompanyMenuVisible.value = false
+    isCompanyMenuVisible.value = false;
   }
-}
+};
 
 onMounted(() => {
-  document.addEventListener('click', closeCompanyMenu)
-})
+  document.addEventListener("click", closeCompanyMenu);
+});
 
 onBeforeUnmount(() => {
-  document.removeEventListener('click', closeCompanyMenu)
-})
+  document.removeEventListener("click", closeCompanyMenu);
+});
 </script>
 
 <style scoped lang="scss">
@@ -110,7 +137,10 @@ onBeforeUnmount(() => {
   overflow: hidden;
   background: linear-gradient(180deg, #f6f7f9 0%, #f2f4f7 100%);
   border-right: 1px solid #edf0f4;
-  transition: width 0.22s ease, flex-basis 0.22s ease, padding 0.22s ease;
+  transition:
+    width 0.22s ease,
+    flex-basis 0.22s ease,
+    padding 0.22s ease;
 
   &.collapsed {
     width: 0;
@@ -128,15 +158,37 @@ onBeforeUnmount(() => {
 .brand-mark {
   display: flex;
   justify-content: center;
-  margin: 0 auto 14px;
-  width: 60px;
-  height: 60x;
-  border-radius: 60px;
-  border: 1px solid #e2e7ef;
+  margin-bottom: 12px;
 }
 
-.brand-logo {
-  width: auto;
+.brand-circle {
+  position: relative;
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border: 1.5px solid #121212;
+  border-radius: 50%;
+  color: #111;
+  font-weight: 800;
+  transform: rotate(-18deg);
+
+  &::before,
+  &::after {
+    position: absolute;
+    width: 48px;
+    height: 1px;
+    content: "";
+    background: #111;
+  }
+
+  &::before {
+    transform: rotate(35deg);
+  }
+
+  &::after {
+    transform: rotate(-52deg);
+  }
 }
 
 .new-chat.el-button {
@@ -149,15 +201,11 @@ onBeforeUnmount(() => {
   background: #ffffff;
   border: 1px solid #e2e7ef;
   box-shadow: 0 2px 7px rgb(25 40 78 / 10%);
-
-  .new-chat-icon {
-    margin-right: 6px;
-  }
 }
 
 .chat-list {
   height: calc(100vh - 258px);
-  overflow: hidden;
+  overflow-y: auto;
   font-size: 11px;
 }
 
@@ -171,8 +219,10 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  width: 100%;
   height: 25px;
   padding: 0 7px;
+  text-align: left;
   color: #252a33;
   border-radius: 7px;
 
@@ -252,7 +302,9 @@ onBeforeUnmount(() => {
 .sidebar-content-leave-active,
 .menu-fade-enter-active,
 .menu-fade-leave-active {
-  transition: opacity 0.16s ease, transform 0.16s ease;
+  transition:
+    opacity 0.16s ease,
+    transform 0.16s ease;
 }
 
 .sidebar-content-enter-from,
