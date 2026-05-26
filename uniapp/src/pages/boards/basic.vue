@@ -26,267 +26,210 @@
     </template>
 
     <template v-else-if="activeType === 'key-metrics'">
-      <view class="time-filter">
-        <text>时间：</text>
-        <button
-          v-for="item in timeOptions"
-          :key="item"
-          :class="{ active: item === activeTime }"
-          @click="activeTime = item"
-        >
-          {{ item }}
-        </button>
-      </view>
-
-      <section class="flow-hero">
-        <text class="flow-title">核心指标看板</text>
-        <text class="title-underline"></text>
-      </section>
-
-      <scroll-view class="flow-board" scroll-x scroll-y>
-        <view class="flow-canvas metrics-canvas">
-          <text
-            v-for="edge in metricEdges"
-            :key="edge.id"
-            class="flow-edge"
-            :class="{ muted: edge.muted }"
-            :style="edgeStyle(edge, metricNodeMap)"
-          ></text>
-
-          <view
-            v-for="node in metricNodes"
-            :key="node.id"
-            class="flow-node metric-node"
-            :class="metricNodeClass(node)"
-            :style="nodeStyle(node)"
-          >
-            <text v-if="node.titleMode === 'vertical'" class="vertical-title">
-              {{ node.title }}
-            </text>
-            <view class="metric-node-content">
-              <text v-if="node.titleMode !== 'vertical'" class="node-title">
-                {{ node.title }}
-              </text>
-              <view v-if="node.groups" class="metric-groups">
-                <view v-for="group in node.groups" :key="group.label" class="metric-group">
-                  <text>{{ group.label }}</text>
-                  <view>
-                    <text class="metric-strong">{{ group.value }}</text>
-                    <text class="trend" :class="group.trend">
-                      {{ group.trend === "up" ? "↑" : "↓" }}
-                    </text>
-                  </view>
-                </view>
-              </view>
-              <text v-else-if="node.empty" class="empty-text">暂无数据</text>
-              <view v-else class="metric-rows">
-                <view v-for="row in node.rows" :key="`${row.label}-${row.value}`" class="metric-row">
-                  <text class="row-label">{{ row.label }}：</text>
-                  <text class="metric-strong">{{ row.value }}</text>
-                  <text class="trend" :class="row.trend">
-                    {{ row.trend === "up" ? "↑" : "↓" }}
-                  </text>
-                </view>
-              </view>
-            </view>
-          </view>
-        </view>
-      </scroll-view>
+      <KeyMetricsMobile
+        v-if="isMobileLayout"
+        v-model:active-time="activeTime"
+        :nodes="metricNodes"
+        :time-options="timeOptions"
+        @back="goHome"
+      />
+      <KeyMetricsDesktop
+        v-else
+        v-model:active-time="activeTime"
+        :edges="metricEdges"
+        :nodes="metricNodes"
+        :time-options="timeOptions"
+      />
     </template>
 
     <template v-else-if="activeType === 'marketing-operations'">
-      <view class="status-legend">
-        <view v-for="item in statusLegend" :key="item.label" class="legend-item">
-          <text class="legend-dot" :class="item.type"></text>
-          <text>{{ item.label }}</text>
-        </view>
-      </view>
-
-      <section class="flow-hero">
-        <text class="flow-title">营销运营看板</text>
-        <text class="title-underline"></text>
-      </section>
-
-      <scroll-view class="flow-board" scroll-x scroll-y>
-        <view class="flow-canvas operations-canvas">
-          <text
-            v-for="edge in operationEdges"
-            :key="edge.id"
-            class="flow-edge"
-            :class="{ muted: edge.muted }"
-            :style="edgeStyle(edge, operationNodeMap)"
-          ></text>
-
-          <view
-            v-for="node in operationNodes"
-            :key="node.id"
-            class="flow-node operation-node"
-            :class="operationNodeClass(node)"
-            :style="nodeStyle(node)"
-          >
-            <text class="status-dot" :class="node.status"></text>
-            <text class="node-title">{{ node.title }}</text>
-            <image class="operation-icon" :src="node.icon" mode="aspectFit" />
-          </view>
-        </view>
-      </scroll-view>
+      <MarketingOperationsMobile
+        v-if="isMobileLayout"
+        :nodes="operationNodes"
+        :status-legend="statusLegend"
+        @back="goHome"
+      />
+      <MarketingOperationsDesktop
+        v-else
+        :edges="operationEdges"
+        :nodes="operationNodes"
+        :status-legend="statusLegend"
+      />
     </template>
 
     <template v-else-if="activeType === 'marketing-calendar'">
-      <section class="page-hero">
-        <text class="board-title">营销日历看板</text>
-        <text class="title-underline calendar-underline"></text>
-      </section>
-
-      <section class="calendar-layout">
-        <aside class="calendar-panel">
-          <text class="calendar-panel-title">时 间 选 择</text>
-          <view class="calendar-picker">
-            <view class="calendar-header">
-              <view class="calendar-nav-group">
-                <button class="month-button" @click="shiftYear(-1)">«</button>
-                <button class="month-button" @click="shiftMonth(-1)">‹</button>
-              </view>
-              <text class="calendar-title">{{ calendarTitle }}</text>
-              <view class="calendar-nav-group">
-                <button class="month-button" @click="shiftMonth(1)">›</button>
-                <button class="month-button" @click="shiftYear(1)">»</button>
-              </view>
-            </view>
-            <view class="weekday-row">
-              <text v-for="day in weekdays" :key="day">{{ day }}</text>
-            </view>
-            <view class="date-grid">
-              <view
-                v-for="day in calendarDays"
-                :key="day.key"
-                class="date-cell"
-                :class="{ muted: day.muted, current: day.current, selected: day.selected }"
-                @click="selectCalendarDay(day)"
-              >
-                <text>{{ day.date }}</text>
-              </view>
-            </view>
-          </view>
-        </aside>
-
-        <section class="schedule-panel">
-          <view class="schedule-head">
-            <text>营销方式</text>
-            <text>平台</text>
-            <text>账号</text>
-            <text>主题</text>
-            <text>启动时间</text>
-          </view>
-          <scroll-view class="schedule-list" scroll-y>
-            <button
-              v-for="item in scheduleItems"
-              :key="`${item.account}-${item.title}-${item.time}-${item.index}`"
-              class="schedule-card"
-              :class="{ active: item.active }"
-            >
-              <view class="method-cell">
-                <text class="method-dot" :style="`background:${item.color}`"></text>
-                <text>{{ item.method }}</text>
-              </view>
-              <text>{{ item.platform }}</text>
-              <text>{{ item.account }}</text>
-              <text>{{ item.title }}</text>
-              <text class="time">{{ item.time }}</text>
-            </button>
-          </scroll-view>
+      <MarketingCalendarMobile
+        v-if="isMobileLayout"
+        :items="scheduleItems"
+        @back="goHome"
+      />
+      <template v-else>
+        <section class="page-hero">
+          <text class="board-title">营销日历看板</text>
+          <text class="title-underline calendar-underline"></text>
         </section>
-      </section>
+
+        <section class="calendar-layout">
+          <aside class="calendar-panel">
+            <text class="calendar-panel-title">时 间 选 择</text>
+            <view class="calendar-picker">
+              <view class="calendar-header">
+                <view class="calendar-nav-group">
+                  <button class="month-button" @click="shiftYear(-1)">«</button>
+                  <button class="month-button" @click="shiftMonth(-1)">‹</button>
+                </view>
+                <text class="calendar-title">{{ calendarTitle }}</text>
+                <view class="calendar-nav-group">
+                  <button class="month-button" @click="shiftMonth(1)">›</button>
+                  <button class="month-button" @click="shiftYear(1)">»</button>
+                </view>
+              </view>
+              <view class="weekday-row">
+                <text v-for="day in weekdays" :key="day">{{ day }}</text>
+              </view>
+              <view class="date-grid">
+                <view
+                  v-for="day in calendarDays"
+                  :key="day.key"
+                  class="date-cell"
+                  :class="{ muted: day.muted, current: day.current, selected: day.selected }"
+                  @click="selectCalendarDay(day)"
+                >
+                  <text>{{ day.date }}</text>
+                </view>
+              </view>
+            </view>
+          </aside>
+
+          <section class="schedule-panel">
+            <view class="schedule-head">
+              <text>营销方式</text>
+              <text>平台</text>
+              <text>账号</text>
+              <text>主题</text>
+              <text>启动时间</text>
+            </view>
+            <scroll-view class="schedule-list" scroll-y>
+              <button
+                v-for="item in scheduleItems"
+                :key="`${item.account}-${item.title}-${item.time}-${item.index}`"
+                class="schedule-card"
+                :class="{ active: item.active }"
+              >
+                <view class="method-cell">
+                  <text class="method-dot" :style="`background:${item.color}`"></text>
+                  <text>{{ item.method }}</text>
+                </view>
+                <text>{{ item.platform }}</text>
+                <text>{{ item.account }}</text>
+                <text>{{ item.title }}</text>
+                <text class="time">{{ item.time }}</text>
+              </button>
+            </scroll-view>
+          </section>
+        </section>
+      </template>
     </template>
 
     <template v-else-if="activeType === 'market-feedback'">
-      <section class="feedback-toolbar">
-        <text class="toolbar-label">时间：</text>
-        <view
-          v-for="item in feedbackFilters"
-          :key="item"
-          class="filter-pill"
-          :class="{ active: item === activeFeedbackFilter }"
-          @click="activeFeedbackFilter = item"
-        >
-          {{ item }}
-        </view>
-      </section>
-
-      <section class="page-hero feedback-hero">
-        <text class="board-title">市场反馈看板</text>
-        <text class="title-underline calendar-underline"></text>
-        <text class="hero-note">数据来源于微信聊天、外呼系统、录音工牌、友商直播间</text>
-      </section>
-
-      <section class="feedback-grid top-grid">
-        <article v-for="panel in topPanels" :key="panel.title" class="feedback-card">
-          <view class="card-head">
-            <text class="card-title">{{ panel.title }}</text>
+      <MarketFeedbackMobile
+        v-if="isMobileLayout"
+        v-model:active-filter="activeFeedbackFilter"
+        :competitor-panel="competitorPanel"
+        :filters="feedbackFilters"
+        :stream-panel="streamPanel"
+        :top-panels="topPanels"
+        @back="goHome"
+      />
+      <template v-else>
+        <section class="feedback-toolbar">
+          <text class="toolbar-label">时间：</text>
+          <view
+            v-for="item in feedbackFilters"
+            :key="item"
+            class="filter-pill"
+            :class="{ active: item === activeFeedbackFilter }"
+            @click="activeFeedbackFilter = item"
+          >
+            {{ item }}
           </view>
-          <view class="panel-content">
-            <section v-for="group in panel.groups" :key="group.title || group.summaryTitle" class="content-group">
-              <text v-if="group.title" class="group-title">{{ group.title }}</text>
-              <view v-if="group.items?.length" class="ordered-list">
-                <view v-for="(item, index) in group.items" :key="item" class="list-item">
-                  <text>{{ index + 1 }}.</text>
-                  <text>{{ item }}</text>
+        </section>
+
+        <section class="page-hero feedback-hero">
+          <text class="board-title">市场反馈看板</text>
+          <text class="title-underline calendar-underline"></text>
+          <text class="hero-note">数据来源于微信聊天、外呼系统、录音工牌、友商直播间</text>
+        </section>
+
+        <section class="feedback-grid top-grid">
+          <article v-for="panel in topPanels" :key="panel.title" class="feedback-card">
+            <view class="card-head">
+              <text class="card-title">{{ panel.title }}</text>
+            </view>
+            <view class="panel-content">
+              <section v-for="group in panel.groups" :key="group.title || group.summaryTitle" class="content-group">
+                <text v-if="group.title" class="group-title">{{ group.title }}</text>
+                <view v-if="group.items?.length" class="ordered-list">
+                  <view v-for="(item, index) in group.items" :key="item" class="list-item">
+                    <text>{{ index + 1 }}.</text>
+                    <text>{{ item }}</text>
+                  </view>
                 </view>
-              </view>
-              <view v-if="group.summaryRows" class="summary">
-                <view v-for="row in group.summaryRows" :key="row.label" class="summary-row">
-                  <text class="summary-label">{{ row.label }}</text>
-                  <text>{{ row.value }}</text>
+                <view v-if="group.summaryRows" class="summary">
+                  <view v-for="row in group.summaryRows" :key="row.label" class="summary-row">
+                    <text class="summary-label">{{ row.label }}</text>
+                    <text>{{ row.value }}</text>
+                  </view>
                 </view>
-              </view>
-            </section>
-          </view>
-        </article>
-      </section>
+              </section>
+            </view>
+          </article>
+        </section>
 
-      <section class="feedback-grid bottom-grid">
-        <article class="feedback-card feedback-card--narrow">
-          <view class="card-head">
-            <text class="card-title">{{ competitorPanel.title }}</text>
-          </view>
-          <view class="panel-content">
-            <section v-for="group in competitorPanel.groups" :key="group.title" class="content-group">
-              <text class="group-title">{{ group.title }}</text>
-              <view class="ordered-list">
-                <view v-for="(item, index) in group.items" :key="item" class="list-item">
-                  <text>{{ index + 1 }}.</text>
-                  <text>{{ item }}</text>
-                </view>
-              </view>
-            </section>
-          </view>
-        </article>
-
-        <article class="feedback-card feedback-card--wide">
-          <view class="card-head">
-            <text class="card-title">{{ streamPanel.title }}</text>
-          </view>
-          <view class="wide-content">
-            <view class="wide-column">
-              <section v-for="group in streamPanel.leftGroups" :key="group.title" class="content-group">
+        <section class="feedback-grid bottom-grid">
+          <article class="feedback-card feedback-card--narrow">
+            <view class="card-head">
+              <text class="card-title">{{ competitorPanel.title }}</text>
+            </view>
+            <view class="panel-content">
+              <section v-for="group in competitorPanel.groups" :key="group.title" class="content-group">
                 <text class="group-title">{{ group.title }}</text>
-                <view v-if="group.mode === 'plain'" class="plain-list">
-                  <view v-for="item in group.items" :key="item" class="plain-item">{{ item }}</view>
-                </view>
-                <text v-else class="tag-line">{{ group.items.join("、") }}</text>
-              </section>
-            </view>
-            <view class="wide-column">
-              <section class="content-group">
-                <text class="group-title">{{ streamPanel.alertGroup.title }}</text>
-                <view class="plain-list">
-                  <view v-for="item in streamPanel.alertGroup.items" :key="item" class="plain-item">{{ item }}</view>
+                <view class="ordered-list">
+                  <view v-for="(item, index) in group.items" :key="item" class="list-item">
+                    <text>{{ index + 1 }}.</text>
+                    <text>{{ item }}</text>
+                  </view>
                 </view>
               </section>
             </view>
-          </view>
-        </article>
-      </section>
+          </article>
+
+          <article class="feedback-card feedback-card--wide">
+            <view class="card-head">
+              <text class="card-title">{{ streamPanel.title }}</text>
+            </view>
+            <view class="wide-content">
+              <view class="wide-column">
+                <section v-for="group in streamPanel.leftGroups" :key="group.title" class="content-group">
+                  <text class="group-title">{{ group.title }}</text>
+                  <view v-if="group.mode === 'plain'" class="plain-list">
+                    <view v-for="item in group.items" :key="item" class="plain-item">{{ item }}</view>
+                  </view>
+                  <text v-else class="tag-line">{{ group.items.join("、") }}</text>
+                </section>
+              </view>
+              <view class="wide-column">
+                <section class="content-group">
+                  <text class="group-title">{{ streamPanel.alertGroup.title }}</text>
+                  <view class="plain-list">
+                    <view v-for="item in streamPanel.alertGroup.items" :key="item" class="plain-item">{{ item }}</view>
+                  </view>
+                </section>
+              </view>
+            </view>
+          </article>
+        </section>
+      </template>
     </template>
 
     <template v-else-if="activeType === 'ecological-partner'">
@@ -314,7 +257,13 @@
 
 <script setup lang="ts">
 import { onLoad } from "@dcloudio/uni-app";
-import { computed, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import KeyMetricsDesktop from "./components/KeyMetricsDesktop.vue";
+import KeyMetricsMobile from "./components/KeyMetricsMobile.vue";
+import MarketFeedbackMobile from "./components/MarketFeedbackMobile.vue";
+import MarketingCalendarMobile from "./components/MarketingCalendarMobile.vue";
+import MarketingOperationsDesktop from "./components/MarketingOperationsDesktop.vue";
+import MarketingOperationsMobile from "./components/MarketingOperationsMobile.vue";
 
 type BoardType =
   | "brand-strategy"
@@ -372,6 +321,7 @@ type CalendarDay = {
 const activeType = ref<BoardType>("brand-strategy");
 const activeTime = ref("当月");
 const activeFeedbackFilter = ref("当 月");
+const isMobileLayout = ref(false);
 const timeOptions = ["当天", "当月", "当季", "当年"];
 
 const isFlowBoard = computed(
@@ -398,7 +348,7 @@ const basicBoard = {
   ],
 };
 
-const statusLegend = [
+const statusLegend: Array<{ label: string; type: Status }> = [
   { label: "已完成", type: "done" },
   { label: "进行中", type: "doing" },
   { label: "待开始", type: "pending" },
@@ -600,6 +550,21 @@ const operationEdges: FlowEdge[] = [
 const metricNodeMap = computed(() => toNodeMap(metricNodes));
 const operationNodeMap = computed(() => toNodeMap(operationNodes));
 
+type WindowResizeResult = {
+  size: {
+    windowWidth: number;
+    windowHeight: number;
+  };
+};
+
+function updateMobileLayout(width = uni.getSystemInfoSync().windowWidth) {
+  isMobileLayout.value = width <= 760;
+}
+
+function handleWindowResize(result: WindowResizeResult) {
+  updateMobileLayout(result.size.windowWidth);
+}
+
 const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const monthNames = [
   "January",
@@ -756,6 +721,8 @@ const partnerCards = [
 ];
 
 onLoad((query) => {
+  updateMobileLayout();
+
   const type = query?.type;
   if (typeof type === "string" && type in boardTitles) {
     activeType.value = type as BoardType;
@@ -764,6 +731,15 @@ onLoad((query) => {
   uni.setNavigationBarTitle({
     title: boardTitles[activeType.value],
   });
+});
+
+onMounted(() => {
+  updateMobileLayout();
+  uni.onWindowResize(handleWindowResize);
+});
+
+onBeforeUnmount(() => {
+  uni.offWindowResize(handleWindowResize);
 });
 
 function toNodeMap(nodes: FlowNode[]) {
