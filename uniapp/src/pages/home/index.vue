@@ -1,0 +1,2442 @@
+<template>
+  <view class="home-page">
+    <view class="top-strip"></view>
+    <view class="workspace">
+      <view class="sidebar" :class="{ collapsed: isSidebarCollapsed }">
+        <view v-if="!isSidebarCollapsed" class="sidebar-content">
+          <view class="brand-mark">
+            <view class="brand-circle">肆</view>
+          </view>
+
+          <button class="new-chat" :disabled="isBusy" @click="createSession">
+            <view class="button-icon"></view>
+            <text>创建新对话</text>
+          </button>
+
+          <scroll-view class="chat-list" scroll-y>
+            <template v-for="chat in sessionChats" :key="chat.id">
+              <text v-if="chat.date" class="date-label">{{ chat.date }}</text>
+              <button
+                class="chat-item"
+                :class="{ active: chat.active }"
+                @click="selectSession(chat.id)"
+              >
+                <text>{{ chat.title }}</text>
+              </button>
+            </template>
+
+            <template v-if="!sessionChats.length">
+              <template
+                v-for="(item, index) in fallbackChats"
+                :key="`${item.title}-${index}`"
+              >
+                <text v-if="item.date" class="date-label">{{ item.date }}</text>
+                <view class="chat-item" :class="{ active: item.active }">
+                  <text>{{ item.title }}</text>
+                </view>
+              </template>
+            </template>
+          </scroll-view>
+        </view>
+
+        <view v-if="!isSidebarCollapsed" class="company-menu-wrap">
+          <view v-if="isCompanyMenuVisible" class="settings-card">
+            <button
+              v-for="item in settingItems"
+              :key="item.label"
+              class="setting-item"
+              :class="{ active: item.action === 'settings' }"
+              @click="handleSettingClick(item.action)"
+            >
+              <text class="setting-icon" :class="item.action"></text>
+              <text>{{ item.label }}</text>
+            </button>
+          </view>
+
+          <button class="company" @click="toggleCompanyMenu">
+            <text class="avatar">
+              <image v-if="settingsForm.avatarUrl" :src="settingsForm.avatarUrl" mode="aspectFill" />
+              <text v-else>{{ avatarInitial }}</text>
+            </text>
+            <text class="company-name">{{ companyName }}</text>
+          </button>
+        </view>
+      </view>
+
+      <view class="main-panel">
+        <button
+          class="collapse-button"
+          :class="{ collapsed: isSidebarCollapsed }"
+          @click="toggleSidebar"
+        >
+          <image class="collapse-icon" src="/static/svg/expandIcon.svg" mode="aspectFit" />
+        </button>
+
+        <scroll-view
+          v-if="showMessages"
+          class="message-panel"
+          scroll-y
+          :scroll-top="messageScrollTop"
+        >
+          <view class="message-stream">
+            <view v-if="chatStore.pendingFrameworkUpdate" class="pending-bar">
+              框架修改待确认：请在会话中回复“确认”或“取消”。
+            </view>
+
+            <view
+              v-for="message in chatStore.messages"
+              :key="message.id"
+              class="message-row"
+              :class="{ mine: message.role === 'USER' }"
+            >
+              <view class="message-bubble">
+                <text class="message-content">{{ message.content }}</text>
+                <text class="message-time">{{ formatTime(message.createdAt) }}</text>
+              </view>
+            </view>
+
+            <view v-if="isBusy" class="assistant-loading">
+              {{ chatStore.uploading ? "正在上传并解析资料" : "正在处理" }}
+            </view>
+          </view>
+        </scroll-view>
+
+        <view v-else class="hero">
+          <text class="hero-title">别再问我怎么搞钱了！用好车肆，先赚一个小目标！</text>
+          <view class="feature-grid">
+            <button
+              v-for="feature in features"
+              :key="feature.title"
+              class="feature-card"
+              @click="handleFeatureSelect(feature)"
+            >
+              <view class="feature-visual">
+                <image class="feature-svg" :src="feature.icon" mode="aspectFit" />
+              </view>
+              <view class="feature-copy">
+                <text class="feature-title">{{ feature.title }}</text>
+                <text class="feature-description">{{ feature.description }}</text>
+              </view>
+            </button>
+          </view>
+        </view>
+
+        <text v-if="strategyNotice" class="error-text">{{ strategyNotice }}</text>
+
+        <view
+          v-if="isBoardMenuVisible"
+          class="board-mention-menu"
+          :style="boardMenuStyle"
+        >
+          <text class="board-menu-title">选择看板</text>
+          <scroll-view class="board-menu-list" scroll-y>
+            <button
+              v-for="board in filteredBoards"
+              :key="board.id"
+              class="board-option"
+              @click="selectBoard(board)"
+            >
+              <text class="board-icon">
+                <image :src="board.icon" mode="aspectFit" />
+              </text>
+              <view class="board-copy">
+                <view class="board-name-row">
+                  <text class="board-name">{{ board.name }}</text>
+                  <text class="board-alias">@{{ board.mention }}</text>
+                </view>
+                <text class="board-description">{{ board.description }}</text>
+              </view>
+            </button>
+          </scroll-view>
+        </view>
+
+        <view class="composer">
+          <view class="editor-wrap">
+            <text v-if="!draft" class="message-placeholder">
+              发消息......输入“@”选择看板、输入“/”选择技能
+            </text>
+            <textarea
+              v-model="draft"
+              class="message-input"
+              auto-height
+              :disabled="isBusy"
+              :maxlength="-1"
+              @blur="handleEditorBlur"
+              @confirm="sendMessage"
+              @focus="handleEditorFocus"
+              @input="handleDraftInput"
+              @tap="handleEditorPointerEnd"
+            />
+          </view>
+
+          <view class="composer-footer">
+            <scroll-view class="quick-actions" scroll-x>
+              <view class="quick-action-row">
+                <button class="plus" :disabled="isBusy" @click="chooseMaterial">
+                  <uni-icons type="plusempty" size="18" color="#111827" />
+                </button>
+                <button
+                  v-for="action in quickActions"
+                  :key="action.label"
+                  class="quick-action"
+                  :disabled="isBusy"
+                  @click="handleQuickAction(action)"
+                >
+                  {{ action.label }}
+                </button>
+                <button class="quick-action more">
+                  <uni-icons type="list" size="13" color="#2f3743" />
+                  <text>更多</text>
+                </button>
+              </view>
+            </scroll-view>
+            <button
+              class="send-button"
+              :class="{ 'is-disabled': isBusy || !draft.trim() }"
+              :disabled="isBusy || !draft.trim()"
+              @click="sendMessage"
+            >
+              <uni-icons type="arrow-up" size="17" color="#ffffff" />
+            </button>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view v-if="isSettingsVisible" class="settings-overlay" @click="closeSettings">
+      <view class="settings-panel" @click.stop>
+        <view class="settings-nav">
+          <button class="settings-close" @click="closeSettings">
+            <text class="close-icon"></text>
+          </button>
+          <button class="settings-nav-item active">
+            <text class="settings-nav-icon"></text>
+            <text>账号设置</text>
+          </button>
+        </view>
+
+        <scroll-view class="settings-content" scroll-y>
+          <view class="settings-content-inner">
+            <view class="settings-header">
+              <text class="settings-title">账户</text>
+              <text v-if="settingsLoading" class="settings-status">正在同步账号信息</text>
+            </view>
+
+            <view class="settings-section account-summary">
+              <view class="avatar-preview">
+                <image
+                  v-if="settingsForm.avatarUrl"
+                  :src="settingsForm.avatarUrl"
+                  mode="aspectFill"
+                />
+                <text v-else>{{ avatarInitial }}</text>
+              </view>
+              <view class="summary-text">
+                <text class="summary-name">{{ settingsForm.nickname || displayName }}</text>
+                <text class="summary-email">{{ userEmail || "未绑定邮箱" }}</text>
+              </view>
+              <button class="secondary-button" @click="chooseAvatar">更换头像</button>
+            </view>
+
+            <view class="settings-section">
+              <view class="form-row">
+                <text>昵称</text>
+                <input v-model.trim="settingsForm.nickname" placeholder="请输入昵称" />
+              </view>
+              <view class="form-row">
+                <text>手机号码</text>
+                <input
+                  v-model.trim="settingsForm.phone"
+                  placeholder="请输入手机号码"
+                  type="number"
+                />
+              </view>
+            </view>
+
+            <view class="settings-section">
+              <text class="section-title">修改密码</text>
+              <view class="form-row">
+                <text>当前密码</text>
+                <input
+                  v-model="settingsForm.currentPassword"
+                  password
+                  placeholder="请输入当前密码"
+                />
+              </view>
+              <view class="form-row">
+                <text>新密码</text>
+                <input
+                  v-model="settingsForm.newPassword"
+                  password
+                  placeholder="至少 6 位"
+                />
+              </view>
+              <view class="form-row">
+                <text>确认新密码</text>
+                <input
+                  v-model="settingsForm.confirmPassword"
+                  password
+                  placeholder="再次输入新密码"
+                />
+              </view>
+            </view>
+
+            <view class="settings-section">
+              <text class="section-title">企业信息</text>
+              <view class="readonly-row">
+                <text>企业名称</text>
+                <text>{{ tenantName }}</text>
+              </view>
+              <view class="readonly-row">
+                <text>姓名</text>
+                <text>{{ displayName }}</text>
+              </view>
+              <view class="readonly-row">
+                <text>角色</text>
+                <text>{{ roleText }}</text>
+              </view>
+              <view class="readonly-row">
+                <text>所属组织</text>
+                <text>{{ organizationText }}</text>
+              </view>
+            </view>
+
+            <view class="settings-actions">
+              <button class="ghost-button" @click="resetSettingsForm">重置</button>
+              <button class="primary-button" @click="saveSettings">保存设置</button>
+            </view>
+          </view>
+        </scroll-view>
+      </view>
+    </view>
+  </view>
+</template>
+
+<script setup lang="ts">
+import { onLoad } from "@dcloudio/uni-app";
+import { computed, nextTick, reactive, ref, watch } from "vue";
+import { request } from "@/services/api";
+import { useAuthStore } from "@/stores/auth";
+import { useStrategyChatStore } from "@/stores/strategyChat";
+import type { LoginResponse } from "@/types/strategy";
+
+type BoardType =
+  | "brand-strategy"
+  | "key-metrics"
+  | "marketing-operations"
+  | "marketing-calendar"
+  | "market-feedback"
+  | "ecological-partner";
+
+type Feature = {
+  title: string;
+  description: string;
+  icon: string;
+  action?: "strategy-chat";
+  boardType?: BoardType;
+};
+
+type BoardOption = {
+  id: BoardType;
+  name: string;
+  mention: string;
+  description: string;
+  icon: string;
+  searchText: string;
+};
+
+type QuickAction =
+  | { label: string; type: "board" }
+  | { label: string; type: "upload" }
+  | { label: string; type: "prompt"; prompt: string; strategy?: boolean };
+
+type PickedFile = {
+  path?: string;
+  tempFilePath?: string;
+  name?: string;
+};
+
+type BoardTrigger = {
+  start: number;
+  end: number;
+  query: string;
+};
+
+type RectLike = {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+  right: number;
+  bottom: number;
+};
+
+type AuthUser = LoginResponse["user"];
+type MeContext = {
+  user?: AuthUser & {
+    loginName?: string;
+    departmentName?: string;
+    organizationName?: string;
+  };
+  tenant?: {
+    id?: string;
+    name?: string;
+  } | null;
+  roles?: Array<{
+    id?: string;
+    name?: string;
+  }>;
+};
+
+type LocalSettings = {
+  avatarUrl: string;
+  nickname: string;
+  phone: string;
+};
+
+const LOCAL_SETTINGS_KEY = "vehicle_marketing_client_account_settings";
+
+const authStore = useAuthStore();
+const chatStore = useStrategyChatStore();
+const pageLoading = ref(false);
+const isSidebarCollapsed = ref(false);
+const isCompanyMenuVisible = ref(false);
+const isSettingsVisible = ref(false);
+const isBoardMenuVisible = ref(false);
+const boardMenuQuery = ref("");
+const boardMenuTrigger = ref<BoardTrigger | null>(null);
+const boardMenuStyle = ref("left:16px;top:96px;width:320px;");
+const editorCursor = ref(0);
+const boardMenuCloseTimer = ref<ReturnType<typeof setTimeout> | null>(null);
+const draft = ref("");
+const messageScrollTop = ref(0);
+const settingsLoading = ref(false);
+const meContext = ref<MeContext | null>(null);
+const settingsForm = reactive({
+  avatarUrl: "",
+  nickname: "",
+  phone: "",
+  currentPassword: "",
+  newPassword: "",
+  confirmPassword: "",
+});
+
+const iconMap = {
+  brandStrategy: "/static/svg/brand-strategy.svg",
+  keyMetrics: "/static/svg/key-metrics.svg",
+  marketingOperations: "/static/svg/marketing-operations.svg",
+  marketingCalendar: "/static/svg/marketing-calendar.svg",
+  marketFeedback: "/static/svg/market-feedback.svg",
+  ecologicalPartner: "/static/svg/ecological-partner.svg",
+};
+
+const features: Feature[] = [
+  {
+    title: "品牌战略",
+    description: "锚定方向，塑造品牌心智",
+    icon: iconMap.brandStrategy,
+    boardType: "brand-strategy",
+  },
+  {
+    title: "核心指标",
+    description: "数据驱动业务增长",
+    icon: iconMap.keyMetrics,
+    boardType: "key-metrics",
+  },
+  {
+    title: "营销运营",
+    description: "全链路营销提效增长",
+    icon: iconMap.marketingOperations,
+    boardType: "marketing-operations",
+  },
+  {
+    title: "营销日历",
+    description: "精准把控营销节点",
+    icon: iconMap.marketingCalendar,
+    boardType: "marketing-calendar",
+  },
+  {
+    title: "市场反馈",
+    description: "倾听用户优化策略",
+    icon: iconMap.marketFeedback,
+    boardType: "market-feedback",
+  },
+  {
+    title: "生态伙伴",
+    description: "携手同行共建生态",
+    icon: iconMap.ecologicalPartner,
+    boardType: "ecological-partner",
+  },
+];
+
+const fallbackChats = [
+  { date: "最近会话", title: "新的聊天", active: true },
+  { date: "", title: "新的聊天" },
+  { date: "", title: "新的聊天" },
+  { date: "", title: "新的聊天" },
+  { date: "", title: "新的聊天" },
+  { date: "", title: "新的聊天" },
+  { date: "", title: "新的聊天" },
+];
+
+const quickActions: QuickAction[] = [
+  { label: "@看板", type: "board" },
+  { label: "/ 任务管理", type: "prompt", prompt: "创建任务管理计划" },
+  { label: "/ 战略诊断", type: "prompt", prompt: "开始战略诊断", strategy: true },
+  { label: "/ 战略拆解", type: "prompt", prompt: "生成19点战略框架", strategy: true },
+  { label: "/ 上传素材", type: "upload" },
+  { label: "/ 图文营销", type: "prompt", prompt: "生成图文营销方案" },
+];
+
+const boardOptions: BoardOption[] = ([
+  {
+    id: "brand-strategy",
+    name: "品牌战略看板",
+    mention: "品牌战略",
+    description: "锚定方向，塑造品牌心智",
+    icon: iconMap.brandStrategy,
+  },
+  {
+    id: "key-metrics",
+    name: "核心指标看板",
+    mention: "核心指标",
+    description: "数据驱动业务增长",
+    icon: iconMap.keyMetrics,
+  },
+  {
+    id: "marketing-operations",
+    name: "营销运营看板",
+    mention: "营销运营",
+    description: "全链路营销提效增长",
+    icon: iconMap.marketingOperations,
+  },
+  {
+    id: "marketing-calendar",
+    name: "营销日历看板",
+    mention: "营销日历",
+    description: "精准把控营销节点",
+    icon: iconMap.marketingCalendar,
+  },
+  {
+    id: "market-feedback",
+    name: "市场反馈看板",
+    mention: "市场反馈",
+    description: "倾听用户优化策略",
+    icon: iconMap.marketFeedback,
+  },
+  {
+    id: "ecological-partner",
+    name: "生态伙伴看板",
+    mention: "生态伙伴",
+    description: "携手同行共建生态",
+    icon: iconMap.ecologicalPartner,
+  },
+] satisfies Array<Omit<BoardOption, "searchText">>).map((board) => ({
+  ...board,
+  searchText: [board.id, board.name, board.mention, board.description]
+    .join(" ")
+    .toLowerCase()
+    .replace(/[\s-]+/g, ""),
+}));
+
+const settingItems = [
+  { label: "设置", action: "settings" },
+  { label: "管理后台", action: "admin" },
+  { label: "车肆官网", action: "site" },
+  { label: "问题反馈", action: "feedback" },
+  { label: "退出登录", action: "logout" },
+] as const;
+
+const isBusy = computed(
+  () => pageLoading.value || chatStore.loading || chatStore.uploading,
+);
+const showMessages = computed(() => chatStore.messages.length > 0);
+const strategyNotice = computed(
+  () => chatStore.error || chatStore.unavailableReason,
+);
+const companyName = computed(
+  () => settingsForm.nickname || authStore.user?.nickname || authStore.user?.tenantId || "车肆企业空间",
+);
+const settingsUser = computed(() => meContext.value?.user ?? authStore.user);
+const displayName = computed(
+  () =>
+    settingsUser.value?.name ||
+    settingsUser.value?.loginName ||
+    settingsUser.value?.email ||
+    "未命名用户",
+);
+const userEmail = computed(() => settingsUser.value?.email || "");
+const avatarInitial = computed(() => {
+  const source = settingsForm.nickname || displayName.value || "车";
+  return source.slice(0, 1).toUpperCase();
+});
+const tenantName = computed(
+  () => meContext.value?.tenant?.name || authStore.user?.tenantId || "暂未绑定企业",
+);
+const roleText = computed(() => {
+  const roleNames = (meContext.value?.roles ?? [])
+    .map((role) => role.name)
+    .filter((name): name is string => Boolean(name));
+
+  if (roleNames.length > 0) {
+    return roleNames.join("、");
+  }
+
+  if (settingsUser.value?.isTenantSuperAdmin) {
+    return "企业超级管理员";
+  }
+
+  if (settingsUser.value?.role === "ADMIN") {
+    return "系统管理员";
+  }
+
+  return "普通成员";
+});
+const organizationText = computed(
+  () => settingsUser.value?.organizationName || settingsUser.value?.departmentName || "暂未设置",
+);
+const sessionChats = computed(() =>
+  chatStore.sessions.map((session, index) => ({
+    id: session.id,
+    date: index === 0 ? "最近会话" : "",
+    title:
+      session.title ||
+      (session.agentCode === "strategy_agent" ? "品牌战略诊断" : "新的聊天"),
+    preview: session.lastMessage?.content || "",
+    active: session.id === chatStore.sessionId,
+  })),
+);
+const filteredBoards = computed(() => {
+  const query = boardMenuQuery.value.trim().toLowerCase().replace(/[\s-]+/g, "");
+  if (!query) {
+    return boardOptions;
+  }
+
+  return boardOptions.filter((board) => board.searchText.includes(query));
+});
+
+onLoad(async () => {
+  authStore.restore();
+  applyLocalSettings();
+
+  if (!authStore.isAuthenticated) {
+    uni.reLaunch({
+      url: "/pages/login/index",
+    });
+    return;
+  }
+
+  await refresh();
+});
+
+watch(draft, () => {
+  editorCursor.value = clampCursor(editorCursor.value);
+  updateBoardMenu();
+});
+
+watch(
+  () => [chatStore.messages.length, chatStore.loading, chatStore.uploading],
+  () => {
+    scrollToBottom();
+  },
+);
+
+function toggleSidebar() {
+  isSidebarCollapsed.value = !isSidebarCollapsed.value;
+  isCompanyMenuVisible.value = false;
+}
+
+function toggleCompanyMenu() {
+  isCompanyMenuVisible.value = !isCompanyMenuVisible.value;
+}
+
+function handleSettingClick(action: (typeof settingItems)[number]["action"]) {
+  if (action === "settings") {
+    openSettings();
+    return;
+  }
+
+  if (action === "logout") {
+    authStore.logout();
+    return;
+  }
+
+  uni.showToast({
+    title: "暂未开放",
+    icon: "none",
+  });
+  isCompanyMenuVisible.value = false;
+}
+
+function readLocalSettings(): LocalSettings {
+  try {
+    const raw = uni.getStorageSync(LOCAL_SETTINGS_KEY);
+    const parsed =
+      typeof raw === "string" && raw
+        ? (JSON.parse(raw) as Partial<LocalSettings>)
+        : (raw as Partial<LocalSettings> | undefined) ?? {};
+
+    return {
+      avatarUrl: parsed.avatarUrl || authStore.user?.avatarUrl || "",
+      nickname: parsed.nickname || authStore.user?.nickname || authStore.user?.name || "",
+      phone: parsed.phone || authStore.user?.phone || "",
+    };
+  } catch {
+    return {
+      avatarUrl: authStore.user?.avatarUrl || "",
+      nickname: authStore.user?.nickname || authStore.user?.name || "",
+      phone: authStore.user?.phone || "",
+    };
+  }
+}
+
+function applyLocalSettings() {
+  const settings = readLocalSettings();
+  settingsForm.avatarUrl = settings.avatarUrl;
+  settingsForm.nickname = settings.nickname;
+  settingsForm.phone = settings.phone;
+  settingsForm.currentPassword = "";
+  settingsForm.newPassword = "";
+  settingsForm.confirmPassword = "";
+}
+
+async function fetchMe() {
+  settingsLoading.value = true;
+
+  try {
+    meContext.value = await request<MeContext>("/me");
+  } catch {
+    meContext.value = null;
+  } finally {
+    settingsLoading.value = false;
+  }
+}
+
+function openSettings() {
+  isCompanyMenuVisible.value = false;
+  isSettingsVisible.value = true;
+  applyLocalSettings();
+  fetchMe();
+}
+
+function closeSettings() {
+  isSettingsVisible.value = false;
+}
+
+function resetSettingsForm() {
+  applyLocalSettings();
+}
+
+function chooseAvatar() {
+  uni.chooseImage({
+    count: 1,
+    sizeType: ["compressed"],
+    sourceType: ["album", "camera"],
+    success: (res) => {
+      settingsForm.avatarUrl = res.tempFilePaths[0] || "";
+    },
+  });
+}
+
+function saveSettings() {
+  const hasPasswordInput = Boolean(
+    settingsForm.currentPassword ||
+      settingsForm.newPassword ||
+      settingsForm.confirmPassword,
+  );
+
+  if (hasPasswordInput) {
+    if (
+      !settingsForm.currentPassword ||
+      !settingsForm.newPassword ||
+      !settingsForm.confirmPassword
+    ) {
+      uni.showToast({
+        title: "请完整填写密码修改信息",
+        icon: "none",
+      });
+      return;
+    }
+
+    if (settingsForm.newPassword.length < 6) {
+      uni.showToast({
+        title: "新密码至少需要 6 位",
+        icon: "none",
+      });
+      return;
+    }
+
+    if (settingsForm.newPassword !== settingsForm.confirmPassword) {
+      uni.showToast({
+        title: "两次输入的新密码不一致",
+        icon: "none",
+      });
+      return;
+    }
+  }
+
+  const settings: LocalSettings = {
+    avatarUrl: settingsForm.avatarUrl,
+    nickname: settingsForm.nickname,
+    phone: settingsForm.phone,
+  };
+  uni.setStorageSync(LOCAL_SETTINGS_KEY, JSON.stringify(settings));
+  authStore.patchLocalUser(settings);
+  settingsForm.currentPassword = "";
+  settingsForm.newPassword = "";
+  settingsForm.confirmPassword = "";
+  uni.showToast({
+    title: "账号设置已保存",
+    icon: "success",
+  });
+  closeSettings();
+}
+
+async function refresh() {
+  pageLoading.value = true;
+
+  try {
+    await chatStore.initialize();
+    await scrollToBottom();
+  } catch (err) {
+    showError(err, "读取会话失败");
+  } finally {
+    pageLoading.value = false;
+  }
+}
+
+async function createSession() {
+  try {
+    await chatStore.createSession();
+    await scrollToBottom();
+  } catch (err) {
+    showError(err, "创建会话失败");
+  }
+}
+
+async function selectSession(sessionId: string) {
+  try {
+    await chatStore.selectSession(sessionId);
+    await scrollToBottom();
+  } catch (err) {
+    showError(err, "读取会话失败");
+  }
+}
+
+async function handleFeatureSelect(feature: Feature) {
+  if (feature.action === "strategy-chat") {
+    try {
+      await chatStore.enterStrategy();
+      await scrollToBottom();
+    } catch (err) {
+      showError(err, "进入失败");
+    }
+    return;
+  }
+
+  if (feature.boardType) {
+    navigateBoard(feature.boardType);
+  }
+}
+
+function handleQuickAction(action: QuickAction) {
+  if (action.type === "board") {
+    openBoardMenuFromAction();
+    return;
+  }
+
+  if (action.type === "upload") {
+    chooseMaterial();
+    return;
+  }
+
+  sendPreset(action.prompt, Boolean(action.strategy));
+}
+
+function handleDraftInput(event: Event) {
+  const detail = (event as Event & {
+    detail?: {
+      value?: string;
+      cursor?: number;
+    };
+  }).detail;
+  const value = detail?.value ?? draft.value;
+  draft.value = value;
+  editorCursor.value =
+    typeof detail?.cursor === "number"
+      ? clampCursor(detail.cursor)
+      : clampCursor(value.length);
+  updateBoardMenu();
+}
+
+function handleEditorFocus() {
+  clearBoardMenuCloseTimer();
+  syncNativeTextareaCursor();
+  updateBoardMenu();
+}
+
+function handleEditorBlur() {
+  clearBoardMenuCloseTimer();
+  boardMenuCloseTimer.value = setTimeout(() => {
+    closeBoardMenu();
+  }, 120);
+}
+
+function handleEditorPointerEnd() {
+  setTimeout(() => {
+    syncNativeTextareaCursor();
+    updateBoardMenu();
+  }, 0);
+}
+
+function clearBoardMenuCloseTimer() {
+  if (boardMenuCloseTimer.value) {
+    clearTimeout(boardMenuCloseTimer.value);
+    boardMenuCloseTimer.value = null;
+  }
+}
+
+function clampCursor(cursor: number) {
+  return Math.max(0, Math.min(cursor, draft.value.length));
+}
+
+function syncNativeTextareaCursor() {
+  // #ifdef H5
+  const textarea = document.querySelector<HTMLTextAreaElement>(
+    "textarea.message-input, .message-input textarea",
+  );
+  if (textarea && typeof textarea.selectionStart === "number") {
+    editorCursor.value = clampCursor(textarea.selectionStart);
+  }
+  // #endif
+}
+
+function resolveBoardTriggerAtCursor() {
+  const cursor = clampCursor(editorCursor.value);
+  const beforeCursor = draft.value.slice(0, cursor);
+  const match = beforeCursor.match(/(^|[\s\n])@([^\s@]{0,24})$/);
+
+  if (!match) {
+    return null;
+  }
+
+  const sourceText = match[0] ?? "";
+  const prefix = match[1] ?? "";
+
+  return {
+    start: cursor - sourceText.length + prefix.length,
+    end: cursor,
+    query: match[2] ?? "",
+  };
+}
+
+async function updateBoardMenu(options: { force?: boolean } = {}) {
+  await nextTick();
+
+  if (isBusy.value) {
+    closeBoardMenu();
+    return;
+  }
+
+  const cursor = clampCursor(editorCursor.value);
+  const trigger = options.force
+    ? {
+        start: cursor,
+        end: cursor,
+        query: "",
+      }
+    : resolveBoardTriggerAtCursor();
+
+  if (!trigger) {
+    closeBoardMenu();
+    return;
+  }
+
+  boardMenuTrigger.value = trigger;
+  boardMenuQuery.value = trigger.query;
+  isBoardMenuVisible.value = true;
+
+  await nextTick();
+  updateBoardMenuPosition();
+}
+
+function closeBoardMenu() {
+  isBoardMenuVisible.value = false;
+  boardMenuQuery.value = "";
+  boardMenuTrigger.value = null;
+}
+
+function openBoardMenuFromAction() {
+  clearBoardMenuCloseTimer();
+  syncNativeTextareaCursor();
+  updateBoardMenu({ force: true });
+}
+
+function normalizeRect(rect: unknown): RectLike | null {
+  if (!rect || typeof rect !== "object") {
+    return null;
+  }
+
+  const value = rect as {
+    left?: number;
+    top?: number;
+    width?: number;
+    height?: number;
+    right?: number;
+    bottom?: number;
+  };
+  const left = Number(value.left ?? 0);
+  const top = Number(value.top ?? 0);
+  const width = Number(value.width ?? 0);
+  const height = Number(value.height ?? 0);
+
+  if (!width || !height) {
+    return null;
+  }
+
+  return {
+    left,
+    top,
+    width,
+    height,
+    right: Number(value.right ?? left + width),
+    bottom: Number(value.bottom ?? top + height),
+  };
+}
+
+function estimateTextWidth(text: string) {
+  return Array.from(text).reduce((width, char) => {
+    if (char === "\t") {
+      return width + 24;
+    }
+
+    if (char === " ") {
+      return width + 4;
+    }
+
+    return width + (/[\u2E80-\u9FFF\uF900-\uFAFF]/.test(char) ? 12 : 7);
+  }, 0);
+}
+
+function estimateCaretOffset(inputWidth: number) {
+  const cursor = clampCursor(editorCursor.value);
+  const beforeCursor = draft.value.slice(0, cursor);
+  const maxLineWidth = Math.max(40, inputWidth - 8);
+  const lineHeight = 20;
+  let line = 0;
+  let x = 0;
+
+  for (const char of Array.from(beforeCursor)) {
+    if (char === "\n") {
+      line += 1;
+      x = 0;
+      continue;
+    }
+
+    const width = estimateTextWidth(char);
+    if (x + width > maxLineWidth) {
+      line += 1;
+      x = 0;
+    }
+    x += width;
+  }
+
+  return {
+    x: Math.min(x, maxLineWidth),
+    y: line * lineHeight,
+    lineHeight,
+  };
+}
+
+function updateBoardMenuPosition() {
+  uni
+    .createSelectorQuery()
+    .select(".main-panel")
+    .boundingClientRect()
+    .select(".editor-wrap")
+    .boundingClientRect()
+    .exec((results) => {
+      const mainRect = normalizeRect(results?.[0]);
+      const editorRect = normalizeRect(results?.[1]);
+
+      if (!mainRect || !editorRect) {
+        boardMenuStyle.value = "left:16px;top:96px;width:320px;";
+        return;
+      }
+
+      const systemInfo = uni.getSystemInfoSync();
+      const viewportHeight = systemInfo.windowHeight || mainRect.bottom;
+      const menuWidth = Math.min(352, Math.max(288, mainRect.width - 32));
+      const estimatedMenuHeight = Math.min(
+        408,
+        37 + Math.max(1, filteredBoards.value.length) * 62,
+      );
+      const caret = estimateCaretOffset(editorRect.width);
+      const caretLeft = editorRect.left + caret.x;
+      const caretTop = editorRect.top + caret.y;
+      const spaceBelow = viewportHeight - (caretTop + caret.lineHeight);
+      const left = Math.min(
+        Math.max(16, caretLeft - mainRect.left - 12),
+        Math.max(16, mainRect.width - menuWidth - 16),
+      );
+      const top =
+        spaceBelow >= Math.min(estimatedMenuHeight, 220)
+          ? caretTop - mainRect.top + caret.lineHeight + 8
+          : Math.max(16, caretTop - mainRect.top - estimatedMenuHeight - 8);
+
+      boardMenuStyle.value = [
+        `left:${Math.round(left)}px`,
+        `top:${Math.round(top)}px`,
+        `width:${Math.round(menuWidth)}px`,
+      ].join(";");
+    });
+}
+
+async function sendPreset(content: string, strategy = false) {
+  if (isBusy.value) {
+    return;
+  }
+
+  try {
+    if (strategy) {
+      await chatStore.sendStrategy(content);
+    } else {
+      await chatStore.sendBase(content);
+    }
+    await scrollToBottom();
+  } catch (err) {
+    showError(err, "发送失败");
+  }
+}
+
+async function sendMessage() {
+  const content = draft.value.trim();
+  if (!content || isBusy.value) {
+    return;
+  }
+
+  draft.value = "";
+  closeBoardMenu();
+
+  try {
+    await chatStore.sendBase(content);
+    await scrollToBottom();
+  } catch (err) {
+    draft.value = content;
+    showError(err, "发送失败");
+  }
+}
+
+function selectBoard(board: BoardOption) {
+  draft.value = "";
+  closeBoardMenu();
+  navigateBoard(board.id);
+}
+
+function navigateBoard(type: BoardType) {
+  uni.navigateTo({
+    url: `/pages/boards/basic?type=${encodeURIComponent(type)}`,
+  });
+}
+
+function chooseMaterial() {
+  if (isBusy.value) {
+    return;
+  }
+
+  // #ifdef MP-WEIXIN
+  uni.chooseMessageFile({
+    count: 1,
+    type: "file",
+    success: (res) => {
+      const file = res.tempFiles[0] as PickedFile | undefined;
+      uploadPickedFile(file);
+    },
+  });
+  return;
+  // #endif
+
+  // #ifdef H5
+  const h5Uni = uni as unknown as {
+    chooseFile?: (options: {
+      count: number;
+      success: (res: { tempFiles: PickedFile[] }) => void;
+    }) => void;
+  };
+  const chooseFile = h5Uni.chooseFile;
+
+  if (chooseFile) {
+    (chooseFile as NonNullable<typeof chooseFile>)({
+      count: 1,
+      success: (res) => uploadPickedFile(res.tempFiles[0]),
+    });
+    return;
+  }
+  // #endif
+
+  uni.showToast({
+    title: "当前端暂不支持文件选择",
+    icon: "none",
+  });
+}
+
+async function uploadPickedFile(file?: PickedFile) {
+  const filePath = file?.path || file?.tempFilePath;
+  if (!filePath) {
+    uni.showToast({
+      title: "未选择有效文件",
+      icon: "none",
+    });
+    return;
+  }
+
+  try {
+    await chatStore.uploadMaterial({
+      filePath,
+      fileName: file?.name,
+    });
+    await scrollToBottom();
+    uni.showToast({
+      title: "资料已上传",
+      icon: "success",
+    });
+  } catch (err) {
+    showError(err, "上传失败");
+  }
+}
+
+async function scrollToBottom() {
+  await nextTick();
+  messageScrollTop.value += 100000;
+}
+
+function formatTime(value: string) {
+  const date = new Date(value);
+  const hours = `${date.getHours()}`.padStart(2, "0");
+  const minutes = `${date.getMinutes()}`.padStart(2, "0");
+  return `${hours}:${minutes}`;
+}
+
+function showError(err: unknown, fallback: string) {
+  uni.showToast({
+    title: err instanceof Error ? err.message : fallback,
+    icon: "none",
+  });
+}
+</script>
+
+<style>
+.home-page {
+  min-height: 100vh;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.top-strip {
+  height: 36px;
+  background: #bfbfbf;
+}
+
+.workspace {
+  display: flex;
+  min-height: calc(100vh - 36px);
+}
+
+.sidebar {
+  position: relative;
+  width: 188px;
+  flex: 0 0 188px;
+  padding: 12px 11px 88px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #f6f7f9 0%, #f2f4f7 100%);
+  border-right: 1px solid #edf0f4;
+  transition: width 0.22s ease, flex-basis 0.22s ease, padding 0.22s ease;
+}
+
+.sidebar.collapsed {
+  width: 0;
+  flex-basis: 0;
+  padding-right: 0;
+  padding-left: 0;
+  border-right-color: transparent;
+}
+
+.sidebar-content {
+  width: 166px;
+}
+
+.brand-mark {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.brand-circle {
+  position: relative;
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  color: #111111;
+  font-weight: 800;
+  border: 1.5px solid #121212;
+  border-radius: 50%;
+  transform: rotate(-18deg);
+}
+
+.brand-circle::before,
+.brand-circle::after {
+  position: absolute;
+  width: 48px;
+  height: 1px;
+  content: "";
+  background: #111111;
+}
+
+.brand-circle::before {
+  transform: rotate(35deg);
+}
+
+.brand-circle::after {
+  transform: rotate(-52deg);
+}
+
+.new-chat {
+  display: flex;
+  width: 162px;
+  height: 26px;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  margin: 0 auto 13px;
+  color: #1167ff;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 26px;
+  background: #ffffff;
+  border: 1px solid #e2e7ef;
+  border-radius: 999px;
+  box-shadow: 0 2px 7px rgb(25 40 78 / 10%);
+  overflow: hidden;
+  padding: 0;
+}
+
+.new-chat::after,
+.chat-item::after,
+.company::after,
+.setting-item::after,
+.collapse-button::after,
+.feature-card::after,
+.quick-action::after,
+.plus::after,
+.send-button::after,
+.board-option::after {
+  border: 0;
+}
+
+.button-icon {
+  position: relative;
+  width: 13px;
+  height: 13px;
+}
+
+.button-icon::before {
+  position: absolute;
+  top: 6px;
+  left: 2px;
+  width: 9px;
+  height: 2px;
+  content: "";
+  background: #1167ff;
+  border-radius: 2px;
+  transform: rotate(-32deg);
+}
+
+.button-icon::after {
+  position: absolute;
+  top: 3px;
+  right: 1px;
+  width: 3px;
+  height: 3px;
+  content: "";
+  background: #1167ff;
+  border-radius: 1px;
+  transform: rotate(-32deg);
+}
+
+.chat-list {
+  height: calc(100vh - 258px);
+  overflow: hidden;
+  font-size: 11px;
+}
+
+.date-label {
+  display: block;
+  margin: 12px 5px 6px;
+  color: #a1a8b2;
+  font-size: 9px;
+}
+
+.chat-item {
+  display: flex;
+  width: 100%;
+  height: 25px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 7px;
+  color: #252a33;
+  font-size: 11px;
+  line-height: 25px;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  box-shadow: none;
+}
+
+.chat-item text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-item.active {
+  font-weight: 700;
+  background: #ffffff;
+  box-shadow: inset 0 0 0 1px #e8ecf2;
+}
+
+.company-menu-wrap {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  right: 10px;
+}
+
+.settings-card {
+  position: absolute;
+  bottom: 41px;
+  left: 0;
+  width: 112px;
+  padding: 6px;
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 8px 22px rgb(28 43 74 / 13%);
+}
+
+.setting-item {
+  display: flex;
+  width: 100%;
+  height: 27px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 9px;
+  color: #2f3540;
+  font-size: 10px;
+  line-height: 27px;
+  text-align: left;
+  white-space: nowrap;
+  background: transparent;
+  border: 0;
+  border-radius: 5px;
+  box-shadow: none;
+}
+
+.setting-item > text:last-child {
+  display: block;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  line-height: 27px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.setting-item.active {
+  background: #f0f1f3;
+}
+
+.setting-icon {
+  position: relative;
+  width: 13px;
+  height: 13px;
+  flex: 0 0 13px;
+}
+
+.setting-icon::before,
+.setting-icon::after {
+  position: absolute;
+  content: "";
+  background: #596579;
+}
+
+.setting-icon.settings::before {
+  inset: 2px;
+  border: 2px solid #596579;
+  background: transparent;
+  border-radius: 50%;
+}
+
+.setting-icon.settings::after {
+  top: 5px;
+  left: 5px;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+}
+
+.setting-icon.admin::before,
+.setting-icon.site::before {
+  inset: 2px;
+  border: 1px solid #596579;
+  background: transparent;
+  border-radius: 2px;
+}
+
+.setting-icon.admin::after {
+  right: 3px;
+  bottom: 3px;
+  left: 3px;
+  height: 2px;
+}
+
+.setting-icon.site::after {
+  top: 6px;
+  right: 2px;
+  left: 2px;
+  height: 1px;
+}
+
+.setting-icon.feedback::before {
+  top: 1px;
+  left: 4px;
+  width: 5px;
+  height: 7px;
+  border: 1px solid #596579;
+  border-bottom: 0;
+  background: transparent;
+  border-radius: 6px 6px 0 0;
+}
+
+.setting-icon.feedback::after {
+  bottom: 1px;
+  left: 6px;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+}
+
+.setting-icon.logout::before {
+  top: 2px;
+  left: 1px;
+  width: 8px;
+  height: 9px;
+  border: 1px solid #596579;
+  background: transparent;
+  border-radius: 2px;
+}
+
+.setting-icon.logout::after {
+  top: 6px;
+  right: 1px;
+  width: 7px;
+  height: 1px;
+}
+
+.company {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  height: 28px;
+  align-items: center;
+  gap: 12px;
+  color: #303640;
+  font-size: 11px;
+  line-height: 28px;
+  padding: 0;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.avatar {
+  display: grid;
+  width: 25px;
+  height: 25px;
+  flex: 0 0 25px;
+  place-items: center;
+  overflow: hidden;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  background: #cfcfcf;
+  border-radius: 50%;
+}
+
+.avatar image {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.company-name {
+  display: block;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  line-height: 28px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.main-panel {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: calc(100vh - 36px);
+  padding-bottom: 126px;
+  background: #ffffff;
+}
+
+.collapse-button {
+  position: absolute;
+  top: 13px;
+  left: 15px;
+  z-index: 5;
+  display: grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.collapse-button.collapsed {
+  transform: rotate(180deg);
+}
+
+.collapse-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 67px;
+}
+
+.hero-title {
+  margin: 0 0 45px;
+  color: #2f333a;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.35;
+  letter-spacing: 0.5px;
+}
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 136px);
+  gap: 55px 38px;
+}
+
+.feature-card {
+  position: relative;
+  width: 136px;
+  height: 74px;
+  padding: 34px 17px 11px;
+  background: #f0f5fd;
+  border: 0;
+  border-radius: 10px;
+  box-shadow: none;
+  overflow: visible;
+}
+
+.feature-card:active {
+  box-shadow: 0 0 0 1px #cfe3ff, 0 5px 14px rgb(43 133 255 / 22%);
+}
+
+.feature-visual {
+  position: absolute;
+  top: -25px;
+  left: 50%;
+  width: 84px;
+  height: 58px;
+  transform: translateX(-50%);
+}
+
+.feature-svg {
+  width: 84px;
+  height: 58px;
+  display: block;
+}
+
+.feature-title {
+  display: block;
+  margin: 0 0 3px;
+  color: #1f2733;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.feature-description {
+  display: block;
+  overflow: hidden;
+  color: #647083;
+  font-size: 9px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.message-panel {
+  box-sizing: border-box;
+  height: calc(100vh - 162px);
+  margin: 46px 26px 0;
+  padding: 18px;
+  overflow: hidden;
+  background: #f7f9fc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  width: initial;
+}
+
+.message-stream {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.pending-bar {
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  color: #8a4b00;
+  font-size: 13px;
+  line-height: 1.4;
+  background: #fff7e6;
+  border: 1px solid #ffe0a3;
+  border-radius: 8px;
+}
+
+.message-row {
+  box-sizing: border-box;
+  display: flex;
+  justify-content: flex-start;
+  width: 100%;
+  max-width: 100%;
+  margin-bottom: 14px;
+  overflow: hidden;
+}
+
+.message-row.mine {
+  justify-content: flex-end;
+}
+
+.message-bubble {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: min(760px, 82%);
+  overflow: hidden;
+  padding: 12px 14px 10px;
+  background: #ffffff;
+  border: 1px solid #e4eaf2;
+  border-radius: 8px;
+  box-shadow: 0 4px 14px rgb(31 45 61 / 5%);
+}
+
+.message-row.mine .message-bubble {
+  color: #ffffff;
+  background: #1267ff;
+  border-color: #1267ff;
+}
+
+.message-content {
+  display: block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  color: inherit;
+  font-size: 14px;
+  line-height: 1.75;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.message-time {
+  display: block;
+  margin-top: 8px;
+  color: #9aa5b5;
+  font-size: 11px;
+  text-align: right;
+}
+
+.message-row.mine .message-time {
+  color: #d9e8ff;
+}
+
+.assistant-loading {
+  align-self: flex-start;
+  width: fit-content;
+  padding: 10px 12px;
+  color: #64748b;
+  font-size: 13px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.error-text {
+  position: absolute;
+  right: 16%;
+  bottom: 110px;
+  left: 16%;
+  margin: 0;
+  color: #d93025;
+  font-size: 12px;
+}
+
+.composer {
+  position: absolute;
+  right: 16%;
+  bottom: 27px;
+  left: 16%;
+  min-height: 74px;
+  padding: 12px 7px 7px 15px;
+  background: #ffffff;
+  border: 1px solid #98c5ff;
+  border-radius: 11px;
+  box-shadow: 0 0 0 1px rgb(31 126 255 / 5%), 0 4px 16px rgb(33 118 255 / 25%);
+}
+
+.editor-wrap {
+  position: relative;
+  min-height: 34px;
+}
+
+.message-placeholder {
+  position: absolute;
+  top: 0;
+  right: 8px;
+  left: 0;
+  z-index: 1;
+  color: #9aa3af;
+  font-size: 12px;
+  line-height: 20px;
+  pointer-events: none;
+}
+
+.message-input {
+  display: block;
+  width: 100%;
+  min-height: 34px;
+  max-height: 74px;
+  padding: 0 8px 0 0;
+  color: #1f2733;
+  font-size: 12px;
+  line-height: 20px;
+  background: transparent;
+}
+
+.composer-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 24px;
+}
+
+.quick-actions {
+  flex: 0 1 auto;
+  width: auto;
+  max-width: calc(100% - 47px);
+  min-width: 0;
+  color: #2f3743;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.quick-action-row {
+  display: inline-flex;
+  width: max-content;
+  align-items: center;
+  gap: 18px;
+  white-space: nowrap;
+}
+
+.plus {
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 20px;
+  color: #111827;
+  line-height: 20px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.quick-action {
+  display: inline-flex;
+  height: 20px;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 0;
+  padding: 0;
+  color: inherit;
+  font-size: 10px;
+  line-height: 20px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.quick-action.more {
+  gap: 4px;
+}
+
+.send-button {
+  position: relative;
+  display: inline-flex;
+  width: 23px;
+  height: 23px;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 23px;
+  margin-left: auto;
+  color: #ffffff;
+  background: #1267ff;
+  border-radius: 50%;
+  box-shadow: 0 4px 12px rgb(18 103 255 / 28%);
+  padding: 0;
+  border: 0;
+}
+
+.send-button[disabled] {
+  opacity: 1;
+}
+
+.send-button.is-disabled {
+  background: #86a8ff;
+  box-shadow: 0 4px 12px rgb(134 168 255 / 22%);
+}
+
+.board-mention-menu {
+  position: absolute;
+  right: auto;
+  bottom: auto;
+  z-index: 20;
+  width: 352px;
+  max-width: calc(100% - 32px);
+  overflow: hidden;
+  background: #ffffff;
+  border: 1px solid #e8eef8;
+  border-radius: 12px;
+  box-shadow: 0 16px 44px rgb(24 55 105 / 18%), 0 0 0 1px rgb(18 103 255 / 4%);
+}
+
+.board-menu-title {
+  display: flex;
+  height: 37px;
+  align-items: center;
+  padding: 0 13px;
+  color: #7a8494;
+  font-size: 12px;
+  line-height: 37px;
+  border-bottom: 1px solid #eef2f7;
+}
+
+.board-menu-list {
+  max-height: 372px;
+  padding: 6px;
+}
+
+.board-option {
+  display: flex;
+  width: 100%;
+  min-height: 58px;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  color: #1f2733;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-radius: 9px;
+  box-shadow: none;
+}
+
+.board-option:active {
+  background: #f2f7ff;
+}
+
+.board-icon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  flex: 0 0 34px;
+  overflow: hidden;
+  background: #f6f9ff;
+  border-radius: 9px;
+}
+
+.board-icon image {
+  width: 30px;
+  height: 30px;
+}
+
+.board-copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.board-name-row {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.board-name {
+  overflow: hidden;
+  min-width: 0;
+  color: #1f2733;
+  font-size: 13px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.board-alias {
+  flex: 0 0 auto;
+  color: #8d98aa;
+  font-size: 11px;
+}
+
+.board-description {
+  display: block;
+  overflow: hidden;
+  color: #647083;
+  font-size: 11px;
+  line-height: 16px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  background: rgb(0 0 0 / 12%);
+}
+
+.settings-panel {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  width: min(980px, calc(100vw - 96px));
+  height: min(720px, calc(100vh - 96px));
+  overflow: hidden;
+  background: #ffffff;
+  border: 1px solid #d8d8d8;
+  border-radius: 20px;
+  box-shadow: 0 24px 70px rgb(15 23 42 / 18%);
+}
+
+.settings-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 27px 24px;
+  background: #ffffff;
+}
+
+.settings-close {
+  position: relative;
+  display: flex;
+  width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 28px;
+  padding: 0;
+  overflow: visible;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+.close-icon {
+  position: relative;
+  display: block;
+  width: 20px;
+  height: 20px;
+}
+
+.close-icon::before,
+.close-icon::after {
+  position: absolute;
+  top: 9px;
+  left: 2px;
+  width: 16px;
+  height: 2px;
+  content: "";
+  background: #111111;
+  border-radius: 999px;
+}
+
+.close-icon::before {
+  transform: rotate(45deg);
+}
+
+.close-icon::after {
+  transform: rotate(-45deg);
+}
+
+.settings-nav-item {
+  display: flex;
+  width: 100%;
+  height: 44px;
+  align-items: center;
+  gap: 12px;
+  padding: 0 14px;
+  color: #181818;
+  font-size: 16px;
+  line-height: 44px;
+  text-align: left;
+  white-space: nowrap;
+  background: transparent;
+  border: 0;
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+.settings-nav-item.active {
+  background: #f2f2f2;
+}
+
+.settings-nav-icon {
+  position: relative;
+  width: 21px;
+  height: 21px;
+  flex: 0 0 21px;
+}
+
+.settings-nav-icon::before {
+  position: absolute;
+  top: 3px;
+  left: 6px;
+  width: 8px;
+  height: 8px;
+  content: "";
+  border: 2px solid #181818;
+  border-radius: 50%;
+}
+
+.settings-nav-icon::after {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  left: 2px;
+  height: 9px;
+  content: "";
+  border: 2px solid #181818;
+  border-top: 0;
+  border-radius: 10px 10px 0 0;
+}
+
+.settings-nav-item > text:last-child {
+  overflow: hidden;
+  min-width: 0;
+  line-height: 44px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-content {
+  height: 100%;
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.settings-content-inner {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  padding: 28px 64px 34px 16px;
+}
+
+.settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 24px;
+  border-bottom: 1px solid #dedede;
+}
+
+.settings-title {
+  color: #111111;
+  font-size: 25px;
+  font-weight: 600;
+}
+
+.settings-status {
+  color: #8b8b8b;
+  font-size: 13px;
+}
+
+.settings-section {
+  padding: 20px 0;
+  border-bottom: 1px solid #ebebeb;
+}
+
+.account-summary {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.avatar-preview {
+  display: grid;
+  width: 58px;
+  height: 58px;
+  flex: 0 0 auto;
+  place-items: center;
+  overflow: hidden;
+  color: #ffffff;
+  font-size: 22px;
+  font-weight: 700;
+  background: #111827;
+  border-radius: 50%;
+}
+
+.avatar-preview image {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.summary-text {
+  min-width: 0;
+  flex: 1;
+}
+
+.summary-name {
+  display: block;
+  overflow: hidden;
+  color: #151515;
+  font-size: 17px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.summary-email {
+  display: block;
+  overflow: hidden;
+  margin-top: 5px;
+  color: #6b6b6b;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.section-title {
+  display: block;
+  margin-bottom: 12px;
+  color: #111111;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.form-row,
+.readonly-row {
+  display: grid;
+  grid-template-columns: 148px minmax(0, 1fr);
+  min-height: 54px;
+  align-items: center;
+  gap: 20px;
+}
+
+.form-row > text,
+.readonly-row > text:first-child {
+  color: #111111;
+  font-size: 16px;
+}
+
+.form-row input,
+.readonly-row > text:last-child {
+  min-width: 0;
+  max-width: 520px;
+  justify-self: stretch;
+  color: #5b5b5b;
+  font-size: 16px;
+  font-weight: 400;
+  text-align: right;
+}
+
+.form-row input {
+  box-sizing: border-box;
+  height: 38px;
+  padding: 0 12px;
+  background: #f7f7f7;
+  border: 1px solid transparent;
+  border-radius: 9px;
+}
+
+.secondary-button,
+.ghost-button,
+.primary-button {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 36px;
+  border-radius: 999px;
+}
+
+.secondary-button,
+.ghost-button {
+  color: #111111;
+  background: #f4f4f4;
+}
+
+.primary-button {
+  color: #ffffff;
+  background: #111827;
+}
+
+.settings-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 20px;
+}
+
+button[disabled] {
+  opacity: 0.55;
+}
+
+@media (max-width: 760px) {
+  .top-strip {
+    height: 18px;
+  }
+
+  .workspace {
+    min-height: calc(100vh - 18px);
+  }
+
+  .sidebar {
+    width: 148px;
+    flex-basis: 148px;
+    padding: 10px 8px 74px;
+  }
+
+  .sidebar-content {
+    width: 132px;
+  }
+
+  .new-chat {
+    width: 126px;
+  }
+
+  .main-panel {
+    height: calc(100vh - 18px);
+    padding-bottom: 150px;
+  }
+
+  .hero {
+    padding-top: 58px;
+  }
+
+  .hero-title {
+    width: 76vw;
+    margin-bottom: 44px;
+    text-align: center;
+  }
+
+  .feature-grid {
+    grid-template-columns: repeat(2, 136px);
+    gap: 52px 18px;
+  }
+
+  .message-panel {
+    height: calc(100vh - 166px);
+    margin: 42px 12px 0;
+    padding: 12px;
+  }
+
+  .composer {
+    right: 12px;
+    bottom: 18px;
+    left: 12px;
+  }
+
+  .error-text {
+    right: 18px;
+    bottom: 118px;
+    left: 18px;
+  }
+
+  .board-mention-menu {
+    max-width: calc(100% - 24px);
+  }
+
+  .settings-overlay {
+    padding: 16px;
+  }
+
+  .settings-panel {
+    grid-template-columns: 128px minmax(0, 1fr);
+    width: calc(100vw - 32px);
+    height: calc(100vh - 32px);
+  }
+
+  .settings-nav {
+    padding: 22px 14px;
+  }
+
+  .settings-content-inner {
+    padding-right: 24px;
+  }
+
+  .form-row,
+  .readonly-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 8px 0;
+  }
+
+  .form-row input,
+  .readonly-row > text:last-child {
+    text-align: left;
+  }
+}
+</style>
