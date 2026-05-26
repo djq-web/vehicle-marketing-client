@@ -233,24 +233,31 @@
     </template>
 
     <template v-else-if="activeType === 'ecological-partner'">
-      <section class="page-hero partner-hero">
-        <text class="board-title">生态伙伴看板</text>
-        <text class="title-underline"></text>
-      </section>
+      <EcologicalPartnerMobile
+        v-if="isMobileLayout"
+        :cards="partnerCards"
+        @back="goHome"
+      />
+      <template v-else>
+        <section class="page-hero partner-hero">
+          <text class="board-title">生态伙伴看板</text>
+          <text class="title-underline"></text>
+        </section>
 
-      <section class="partner-grid">
-        <button
-          v-for="card in partnerCards"
-          :key="card.title"
-          class="partner-card"
-          :class="{ active: card.active }"
-        >
-          <view class="partner-image-wrap">
-            <image class="partner-image" :src="card.image" :alt="card.title" mode="aspectFill" />
-          </view>
-          <text>{{ card.title }}</text>
-        </button>
-      </section>
+        <section class="partner-grid">
+          <button
+            v-for="card in partnerCards"
+            :key="card.title"
+            class="partner-card"
+            :class="{ active: card.active }"
+          >
+            <view class="partner-image-wrap">
+              <image class="partner-image" :src="card.image" :alt="card.title" mode="aspectFill" />
+            </view>
+            <text>{{ card.title }}</text>
+          </button>
+        </section>
+      </template>
     </template>
   </view>
 </template>
@@ -258,6 +265,7 @@
 <script setup lang="ts">
 import { onLoad } from "@dcloudio/uni-app";
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import EcologicalPartnerMobile from "./components/EcologicalPartnerMobile.vue";
 import KeyMetricsDesktop from "./components/KeyMetricsDesktop.vue";
 import KeyMetricsMobile from "./components/KeyMetricsMobile.vue";
 import MarketFeedbackMobile from "./components/MarketFeedbackMobile.vue";
