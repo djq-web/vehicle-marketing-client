@@ -11,6 +11,7 @@ import type {
   StrategyChatSessionResponse,
   StrategyChatSessionSummary,
   StrategyFileUploadResponse,
+  StrategyReportResponse,
 } from "@/types/strategy";
 
 const BASE_CHAT_AGENT_CODE = "base_chat_agent";
@@ -353,6 +354,87 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
         throw err;
       } finally {
         this.uploading = false;
+      }
+    },
+    async openReport(
+      type: string,
+      options: { diagnosisId?: string | null } = {},
+    ) {
+      this.ensureClientStrategyAvailable();
+
+      if (!type || this.loading || this.uploading) {
+        return;
+      }
+
+      this.error = "";
+      this.loading = true;
+
+      try {
+        const targetDiagnosisId = options.diagnosisId || undefined;
+        const isCurrentDiagnosisReport =
+          !targetDiagnosisId || targetDiagnosisId === this.diagnosisId;
+        let result = await request<StrategyReportResponse>(
+          `/strategy/reports/${encodeURIComponent(type)}`,
+          {
+            query: {
+              tenantId: this.getTenantId(),
+              diagnosisId: targetDiagnosisId,
+            },
+          },
+        );
+
+        if (result.report.needsSync && isCurrentDiagnosisReport) {
+          await request("/strategy/reports/sync", {
+            method: "POST",
+            data: {
+              tenantId: this.getTenantId(),
+              types: [type],
+            },
+          });
+          result = await request<StrategyReportResponse>(
+            `/strategy/reports/${encodeURIComponent(type)}`,
+            {
+              query: {
+                tenantId: this.getTenantId(),
+                diagnosisId: targetDiagnosisId,
+              },
+            },
+          );
+        }
+
+        if (isCurrentDiagnosisReport) {
+          this.diagnosisId = result.diagnosisId;
+        }
+
+        const title = result.report.title || "战略报告";
+        const message: AgentMessage = {
+          id: `local-report-${result.report.type}-${Date.now()}`,
+          sessionId: this.sessionId ?? "local",
+          role: "ASSISTANT",
+          content: `已为您打开《${title}》。`,
+          metadata: {
+            source: "strategy_report_detail",
+            tenantId: result.tenantId,
+            diagnosisId: result.diagnosisId,
+            ui: result.ui,
+            card: {
+              reason: "strategy_report",
+              tenantId: result.tenantId,
+              diagnosisId: result.diagnosisId,
+              ui: result.ui,
+              report: result.report,
+              nextActions: result.nextActions,
+            },
+          },
+          createdAt: new Date().toISOString(),
+        };
+
+        this.messages = [...this.messages, message];
+      } catch (err) {
+        this.error = err instanceof Error ? err.message : "读取报告失败";
+        throw err;
+      } finally {
+        this.loading = false;
       }
     },
   },

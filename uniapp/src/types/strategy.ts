@@ -22,6 +22,38 @@ export type StrategyUiDescriptor = {
   mode?: string;
 };
 
+export type StrategyFileAsset = {
+  id: string;
+  originalName: string;
+  mimeType?: string | null;
+  size: number;
+  status: string;
+  extractedTextLength?: number;
+  metadata?: Record<string, unknown> | null;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type StrategyFormField = {
+  key: string;
+  label: string;
+  value: unknown;
+  status: string;
+  confidence?: number | null;
+  source?: string | null;
+  required?: boolean;
+};
+
+export type StrategyFrameworkPoint = {
+  code: string;
+  title: string;
+  category?: string | null;
+  summary?: string | null;
+  recommendation?: string | null;
+  confidence?: number | null;
+  source?: string | null;
+};
+
 export type PendingFrameworkUpdate = {
   id: string;
   status: "pending";
@@ -106,19 +138,40 @@ export type AgentChatMessageResponse = {
   ui: StrategyUiDescriptor;
 };
 
+export type StrategyReportSummary = {
+  id: string;
+  diagnosisId?: string | null;
+  type: string;
+  title?: string | null;
+  status: string;
+  generatedAt?: string | null;
+  isGenerated: boolean;
+  needsSync: boolean;
+};
+
+export type StrategyReportDetail = StrategyReportSummary & {
+  content?: string | null;
+  structuredContent?: unknown;
+  error?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type StrategyReportResponse = {
+  tenantId: string;
+  diagnosisId: string;
+  report: StrategyReportDetail;
+  nextActions: string[];
+  ui: StrategyUiDescriptor;
+};
+
 export type StrategyFileUploadResponse = {
   tenantId: string;
   diagnosisId: string;
   sessionId: string;
   status: string;
   reason: string;
-  file: {
-    id: string;
-    originalName: string;
-    mimeType?: string | null;
-    size: number;
-    status: string;
-  };
+  file: StrategyFileAsset;
   extractedFields: Record<string, unknown>;
   sourceSummary: Record<string, unknown>;
   message: string;

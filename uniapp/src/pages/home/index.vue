@@ -91,6 +91,12 @@
             >
               <view class="message-bubble">
                 <text class="message-content">{{ message.content }}</text>
+                <StrategyMessageCard
+                  v-if="message.metadata?.card"
+                  :metadata="message.metadata"
+                  :actions-disabled="isBusy"
+                  @action="handleCardAction"
+                />
                 <text class="message-time">{{ formatTime(message.createdAt) }}</text>
               </view>
             </view>
@@ -153,7 +159,7 @@
         <view class="composer">
           <view class="editor-wrap">
             <text v-if="!draft" class="message-placeholder">
-              发消息......输入“@”选择看板、输入“/”选择技能
+              {{ composerPlaceholder }}
             </text>
             <textarea
               v-model="draft"
@@ -165,6 +171,7 @@
               @confirm="sendMessage"
               @focus="handleEditorFocus"
               @input="handleDraftInput"
+              @keydown="handleEditorKeydown"
               @tap="handleEditorPointerEnd"
             />
           </view>
@@ -175,17 +182,31 @@
                 <button class="plus" :disabled="isBusy" @click="chooseMaterial">
                   <uni-icons type="plusempty" size="18" color="#111827" />
                 </button>
+                <view class="tool-divider"></view>
                 <button
-                  v-for="action in quickActions"
+                  v-if="activeComposerModeMeta"
+                  class="mode-chip"
+                  :disabled="isBusy"
+                  @click="cancelComposerMode"
+                >
+                  <text>{{ activeComposerModeMeta.label }}</text>
+                  <text class="chip-close">×</text>
+                </button>
+                <button
+                  v-for="action in visibleQuickActions"
                   :key="action.label"
                   class="quick-action"
                   :disabled="isBusy"
                   @click="handleQuickAction(action)"
                 >
-                  {{ action.label }}
+                  <text>{{ action.label }}</text>
                 </button>
-                <button class="quick-action more">
-                  <uni-icons type="list" size="13" color="#2f3743" />
+                <button
+                  class="quick-action more"
+                  :class="{ active: isMoreMenuVisible }"
+                  :disabled="isBusy"
+                  @click="toggleMoreMenu"
+                >
                   <text>更多</text>
                 </button>
               </view>
@@ -197,6 +218,20 @@
               @click="sendMessage"
             >
               <uni-icons type="arrow-up" size="17" color="#ffffff" />
+            </button>
+          </view>
+
+          <view v-if="isMoreMenuVisible" class="composer-more-menu">
+            <button
+              v-for="item in moreActions"
+              :key="item.label"
+              class="more-menu-item"
+              @click="handleMoreAction(item)"
+            >
+              <view>
+                <text>{{ item.label }}</text>
+                <text>{{ item.description }}</text>
+              </view>
             </button>
           </view>
         </view>
@@ -319,6 +354,7 @@ import { request } from "@/services/api";
 import { useAuthStore } from "@/stores/auth";
 import { useStrategyChatStore } from "@/stores/strategyChat";
 import type { LoginResponse } from "@/types/strategy";
+import StrategyMessageCard from "./components/StrategyMessageCard.vue";
 
 type BoardType =
   | "brand-strategy"
@@ -348,7 +384,26 @@ type BoardOption = {
 type QuickAction =
   | { label: string; type: "board" }
   | { label: string; type: "upload" }
-  | { label: string; type: "prompt"; prompt: string; strategy?: boolean };
+  | { label: string; type: "mode"; mode: ComposerModeId }
+  | {
+      label: string;
+      type: "prompt";
+      prompt: string;
+      strategy?: boolean;
+    };
+
+type ComposerModeId = "strategy";
+
+type ComposerMode = {
+  id: ComposerModeId;
+  label: string;
+  placeholder: string;
+};
+
+type MoreAction = {
+  label: string;
+  description: string;
+};
 
 type PickedFile = {
   path?: string;
@@ -403,6 +458,8 @@ const isSidebarCollapsed = ref(false);
 const isCompanyMenuVisible = ref(false);
 const isSettingsVisible = ref(false);
 const isBoardMenuVisible = ref(false);
+const isMoreMenuVisible = ref(false);
+const activeComposerMode = ref<ComposerModeId | null>(null);
 const boardMenuQuery = ref("");
 const boardMenuTrigger = ref<BoardTrigger | null>(null);
 const boardMenuStyle = ref("left:16px;top:96px;width:320px;");
@@ -480,12 +537,46 @@ const fallbackChats = [
 ];
 
 const quickActions: QuickAction[] = [
-  { label: "@看板", type: "board" },
+  { label: "/ 看板", type: "board" },
   { label: "/ 任务管理", type: "prompt", prompt: "创建任务管理计划" },
-  { label: "/ 战略诊断", type: "prompt", prompt: "开始战略诊断", strategy: true },
+  { label: "/ 战略诊断", type: "mode", mode: "strategy" },
   { label: "/ 战略拆解", type: "prompt", prompt: "生成19点战略框架", strategy: true },
   { label: "/ 上传素材", type: "upload" },
   { label: "/ 图文营销", type: "prompt", prompt: "生成图文营销方案" },
+];
+
+const strategyModeActions: QuickAction[] = [
+  { label: "/ 上传资料", type: "upload" },
+  { label: "/ 战略拆解", type: "prompt", prompt: "生成19点战略框架", strategy: true },
+  { label: "/ 生成报告", type: "prompt", prompt: "生成全部7份战略报告", strategy: true },
+  { label: "/ 打开看板", type: "prompt", prompt: "打开品牌战略看板", strategy: true },
+];
+
+const composerModes: Record<ComposerModeId, ComposerMode> = {
+  strategy: {
+    id: "strategy",
+    label: "战略诊断",
+    placeholder: "描述企业现状、市场问题或你想诊断的战略方向",
+  },
+};
+
+const moreActions: MoreAction[] = [
+  {
+    label: "PPT 生成",
+    description: "把当前方案整理为演示稿",
+  },
+  {
+    label: "AI 表格",
+    description: "生成结构化计划和指标表",
+  },
+  {
+    label: "图像生成",
+    description: "生成营销图片和视觉素材",
+  },
+  {
+    label: "超能模式",
+    description: "更深度的策略推理模式",
+  },
 ];
 
 const boardOptions: BoardOption[] = ([
@@ -546,6 +637,44 @@ const settingItems = [
   { label: "问题反馈", action: "feedback" },
   { label: "退出登录", action: "logout" },
 ] as const;
+
+const actionPrompts: Record<string, string> = {
+  start_diagnosis: "开始战略诊断",
+  provide_info: "我想补充企业信息",
+  view_files: "查看当前资料",
+  generate_form: "生成战略分析表单",
+  confirm_form: "确认",
+  generate_framework: "生成19点战略框架",
+  refine_framework: "请基于当前19点战略框架生成需要继续追问的问题",
+  confirm_framework: "确认",
+  generate_reports: "生成全部7份战略报告",
+  wait_reports: "查看当前诊断进度",
+  sync_reports: "同步报告",
+  view_enterprise_diagnosis_report: "查看企业战略诊断报告",
+  view_enterprise_solution_report: "查看企业战略方案报告",
+  view_beidou_declaration: "查看北斗宣言",
+  view_strategy_positioning_report: "查看战略定位报告",
+  view_advantages_barriers_report: "查看优势与壁垒报告",
+  view_business_model_panorama: "查看商业模式全景图",
+  view_brand_experience_blueprint: "查看品牌与体验蓝图",
+  rediagnose: "重新诊断",
+  confirm_framework_update: "确认修改",
+  cancel_framework_update: "取消修改",
+  continue_refine_framework: "继续完善19点战略框架",
+  answer_refinement_questions: "我来回答追问问题",
+  update_framework: "提交框架修改",
+  check_status: "查看当前诊断进度",
+};
+
+const reportActionTypes: Record<string, string> = {
+  view_enterprise_diagnosis_report: "enterprise_diagnosis",
+  view_enterprise_solution_report: "enterprise_solution",
+  view_beidou_declaration: "beidou_declaration",
+  view_strategy_positioning_report: "strategy_positioning",
+  view_advantages_barriers_report: "advantages_barriers",
+  view_business_model_panorama: "business_model_panorama",
+  view_brand_experience_blueprint: "brand_experience_blueprint",
+};
 
 const isBusy = computed(
   () => pageLoading.value || chatStore.loading || chatStore.uploading,
@@ -614,6 +743,15 @@ const filteredBoards = computed(() => {
 
   return boardOptions.filter((board) => board.searchText.includes(query));
 });
+const activeComposerModeMeta = computed(() =>
+  activeComposerMode.value ? composerModes[activeComposerMode.value] : null,
+);
+const composerPlaceholder = computed(
+  () => activeComposerModeMeta.value?.placeholder || "发消息...",
+);
+const visibleQuickActions = computed(() =>
+  activeComposerMode.value === "strategy" ? strategyModeActions : quickActions,
+);
 
 onLoad(async () => {
   authStore.restore();
@@ -841,16 +979,122 @@ async function handleFeatureSelect(feature: Feature) {
 
 function handleQuickAction(action: QuickAction) {
   if (action.type === "board") {
+    closeMoreMenu();
     openBoardMenuFromAction();
     return;
   }
 
   if (action.type === "upload") {
+    closeMoreMenu();
     chooseMaterial();
     return;
   }
 
+  if (action.type === "mode") {
+    activeComposerMode.value = action.mode;
+    closeMoreMenu();
+    closeBoardMenu();
+    syncNativeTextareaCursor();
+    return;
+  }
+
+  closeMoreMenu();
   sendPreset(action.prompt, Boolean(action.strategy));
+}
+
+function cancelComposerMode() {
+  activeComposerMode.value = null;
+  closeMoreMenu();
+}
+
+function toggleMoreMenu() {
+  clearBoardMenuCloseTimer();
+  closeBoardMenu();
+  isMoreMenuVisible.value = !isMoreMenuVisible.value;
+}
+
+function closeMoreMenu() {
+  isMoreMenuVisible.value = false;
+}
+
+function handleMoreAction(item: MoreAction) {
+  closeMoreMenu();
+  uni.showToast({
+    title: `${item.label} 暂未接入`,
+    icon: "none",
+  });
+}
+
+async function handleCardAction(
+  action: string,
+  payload?: Record<string, unknown>,
+) {
+  if (isBusy.value) {
+    return;
+  }
+
+  if (action === "open_dashboard") {
+    navigateBoard("brand-strategy");
+    return;
+  }
+
+  if (action === "view_report") {
+    const reportType = typeof payload?.type === "string" ? payload.type : "";
+    const diagnosisId =
+      typeof payload?.diagnosisId === "string" ? payload.diagnosisId : null;
+
+    if (reportType) {
+      try {
+        await chatStore.openReport(reportType, { diagnosisId });
+        await scrollToBottom();
+      } catch (err) {
+        showError(err, "读取报告失败");
+      }
+    }
+    return;
+  }
+
+  const mappedReportType = reportActionTypes[action];
+
+  if (mappedReportType) {
+    try {
+      await chatStore.openReport(mappedReportType);
+      await scrollToBottom();
+    } catch (err) {
+      showError(err, "读取报告失败");
+    }
+    return;
+  }
+
+  if (action === "upload_files" || action === "upload_more_files") {
+    chooseMaterial();
+    return;
+  }
+
+  if (action === "supplement_form") {
+    uni.showToast({
+      title: "请在输入框按字段名补充缺失内容",
+      icon: "none",
+    });
+    return;
+  }
+
+  const prompt = actionPrompts[action];
+
+  if (!prompt) {
+    uni.showToast({
+      title: "请在输入框补充具体内容",
+      icon: "none",
+    });
+    return;
+  }
+
+  try {
+    await chatStore.sendStrategy(prompt);
+    await scrollToBottom();
+  } catch (err) {
+    showError(err, "发送失败");
+  }
 }
 
 function handleDraftInput(event: Event) {
@@ -870,6 +1114,7 @@ function handleDraftInput(event: Event) {
 }
 
 function handleEditorFocus() {
+  closeMoreMenu();
   clearBoardMenuCloseTimer();
   syncNativeTextareaCursor();
   updateBoardMenu();
@@ -887,6 +1132,15 @@ function handleEditorPointerEnd() {
     syncNativeTextareaCursor();
     updateBoardMenu();
   }, 0);
+}
+
+function handleEditorKeydown(event: KeyboardEvent) {
+  if (event.key !== "Enter" || event.shiftKey || event.isComposing) {
+    return;
+  }
+
+  event.preventDefault();
+  sendMessage();
 }
 
 function clearBoardMenuCloseTimer() {
@@ -967,6 +1221,7 @@ function closeBoardMenu() {
 }
 
 function openBoardMenuFromAction() {
+  closeMoreMenu();
   clearBoardMenuCloseTimer();
   syncNativeTextareaCursor();
   updateBoardMenu({ force: true });
@@ -1117,9 +1372,14 @@ async function sendMessage() {
 
   draft.value = "";
   closeBoardMenu();
+  closeMoreMenu();
 
   try {
-    await chatStore.sendBase(content);
+    if (activeComposerMode.value === "strategy") {
+      await chatStore.sendStrategy(content);
+    } else {
+      await chatStore.sendBase(content);
+    }
     await scrollToBottom();
   } catch (err) {
     draft.value = content;
@@ -1130,6 +1390,7 @@ async function sendMessage() {
 function selectBoard(board: BoardOption) {
   draft.value = "";
   closeBoardMenu();
+  closeMoreMenu();
   navigateBoard(board.id);
 }
 
@@ -1143,6 +1404,8 @@ function chooseMaterial() {
   if (isBusy.value) {
     return;
   }
+
+  closeMoreMenu();
 
   // #ifdef MP-WEIXIN
   uni.chooseMessageFile({
@@ -1596,7 +1859,7 @@ function showError(err: unknown, fallback: string) {
   flex: 1;
   min-width: 0;
   height: calc(100vh - 36px);
-  padding-bottom: 126px;
+  padding-bottom: 156px;
   background: #ffffff;
 }
 
@@ -1699,7 +1962,7 @@ function showError(err: unknown, fallback: string) {
 
 .message-panel {
   box-sizing: border-box;
-  height: calc(100vh - 162px);
+  height: calc(100vh - 184px);
   margin: 46px 26px 0;
   padding: 18px;
   overflow: hidden;
@@ -1805,43 +2068,47 @@ function showError(err: unknown, fallback: string) {
 
 .composer {
   position: absolute;
-  right: 16%;
+  right: auto;
   bottom: 27px;
-  left: 16%;
-  min-height: 74px;
-  padding: 12px 7px 7px 15px;
+  left: 50%;
+  width: 68%;
+  max-width: 1080px;
+  min-width: 720px;
+  min-height: 82px;
+  padding: 12px 12px 10px 18px;
   background: #ffffff;
-  border: 1px solid #98c5ff;
-  border-radius: 11px;
-  box-shadow: 0 0 0 1px rgb(31 126 255 / 5%), 0 4px 16px rgb(33 118 255 / 25%);
+  border: 1px solid #a9c7ff;
+  border-radius: 22px;
+  box-shadow: 0 0 0 1px rgb(31 126 255 / 4%), 0 10px 28px rgb(42 103 255 / 12%);
+  transform: translateX(-50%);
 }
 
 .editor-wrap {
   position: relative;
-  min-height: 34px;
+  min-height: 32px;
 }
 
 .message-placeholder {
   position: absolute;
   top: 0;
-  right: 8px;
+  right: 12px;
   left: 0;
   z-index: 1;
-  color: #9aa3af;
-  font-size: 12px;
-  line-height: 20px;
+  color: #a3a3a3;
+  font-size: 14px;
+  line-height: 22px;
   pointer-events: none;
 }
 
 .message-input {
   display: block;
   width: 100%;
-  min-height: 34px;
-  max-height: 74px;
-  padding: 0 8px 0 0;
+  min-height: 32px;
+  max-height: 88px;
+  padding: 0 12px 0 0;
   color: #1f2733;
-  font-size: 12px;
-  line-height: 20px;
+  font-size: 14px;
+  line-height: 22px;
   background: transparent;
 }
 
@@ -1850,16 +2117,16 @@ function showError(err: unknown, fallback: string) {
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  min-height: 24px;
+  min-height: 28px;
 }
 
 .quick-actions {
-  flex: 0 1 auto;
-  width: auto;
-  max-width: calc(100% - 47px);
+  flex: 1 1 auto;
+  width: 0;
+  max-width: none;
   min-width: 0;
-  color: #2f3743;
-  font-size: 10px;
+  color: #111827;
+  font-size: 12px;
   white-space: nowrap;
 }
 
@@ -1867,19 +2134,19 @@ function showError(err: unknown, fallback: string) {
   display: inline-flex;
   width: max-content;
   align-items: center;
-  gap: 18px;
+  gap: 14px;
   white-space: nowrap;
 }
 
 .plus {
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  flex: 0 0 20px;
+  flex: 0 0 24px;
   color: #111827;
-  line-height: 20px;
+  line-height: 24px;
   padding: 0;
   background: transparent;
   border: 0;
@@ -1887,19 +2154,26 @@ function showError(err: unknown, fallback: string) {
   box-shadow: none;
 }
 
+.tool-divider {
+  width: 1px;
+  height: 18px;
+  flex: 0 0 1px;
+  background: #e0e3e8;
+}
+
 .quick-action {
   display: inline-flex;
-  height: 20px;
+  height: 26px;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: 0;
   flex: 0 0 auto;
   width: auto;
   min-width: 0;
   padding: 0;
   color: inherit;
-  font-size: 10px;
-  line-height: 20px;
+  font-size: 12px;
+  line-height: 26px;
   background: transparent;
   border: 0;
   border-radius: 0;
@@ -1907,18 +2181,176 @@ function showError(err: unknown, fallback: string) {
 }
 
 .quick-action.more {
-  gap: 4px;
+  gap: 6px;
+}
+
+.quick-action.active {
+  color: #1267ff;
+}
+
+.mode-chip {
+  display: inline-flex;
+  width: auto;
+  height: 26px;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 0 10px;
+  color: #1267ff;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 26px;
+  background: #eef4ff;
+  border: 0;
+  border-radius: 13px;
+  box-shadow: none;
+}
+
+.mode-chip::after {
+  border: 0;
+}
+
+.chip-close {
+  color: #6f9bff;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.tool-icon {
+  position: relative;
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+}
+
+.tool-icon.board::before,
+.tool-icon.task::before,
+.tool-icon.split::before,
+.tool-icon.upload::before,
+.tool-icon.image::before,
+.tool-icon.strategy::before,
+.tool-icon.report::before,
+.tool-icon.ppt::before,
+.tool-icon.table::before,
+.tool-icon.power::before {
+  position: absolute;
+  inset: 2px;
+  content: "";
+  border: 1.6px solid currentColor;
+  border-radius: 4px;
+}
+
+.tool-icon.board::after {
+  position: absolute;
+  top: 7px;
+  left: 5px;
+  width: 8px;
+  height: 1.6px;
+  content: "";
+  background: currentColor;
+  box-shadow: 0 4px 0 currentColor;
+}
+
+.tool-icon.task::after {
+  position: absolute;
+  top: 5px;
+  left: 6px;
+  width: 7px;
+  height: 1.6px;
+  content: "";
+  background: currentColor;
+  box-shadow: 0 4px 0 currentColor, 0 8px 0 currentColor;
+}
+
+.tool-icon.split::before {
+  border-radius: 50%;
+}
+
+.tool-icon.split::after {
+  position: absolute;
+  top: 3px;
+  left: 8px;
+  width: 2px;
+  height: 12px;
+  content: "";
+  background: currentColor;
+  transform: rotate(28deg);
+}
+
+.tool-icon.upload::after {
+  position: absolute;
+  top: 4px;
+  left: 6px;
+  width: 6px;
+  height: 6px;
+  content: "";
+  border-top: 1.8px solid currentColor;
+  border-left: 1.8px solid currentColor;
+  transform: rotate(45deg);
+}
+
+.tool-icon.image::after {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  left: 4px;
+  height: 6px;
+  content: "";
+  background: linear-gradient(135deg, transparent 42%, currentColor 43% 58%, transparent 59%);
+}
+
+.tool-icon.strategy::before {
+  border-radius: 50%;
+}
+
+.tool-icon.strategy::after {
+  position: absolute;
+  top: 2px;
+  left: 8px;
+  width: 2px;
+  height: 14px;
+  content: "";
+  background: currentColor;
+  transform: rotate(28deg);
+}
+
+.tool-icon.report::after,
+.tool-icon.ppt::after,
+.tool-icon.table::after {
+  position: absolute;
+  inset: 6px 4px auto;
+  height: 1.5px;
+  content: "";
+  background: currentColor;
+  box-shadow: 0 4px 0 currentColor;
+}
+
+.tool-icon.power::before {
+  border-radius: 50%;
+}
+
+.tool-icon.power::after {
+  position: absolute;
+  top: 1px;
+  left: 8px;
+  width: 2px;
+  height: 8px;
+  content: "";
+  background: currentColor;
 }
 
 .send-button {
   position: relative;
   display: inline-flex;
-  width: 23px;
-  height: 23px;
+  width: 30px;
+  height: 30px;
   align-items: center;
   justify-content: center;
-  flex: 0 0 23px;
-  margin-left: auto;
+  flex: 0 0 30px;
+  margin-left: 12px;
   color: #ffffff;
   background: #1267ff;
   border-radius: 50%;
@@ -1932,8 +2364,68 @@ function showError(err: unknown, fallback: string) {
 }
 
 .send-button.is-disabled {
-  background: #86a8ff;
-  box-shadow: 0 4px 12px rgb(134 168 255 / 22%);
+  background: #eff1f5;
+  box-shadow: none;
+}
+
+.composer-more-menu {
+  position: absolute;
+  right: 48px;
+  bottom: 48px;
+  z-index: 30;
+  width: 222px;
+  padding: 8px;
+  background: #ffffff;
+  border: 1px solid #e6ecf5;
+  border-radius: 14px;
+  box-shadow: 0 18px 45px rgb(31 45 61 / 18%);
+}
+
+.more-menu-item {
+  display: flex;
+  width: 100%;
+  height: 52px;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 0 10px;
+  color: #182030;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-radius: 10px;
+  box-shadow: none;
+}
+
+.more-menu-item::after {
+  border: 0;
+}
+
+.more-menu-item:active {
+  background: #f3f6fb;
+}
+
+.more-menu-item view {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.more-menu-item view text:first-child {
+  color: #182030;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.more-menu-item view text:last-child {
+  overflow: hidden;
+  color: #8792a3;
+  font-size: 11px;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .board-mention-menu {
@@ -2369,7 +2861,7 @@ button[disabled] {
 
   .main-panel {
     height: calc(100vh - 18px);
-    padding-bottom: 150px;
+    padding-bottom: 176px;
   }
 
   .hero {
@@ -2388,7 +2880,7 @@ button[disabled] {
   }
 
   .message-panel {
-    height: calc(100vh - 166px);
+    height: calc(100vh - 188px);
     margin: 42px 12px 0;
     padding: 12px;
   }
@@ -2397,6 +2889,9 @@ button[disabled] {
     right: 12px;
     bottom: 18px;
     left: 12px;
+    width: auto;
+    min-width: 0;
+    transform: none;
   }
 
   .error-text {
