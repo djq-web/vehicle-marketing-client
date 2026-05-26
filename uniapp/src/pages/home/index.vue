@@ -1,8 +1,26 @@
 <template>
-  <view class="home-page">
+  <view class="home-page" :style="homePageStyle">
+    <view class="mobile-nav">
+      <view class="mobile-nav-content">
+        <button class="mobile-menu-button" @click="toggleMobileSidebar">
+          <text></text>
+          <text></text>
+          <text></text>
+        </button>
+        <text class="mobile-nav-title">车肆</text>
+      </view>
+    </view>
+    <view
+      v-if="isMobileSidebarOpen"
+      class="mobile-sidebar-mask"
+      @click="closeMobileSidebar"
+    ></view>
     <view class="top-strip"></view>
     <view class="workspace">
-      <view class="sidebar" :class="{ collapsed: isSidebarCollapsed }">
+      <view
+        class="sidebar"
+        :class="{ collapsed: isSidebarCollapsed, 'mobile-open': isMobileSidebarOpen }"
+      >
         <view v-if="!isSidebarCollapsed" class="sidebar-content">
           <view class="brand-mark">
             <view class="brand-circle">肆</view>
@@ -108,7 +126,10 @@
         </scroll-view>
 
         <view v-else class="hero">
-          <text class="hero-title">别再问我怎么搞钱了！用好车肆，先赚一个小目标！</text>
+          <view class="hero-title">
+            <text>别再问我怎么搞钱了！</text>
+            <text>用好车肆，先赚一个小目标！</text>
+          </view>
           <view class="feature-grid">
             <button
               v-for="feature in features"
@@ -218,6 +239,13 @@
               @click="sendMessage"
             >
               <uni-icons type="arrow-up" size="17" color="#ffffff" />
+            </button>
+            <button
+              class="mobile-attach-button"
+              :disabled="isBusy"
+              @click="chooseMaterial"
+            >
+              <uni-icons type="plusempty" size="20" color="#303030" />
             </button>
           </view>
 
@@ -459,7 +487,12 @@ const isCompanyMenuVisible = ref(false);
 const isSettingsVisible = ref(false);
 const isBoardMenuVisible = ref(false);
 const isMoreMenuVisible = ref(false);
+const isMobileSidebarOpen = ref(false);
 const activeComposerMode = ref<ComposerModeId | null>(null);
+const mobileStatusBarHeight = ref(0);
+const mobileNavHeight = ref(56);
+const mobileNavContentHeight = ref(44);
+const mobileRightSafeWidth = ref(58);
 const boardMenuQuery = ref("");
 const boardMenuTrigger = ref<BoardTrigger | null>(null);
 const boardMenuStyle = ref("left:16px;top:96px;width:320px;");
@@ -743,6 +776,15 @@ const filteredBoards = computed(() => {
 
   return boardOptions.filter((board) => board.searchText.includes(query));
 });
+const homePageStyle = computed(
+  () =>
+    ({
+      "--mobile-status-height": `${mobileStatusBarHeight.value}px`,
+      "--mobile-nav-height": `${mobileNavHeight.value}px`,
+      "--mobile-nav-content-height": `${mobileNavContentHeight.value}px`,
+      "--mobile-right-safe-width": `${mobileRightSafeWidth.value}px`,
+    }) as Record<string, string>,
+);
 const activeComposerModeMeta = computed(() =>
   activeComposerMode.value ? composerModes[activeComposerMode.value] : null,
 );
@@ -754,6 +796,7 @@ const visibleQuickActions = computed(() =>
 );
 
 onLoad(async () => {
+  initMobileChrome();
   authStore.restore();
   applyLocalSettings();
 
@@ -782,6 +825,14 @@ watch(
 function toggleSidebar() {
   isSidebarCollapsed.value = !isSidebarCollapsed.value;
   isCompanyMenuVisible.value = false;
+}
+
+function toggleMobileSidebar() {
+  isMobileSidebarOpen.value = !isMobileSidebarOpen.value;
+}
+
+function closeMobileSidebar() {
+  isMobileSidebarOpen.value = false;
 }
 
 function toggleCompanyMenu() {
@@ -946,6 +997,7 @@ async function refresh() {
 async function createSession() {
   try {
     await chatStore.createSession();
+    closeMobileSidebar();
     await scrollToBottom();
   } catch (err) {
     showError(err, "创建会话失败");
@@ -955,6 +1007,7 @@ async function createSession() {
 async function selectSession(sessionId: string) {
   try {
     await chatStore.selectSession(sessionId);
+    closeMobileSidebar();
     await scrollToBottom();
   } catch (err) {
     showError(err, "读取会话失败");
@@ -1395,9 +1448,31 @@ function selectBoard(board: BoardOption) {
 }
 
 function navigateBoard(type: BoardType) {
+  closeMobileSidebar();
   uni.navigateTo({
     url: `/pages/boards/basic?type=${encodeURIComponent(type)}`,
   });
+}
+
+function initMobileChrome() {
+  const systemInfo = uni.getSystemInfoSync();
+  const statusBarHeight = systemInfo.statusBarHeight || 0;
+
+  mobileStatusBarHeight.value = statusBarHeight;
+  mobileNavContentHeight.value = 44;
+  mobileNavHeight.value = statusBarHeight + 56;
+  mobileRightSafeWidth.value = 58;
+
+  // #ifdef MP-WEIXIN
+  const menuButton = uni.getMenuButtonBoundingClientRect();
+  const topGap = Math.max(0, menuButton.top - statusBarHeight);
+  const bottomGap = topGap || 6;
+
+  mobileNavContentHeight.value = menuButton.height;
+  mobileNavHeight.value = menuButton.bottom + bottomGap;
+  mobileRightSafeWidth.value =
+    Math.max(88, systemInfo.windowWidth - menuButton.left) + 12;
+  // #endif
 }
 
 function chooseMaterial() {
@@ -1493,6 +1568,12 @@ function showError(err: unknown, fallback: string) {
   min-height: 100vh;
   overflow: hidden;
   background: #ffffff;
+}
+
+.mobile-nav,
+.mobile-sidebar-mask,
+.mobile-attach-button {
+  display: none;
 }
 
 .top-strip {
@@ -1896,12 +1977,19 @@ function showError(err: unknown, fallback: string) {
 }
 
 .hero-title {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
   margin: 0 0 45px;
   color: #2f333a;
   font-size: 18px;
   font-weight: 800;
   line-height: 1.35;
   letter-spacing: 0.5px;
+}
+
+.hero-title text {
+  display: inline;
 }
 
 .feature-grid {
@@ -2837,66 +2925,366 @@ button[disabled] {
 }
 
 @media (max-width: 760px) {
+  .home-page {
+    min-height: 100vh;
+    min-height: 100dvh;
+    background: #ffffff;
+  }
+
+  .mobile-nav {
+    position: fixed;
+    top: 0;
+    right: 0;
+    left: 0;
+    z-index: 1200;
+    box-sizing: border-box;
+    display: block;
+    height: var(--mobile-nav-height);
+    padding-top: var(--mobile-status-height);
+    background: #ffffff;
+  }
+
+  .mobile-nav-content {
+    position: relative;
+    display: flex;
+    height: var(--mobile-nav-content-height);
+    align-items: center;
+    padding: 0 var(--mobile-right-safe-width) 0 24px;
+  }
+
+  .mobile-menu-button {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    width: 34px;
+    height: 34px;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 5px;
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .mobile-menu-button::after {
+    border: 0;
+  }
+
+  .mobile-menu-button text {
+    display: block;
+    width: 22px;
+    height: 2px;
+    background: #303030;
+    border-radius: 999px;
+  }
+
+  .mobile-nav-title {
+    position: absolute;
+    right: var(--mobile-right-safe-width);
+    left: 58px;
+    overflow: hidden;
+    color: #000000;
+    font-size: 17px;
+    font-weight: 800;
+    line-height: var(--mobile-nav-content-height);
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .top-strip {
-    height: 18px;
+    display: none;
   }
 
   .workspace {
-    min-height: calc(100vh - 18px);
+    min-height: 100vh;
+    min-height: 100dvh;
   }
 
   .sidebar {
-    width: 148px;
-    flex-basis: 148px;
-    padding: 10px 8px 74px;
+    display: none;
   }
 
-  .sidebar-content {
-    width: 132px;
+  .mobile-sidebar-mask {
+    position: fixed;
+    inset: 0;
+    z-index: 1190;
+    display: block;
+    background: rgb(15 23 42 / 18%);
   }
 
-  .new-chat {
-    width: 126px;
+  .sidebar.mobile-open {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 1210;
+    box-sizing: border-box;
+    display: block;
+    width: 246px;
+    flex-basis: auto;
+    padding: calc(var(--mobile-nav-height) + 10px) 14px 84px;
+    border-right: 1px solid #edf0f4;
+    box-shadow: 18px 0 45px rgb(15 23 42 / 14%);
+  }
+
+  .sidebar.mobile-open .sidebar-content {
+    width: 218px;
+  }
+
+  .sidebar.mobile-open .new-chat {
+    width: 210px;
+    height: 32px;
+    font-size: 13px;
+    line-height: 32px;
+  }
+
+  .sidebar.mobile-open .chat-list {
+    height: calc(100vh - var(--mobile-nav-height) - 190px);
+  }
+
+  .sidebar.mobile-open .company-menu-wrap {
+    right: 16px;
+    left: 16px;
+  }
+
+  .collapse-button {
+    display: none;
   }
 
   .main-panel {
-    height: calc(100vh - 18px);
-    padding-bottom: 176px;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    padding-top: var(--mobile-nav-height);
+    padding-bottom: 148px;
+    overflow: hidden;
   }
 
   .hero {
-    padding-top: 58px;
+    padding-top: 68px;
   }
 
   .hero-title {
-    width: 76vw;
-    margin-bottom: 44px;
+    display: flex;
+    width: calc(100vw - 48px);
+    flex-direction: column;
+    gap: 22px;
+    margin: 0 0 72px;
+    color: #303236;
+    font-size: 24px;
+    line-height: 1.2;
+    letter-spacing: 0;
     text-align: center;
   }
 
+  .hero-title text {
+    display: block;
+  }
+
   .feature-grid {
-    grid-template-columns: repeat(2, 136px);
-    gap: 52px 18px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: calc(100vw - 52px);
+    gap: 22px 20px;
+  }
+
+  .feature-card {
+    box-sizing: border-box;
+    display: flex;
+    width: 100%;
+    height: 58px;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 6px;
+    padding: 0 12px 0 14px;
+    overflow: hidden;
+    background: #eef4fe;
+    border-radius: 999px;
+  }
+
+  .feature-visual {
+    position: static;
+    width: 58px;
+    height: 44px;
+    flex: 0 0 58px;
+    transform: none;
+  }
+
+  .feature-svg {
+    width: 58px;
+    height: 44px;
+  }
+
+  .feature-copy {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .feature-title {
+    overflow: hidden;
+    margin: 0;
+    color: #303236;
+    font-size: 18px;
+    font-style: italic;
+    font-weight: 900;
+    line-height: 1;
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .feature-description {
+    display: none;
   }
 
   .message-panel {
-    height: calc(100vh - 188px);
-    margin: 42px 12px 0;
+    height: calc(100vh - var(--mobile-nav-height) - 154px);
+    margin: 16px 12px 0;
     padding: 12px;
   }
 
   .composer {
-    right: 12px;
-    bottom: 18px;
-    left: 12px;
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 1000;
+    display: flex;
     width: auto;
     min-width: 0;
+    min-height: 116px;
+    flex-direction: column;
+    gap: 10px;
+    padding: 0 22px calc(14px + env(safe-area-inset-bottom));
+    background: linear-gradient(180deg, rgb(255 255 255 / 0%) 0%, #ffffff 24%);
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
     transform: none;
+  }
+
+  .composer-footer {
+    order: 1;
+    min-height: 38px;
+  }
+
+  .quick-actions {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .quick-action-row {
+    gap: 8px;
+  }
+
+  .quick-action,
+  .mode-chip {
+    height: 34px;
+    padding: 0 16px;
+    color: #2f333a;
+    font-size: 14px;
+    line-height: 34px;
+    background: #ffffff;
+    border: 1px solid #e5e8ee;
+    border-radius: 8px;
+  }
+
+  .mode-chip {
+    color: #1267ff;
+    background: #eef4ff;
+    border-color: #d8e6ff;
+  }
+
+  .quick-action.more {
+    padding: 0 16px;
+  }
+
+  .plus,
+  .tool-divider {
+    display: none;
+  }
+
+  .editor-wrap {
+    order: 2;
+    box-sizing: border-box;
+    min-height: 54px;
+    padding: 14px 86px 10px 18px;
+    background: #ffffff;
+    border-radius: 15px;
+    box-shadow: 0 14px 32px rgb(15 23 42 / 12%);
+  }
+
+  .message-placeholder {
+    top: 14px;
+    right: 86px;
+    left: 18px;
+    color: #a6a6a6;
+    font-size: 14px;
+    line-height: 24px;
+  }
+
+  .message-input {
+    min-height: 30px;
+    max-height: 84px;
+    padding: 0;
+    font-size: 14px;
+    line-height: 24px;
+  }
+
+  .send-button {
+    position: absolute;
+    right: 72px;
+    bottom: calc(24px + env(safe-area-inset-bottom));
+    width: 30px;
+    height: 30px;
+    flex-basis: 30px;
+    margin: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .send-button.is-disabled {
+    background: transparent;
+  }
+
+  .send-button .uni-icons {
+    color: #303030 !important;
+  }
+
+  .mobile-attach-button {
+    position: absolute;
+    right: 40px;
+    bottom: calc(25px + env(safe-area-inset-bottom));
+    display: inline-flex;
+    width: 28px;
+    height: 28px;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    border: 2px solid #303030;
+    border-radius: 50%;
+    box-shadow: none;
+  }
+
+  .mobile-attach-button::after {
+    border: 0;
+  }
+
+  .composer-more-menu {
+    right: 22px;
+    bottom: calc(104px + env(safe-area-inset-bottom));
   }
 
   .error-text {
     right: 18px;
-    bottom: 118px;
+    bottom: calc(124px + env(safe-area-inset-bottom));
     left: 18px;
   }
 
