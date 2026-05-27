@@ -2,7 +2,11 @@
   <view class="home-page" :style="homePageStyle">
     <view class="mobile-nav">
       <view class="mobile-nav-content">
-        <button class="mobile-menu-button" @click="toggleMobileSidebar">
+        <button
+          class="mobile-menu-button"
+          :class="{ open: isMobileSidebarOpen }"
+          @click="toggleMobileSidebar"
+        >
           <text></text>
           <text></text>
           <text></text>
@@ -11,8 +15,8 @@
       </view>
     </view>
     <view
-      v-if="isMobileSidebarOpen"
       class="mobile-sidebar-mask"
+      :class="{ open: isMobileSidebarOpen }"
       @click="closeMobileSidebar"
     ></view>
     <view class="top-strip"></view>
@@ -217,6 +221,7 @@
                   v-for="action in visibleQuickActions"
                   :key="action.label"
                   class="quick-action"
+                  :class="{ inert: action.interactive === false }"
                   :disabled="isBusy"
                   @click="handleQuickAction(action)"
                 >
@@ -409,16 +414,20 @@ type BoardOption = {
   searchText: string;
 };
 
+type QuickActionBase = {
+  label: string;
+  interactive?: boolean;
+};
+
 type QuickAction =
-  | { label: string; type: "board" }
-  | { label: string; type: "upload" }
-  | { label: string; type: "mode"; mode: ComposerModeId }
-  | {
-      label: string;
+  | (QuickActionBase & { type: "board" })
+  | (QuickActionBase & { type: "upload" })
+  | (QuickActionBase & { type: "mode"; mode: ComposerModeId })
+  | (QuickActionBase & {
       type: "prompt";
       prompt: string;
       strategy?: boolean;
-    };
+    });
 
 type ComposerModeId = "strategy";
 
@@ -571,16 +580,16 @@ const fallbackChats = [
 
 const quickActions: QuickAction[] = [
   { label: "/ 看板", type: "board" },
-  { label: "/ 任务管理", type: "prompt", prompt: "创建任务管理计划" },
+  { label: "/ 任务管理", type: "prompt", prompt: "创建任务管理计划", interactive: false },
   { label: "/ 战略诊断", type: "mode", mode: "strategy" },
-  { label: "/ 战略拆解", type: "prompt", prompt: "生成19点战略框架", strategy: true },
-  { label: "/ 上传素材", type: "upload" },
-  { label: "/ 图文营销", type: "prompt", prompt: "生成图文营销方案" },
+  { label: "/ 战略拆解", type: "prompt", prompt: "生成19点战略框架", strategy: true, interactive: false },
+  { label: "/ 上传素材", type: "upload", interactive: false },
+  { label: "/ 图文营销", type: "prompt", prompt: "生成图文营销方案", interactive: false },
 ];
 
 const strategyModeActions: QuickAction[] = [
-  { label: "/ 上传资料", type: "upload" },
-  { label: "/ 战略拆解", type: "prompt", prompt: "生成19点战略框架", strategy: true },
+  { label: "/ 上传资料", type: "upload", interactive: false },
+  { label: "/ 战略拆解", type: "prompt", prompt: "生成19点战略框架", strategy: true, interactive: false },
   { label: "/ 生成报告", type: "prompt", prompt: "生成全部7份战略报告", strategy: true },
   { label: "/ 打开看板", type: "prompt", prompt: "打开品牌战略看板", strategy: true },
 ];
@@ -828,11 +837,20 @@ function toggleSidebar() {
 }
 
 function toggleMobileSidebar() {
-  isMobileSidebarOpen.value = !isMobileSidebarOpen.value;
+  const nextOpen = !isMobileSidebarOpen.value;
+
+  if (nextOpen) {
+    isSidebarCollapsed.value = false;
+  } else {
+    isCompanyMenuVisible.value = false;
+  }
+
+  isMobileSidebarOpen.value = nextOpen;
 }
 
 function closeMobileSidebar() {
   isMobileSidebarOpen.value = false;
+  isCompanyMenuVisible.value = false;
 }
 
 function toggleCompanyMenu() {
@@ -1031,6 +1049,10 @@ async function handleFeatureSelect(feature: Feature) {
 }
 
 function handleQuickAction(action: QuickAction) {
+  if (action.interactive === false) {
+    return;
+  }
+
   if (action.type === "board") {
     closeMoreMenu();
     openBoardMenuFromAction();
@@ -1564,7 +1586,14 @@ function showError(err: unknown, fallback: string) {
 </script>
 
 <style>
+page {
+  height: 100%;
+  overflow: hidden;
+}
+
 .home-page {
+  height: 100vh;
+  height: 100dvh;
   min-height: 100vh;
   overflow: hidden;
   background: #ffffff;
@@ -1583,7 +1612,9 @@ function showError(err: unknown, fallback: string) {
 
 .workspace {
   display: flex;
+  height: calc(100vh - 36px);
   min-height: calc(100vh - 36px);
+  overflow: hidden;
 }
 
 .sidebar {
@@ -1937,6 +1968,7 @@ function showError(err: unknown, fallback: string) {
 
 .main-panel {
   position: relative;
+  box-sizing: border-box;
   flex: 1;
   min-width: 0;
   height: calc(100vh - 36px);
@@ -2274,6 +2306,14 @@ function showError(err: unknown, fallback: string) {
 
 .quick-action.active {
   color: #1267ff;
+}
+
+.quick-action.inert {
+  cursor: default;
+}
+
+.quick-action.inert:active {
+  background: transparent;
 }
 
 .mode-chip {
@@ -2926,8 +2966,11 @@ button[disabled] {
 
 @media (max-width: 760px) {
   .home-page {
+    height: 100vh;
+    height: 100dvh;
     min-height: 100vh;
     min-height: 100dvh;
+    overflow: hidden;
     background: #ffffff;
   }
 
@@ -2980,6 +3023,21 @@ button[disabled] {
     height: 2px;
     background: #303030;
     border-radius: 999px;
+    transition: width 0.2s ease, opacity 0.2s ease, transform 0.24s ease;
+    transform-origin: center;
+  }
+
+  .mobile-menu-button.open text:nth-child(1) {
+    transform: translateY(7px) rotate(45deg);
+  }
+
+  .mobile-menu-button.open text:nth-child(2) {
+    width: 0;
+    opacity: 0;
+  }
+
+  .mobile-menu-button.open text:nth-child(3) {
+    transform: translateY(-7px) rotate(-45deg);
   }
 
   .mobile-nav-title {
@@ -3001,23 +3059,13 @@ button[disabled] {
   }
 
   .workspace {
-    min-height: 100vh;
-    min-height: 100dvh;
+    height: 100vh;
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
   }
 
   .sidebar {
-    display: none;
-  }
-
-  .mobile-sidebar-mask {
-    position: fixed;
-    inset: 0;
-    z-index: 1190;
-    display: block;
-    background: rgb(15 23 42 / 18%);
-  }
-
-  .sidebar.mobile-open {
     position: fixed;
     top: 0;
     bottom: 0;
@@ -3028,8 +3076,44 @@ button[disabled] {
     width: 246px;
     flex-basis: auto;
     padding: calc(var(--mobile-nav-height) + 10px) 14px 84px;
+    pointer-events: none;
     border-right: 1px solid #edf0f4;
+    opacity: 0;
+    box-shadow: 0 0 0 rgb(15 23 42 / 0%);
+    transform: translate3d(-104%, 0, 0);
+    transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 0.22s ease, box-shadow 0.28s ease;
+    will-change: transform, opacity;
+  }
+
+  .sidebar.collapsed {
+    width: 246px;
+    flex-basis: auto;
+    padding: calc(var(--mobile-nav-height) + 10px) 14px 84px;
+    border-right-color: #edf0f4;
+  }
+
+  .mobile-sidebar-mask {
+    position: fixed;
+    inset: 0;
+    z-index: 1190;
+    display: block;
+    pointer-events: none;
+    background: rgb(15 23 42 / 18%);
+    opacity: 0;
+    transition: opacity 0.24s ease;
+  }
+
+  .mobile-sidebar-mask.open {
+    pointer-events: auto;
+    opacity: 1;
+  }
+
+  .sidebar.mobile-open {
+    pointer-events: auto;
+    opacity: 1;
     box-shadow: 18px 0 45px rgb(15 23 42 / 14%);
+    transform: translate3d(0, 0, 0);
   }
 
   .sidebar.mobile-open .sidebar-content {
@@ -3057,6 +3141,7 @@ button[disabled] {
   }
 
   .main-panel {
+    box-sizing: border-box;
     width: 100vw;
     height: 100vh;
     height: 100dvh;
@@ -3066,15 +3151,19 @@ button[disabled] {
   }
 
   .hero {
-    padding-top: 68px;
+    box-sizing: border-box;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    padding-top: 54px;
   }
 
   .hero-title {
     display: flex;
     width: calc(100vw - 48px);
     flex-direction: column;
-    gap: 22px;
-    margin: 0 0 72px;
+    gap: 18px;
+    margin: 0 0 52px;
     color: #303236;
     font-size: 24px;
     line-height: 1.2;
@@ -3089,19 +3178,34 @@ button[disabled] {
   .feature-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    width: calc(100vw - 52px);
-    gap: 22px 20px;
+    width: 646rpx;
+    gap: 36rpx 40rpx;
+  }
+
+  @media (max-height: 720px) {
+    .hero {
+      padding-top: 34px;
+    }
+
+    .hero-title {
+      gap: 14px;
+      margin-bottom: 34px;
+    }
+
+    .feature-grid {
+      gap: 28rpx 32rpx;
+    }
   }
 
   .feature-card {
     box-sizing: border-box;
     display: flex;
     width: 100%;
-    height: 58px;
+    height: 116rpx;
     align-items: center;
     justify-content: flex-start;
-    gap: 6px;
-    padding: 0 12px 0 14px;
+    gap: 12rpx;
+    padding: 0 24rpx 0 28rpx;
     overflow: hidden;
     background: #eef4fe;
     border-radius: 999px;
@@ -3109,15 +3213,15 @@ button[disabled] {
 
   .feature-visual {
     position: static;
-    width: 58px;
-    height: 44px;
-    flex: 0 0 58px;
+    width: 116rpx;
+    height: 88rpx;
+    flex: 0 0 116rpx;
     transform: none;
   }
 
   .feature-svg {
-    width: 58px;
-    height: 44px;
+    width: 116rpx;
+    height: 88rpx;
   }
 
   .feature-copy {
@@ -3129,7 +3233,7 @@ button[disabled] {
     overflow: hidden;
     margin: 0;
     color: #303236;
-    font-size: 18px;
+    font-size: 36rpx;
     font-style: italic;
     font-weight: 900;
     line-height: 1;
