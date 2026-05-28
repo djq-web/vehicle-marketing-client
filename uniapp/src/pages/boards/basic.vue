@@ -10,14 +10,22 @@
 
     <template v-if="activeType === 'brand-strategy'">
       <section class="basic-hero">
-        <image class="basic-hero-icon" :src="basicBoard.icon" mode="aspectFit" />
+        <image
+          class="basic-hero-icon"
+          :src="basicBoard.icon"
+          mode="aspectFit"
+        />
         <text class="board-title">{{ basicBoard.title }}</text>
         <text class="title-underline"></text>
         <text class="board-subtitle">{{ basicBoard.subtitle }}</text>
       </section>
 
       <section class="metric-grid">
-        <view v-for="card in basicBoard.cards" :key="card.label" class="metric-card">
+        <view
+          v-for="card in basicBoard.cards"
+          :key="card.label"
+          class="metric-card"
+        >
           <text class="metric-label">{{ card.label }}</text>
           <text class="metric-value">{{ card.value }}</text>
           <text class="metric-caption">{{ card.caption }}</text>
@@ -76,7 +84,9 @@
               <view class="calendar-header">
                 <view class="calendar-nav-group">
                   <button class="month-button" @click="shiftYear(-1)">«</button>
-                  <button class="month-button" @click="shiftMonth(-1)">‹</button>
+                  <button class="month-button" @click="shiftMonth(-1)">
+                    ‹
+                  </button>
                 </view>
                 <text class="calendar-title">{{ calendarTitle }}</text>
                 <view class="calendar-nav-group">
@@ -92,7 +102,11 @@
                   v-for="day in calendarDays"
                   :key="day.key"
                   class="date-cell"
-                  :class="{ muted: day.muted, current: day.current, selected: day.selected }"
+                  :class="{
+                    muted: day.muted,
+                    current: day.current,
+                    selected: day.selected,
+                  }"
                   @click="selectCalendarDay(day)"
                 >
                   <text>{{ day.date }}</text>
@@ -117,7 +131,10 @@
                 :class="{ active: item.active }"
               >
                 <view class="method-cell">
-                  <text class="method-dot" :style="`background:${item.color}`"></text>
+                  <text
+                    class="method-dot"
+                    :style="`background:${item.color}`"
+                  ></text>
                   <text>{{ item.method }}</text>
                 </view>
                 <text>{{ item.platform }}</text>
@@ -158,25 +175,45 @@
         <section class="page-hero feedback-hero">
           <text class="board-title">市场反馈看板</text>
           <text class="title-underline calendar-underline"></text>
-          <text class="hero-note">数据来源于微信聊天、外呼系统、录音工牌、友商直播间</text>
+          <text class="hero-note"
+            >数据来源于微信聊天、外呼系统、录音工牌、友商直播间</text
+          >
         </section>
 
         <section class="feedback-grid top-grid">
-          <article v-for="panel in topPanels" :key="panel.title" class="feedback-card">
+          <article
+            v-for="panel in topPanels"
+            :key="panel.title"
+            class="feedback-card"
+          >
             <view class="card-head">
               <text class="card-title">{{ panel.title }}</text>
             </view>
             <view class="panel-content">
-              <section v-for="group in panel.groups" :key="group.title || group.summaryTitle" class="content-group">
-                <text v-if="group.title" class="group-title">{{ group.title }}</text>
+              <section
+                v-for="group in panel.groups"
+                :key="group.title || group.summaryTitle"
+                class="content-group"
+              >
+                <text v-if="group.title" class="group-title">{{
+                  group.title
+                }}</text>
                 <view v-if="group.items?.length" class="ordered-list">
-                  <view v-for="(item, index) in group.items" :key="item" class="list-item">
+                  <view
+                    v-for="(item, index) in group.items"
+                    :key="item"
+                    class="list-item"
+                  >
                     <text>{{ index + 1 }}.</text>
                     <text>{{ item }}</text>
                   </view>
                 </view>
                 <view v-if="group.summaryRows" class="summary">
-                  <view v-for="row in group.summaryRows" :key="row.label" class="summary-row">
+                  <view
+                    v-for="row in group.summaryRows"
+                    :key="row.label"
+                    class="summary-row"
+                  >
                     <text class="summary-label">{{ row.label }}</text>
                     <text>{{ row.value }}</text>
                   </view>
@@ -192,10 +229,18 @@
               <text class="card-title">{{ competitorPanel.title }}</text>
             </view>
             <view class="panel-content">
-              <section v-for="group in competitorPanel.groups" :key="group.title" class="content-group">
+              <section
+                v-for="group in competitorPanel.groups"
+                :key="group.title"
+                class="content-group"
+              >
                 <text class="group-title">{{ group.title }}</text>
                 <view class="ordered-list">
-                  <view v-for="(item, index) in group.items" :key="item" class="list-item">
+                  <view
+                    v-for="(item, index) in group.items"
+                    :key="item"
+                    class="list-item"
+                  >
                     <text>{{ index + 1 }}.</text>
                     <text>{{ item }}</text>
                   </view>
@@ -210,19 +255,37 @@
             </view>
             <view class="wide-content">
               <view class="wide-column">
-                <section v-for="group in streamPanel.leftGroups" :key="group.title" class="content-group">
+                <section
+                  v-for="group in streamPanel.leftGroups"
+                  :key="group.title"
+                  class="content-group"
+                >
                   <text class="group-title">{{ group.title }}</text>
                   <view v-if="group.mode === 'plain'" class="plain-list">
-                    <view v-for="item in group.items" :key="item" class="plain-item">{{ item }}</view>
+                    <view
+                      v-for="item in group.items"
+                      :key="item"
+                      class="plain-item"
+                      >{{ item }}</view
+                    >
                   </view>
-                  <text v-else class="tag-line">{{ group.items.join("、") }}</text>
+                  <text v-else class="tag-line">{{
+                    group.items.join("、")
+                  }}</text>
                 </section>
               </view>
               <view class="wide-column">
                 <section class="content-group">
-                  <text class="group-title">{{ streamPanel.alertGroup.title }}</text>
+                  <text class="group-title">{{
+                    streamPanel.alertGroup.title
+                  }}</text>
                   <view class="plain-list">
-                    <view v-for="item in streamPanel.alertGroup.items" :key="item" class="plain-item">{{ item }}</view>
+                    <view
+                      v-for="item in streamPanel.alertGroup.items"
+                      :key="item"
+                      class="plain-item"
+                      >{{ item }}</view
+                    >
                   </view>
                 </section>
               </view>
@@ -252,7 +315,12 @@
             :class="{ active: card.active }"
           >
             <view class="partner-image-wrap">
-              <image class="partner-image" :src="card.image" :alt="card.title" mode="aspectFill" />
+              <image
+                class="partner-image"
+                :src="card.image"
+                :alt="card.title"
+                mode="aspectFill"
+              />
             </view>
             <text>{{ card.title }}</text>
           </button>
@@ -333,7 +401,9 @@ const isMobileLayout = ref(false);
 const timeOptions = ["当天", "当月", "当季", "当年"];
 
 const isFlowBoard = computed(
-  () => activeType.value === "key-metrics" || activeType.value === "marketing-operations",
+  () =>
+    activeType.value === "key-metrics" ||
+    activeType.value === "marketing-operations"
 );
 
 const boardTitles: Record<BoardType, string> = {
@@ -369,10 +439,10 @@ const metricNodes: FlowNode[] = [
   {
     id: "company",
     title: "公司战略",
-    x: 382,
-    y: 38,
-    width: 462,
-    height: 110,
+    x: 370,
+    y: 36,
+    width: 520,
+    height: 124,
     large: true,
     titleMode: "vertical",
     groups: [
@@ -389,9 +459,9 @@ const metricNodes: FlowNode[] = [
     id: "image",
     title: "图文营销",
     x: 50,
-    y: 220,
-    width: 126,
-    height: 122,
+    y: 230,
+    width: 150,
+    height: 150,
     rows: [
       { label: "发布量", value: "12", trend: "down" },
       { label: "阅读量", value: "120000", trend: "up" },
@@ -402,10 +472,10 @@ const metricNodes: FlowNode[] = [
   {
     id: "video",
     title: "短视频营销",
-    x: 210,
-    y: 220,
-    width: 126,
-    height: 122,
+    x: 230,
+    y: 230,
+    width: 150,
+    height: 150,
     rows: [
       { label: "发布量", value: "12", trend: "down" },
       { label: "播放量", value: "1000", trend: "up" },
@@ -416,10 +486,10 @@ const metricNodes: FlowNode[] = [
   {
     id: "live",
     title: "直播营销",
-    x: 370,
-    y: 220,
-    width: 126,
-    height: 122,
+    x: 410,
+    y: 230,
+    width: 150,
+    height: 150,
     rows: [
       { label: "直播场次", value: "4", trend: "up" },
       { label: "观看人数", value: "1210", trend: "up" },
@@ -430,10 +500,10 @@ const metricNodes: FlowNode[] = [
   {
     id: "phone",
     title: "电话营销",
-    x: 530,
-    y: 220,
-    width: 126,
-    height: 122,
+    x: 590,
+    y: 230,
+    width: 160,
+    height: 150,
     active: true,
     rows: [
       { label: "外呼总量", value: "180", trend: "up" },
@@ -442,15 +512,31 @@ const metricNodes: FlowNode[] = [
       { label: "加微成功数", value: "12", trend: "down" },
     ],
   },
-  { id: "store", title: "实体店铺", x: 690, y: 220, width: 126, height: 122, empty: true },
-  { id: "ecommerce", title: "电商销售", x: 850, y: 220, width: 126, height: 122, empty: true },
+  {
+    id: "store",
+    title: "实体店铺",
+    x: 770,
+    y: 230,
+    width: 150,
+    height: 150,
+    empty: true,
+  },
+  {
+    id: "ecommerce",
+    title: "电商销售",
+    x: 950,
+    y: 230,
+    width: 150,
+    height: 150,
+    empty: true,
+  },
   {
     id: "overseas",
     title: "海外独立站",
-    x: 1070,
-    y: 220,
-    width: 126,
-    height: 122,
+    x: 1190,
+    y: 230,
+    width: 150,
+    height: 150,
     rows: [
       { label: "访问量", value: "40", trend: "down" },
       { label: "留资数", value: "1210", trend: "up" },
@@ -460,10 +546,10 @@ const metricNodes: FlowNode[] = [
   {
     id: "private",
     title: "私域营销",
-    x: 330,
-    y: 390,
-    width: 126,
-    height: 122,
+    x: 360,
+    y: 430,
+    width: 150,
+    height: 150,
     rows: [
       { label: "好友总数", value: "45", trend: "up" },
       { label: "新增数", value: "1210", trend: "up" },
@@ -474,10 +560,10 @@ const metricNodes: FlowNode[] = [
   {
     id: "customer",
     title: "大客户销售",
-    x: 820,
-    y: 390,
-    width: 126,
-    height: 122,
+    x: 900,
+    y: 430,
+    width: 150,
+    height: 150,
     rows: [
       { label: "大客户总数", value: "40", trend: "down" },
       { label: "新增数", value: "1210", trend: "up" },
@@ -488,10 +574,10 @@ const metricNodes: FlowNode[] = [
   {
     id: "whatsapp",
     title: "WhatsApp",
-    x: 1070,
-    y: 390,
-    width: 126,
-    height: 122,
+    x: 1190,
+    y: 430,
+    width: 150,
+    height: 150,
     rows: [
       { label: "联系人总数", value: "40", trend: "down" },
       { label: "新增数", value: "1210", trend: "up" },
@@ -499,58 +585,221 @@ const metricNodes: FlowNode[] = [
       { label: "回复率", value: "12%", trend: "up" },
     ],
   },
-  { id: "analysis", title: "营销分析", x: 505, y: 560, width: 230, height: 64, empty: true, tone: "horizontal" },
+  {
+    id: "analysis",
+    title: "营销分析",
+    x: 540,
+    y: 630,
+    width: 280,
+    height: 78,
+    empty: true,
+    tone: "horizontal",
+  },
 ];
 
 const metricEdges: FlowEdge[] = [
+  { id: "analysis-company", source: "analysis", target: "company" },
   { id: "company-image", source: "company", target: "image" },
   { id: "company-video", source: "company", target: "video" },
   { id: "company-live", source: "company", target: "live" },
   { id: "company-phone", source: "company", target: "phone" },
+  { id: "company-store", source: "company", target: "store" },
+  { id: "company-ecommerce", source: "company", target: "ecommerce" },
   { id: "company-overseas", source: "company", target: "overseas" },
   { id: "image-private", source: "image", target: "private" },
   { id: "video-private", source: "video", target: "private" },
   { id: "live-private", source: "live", target: "private" },
-  { id: "phone-analysis", source: "phone", target: "analysis" },
-  { id: "private-analysis", source: "private", target: "analysis" },
-  { id: "overseas-whatsapp", source: "overseas", target: "whatsapp" },
-  { id: "whatsapp-analysis", source: "whatsapp", target: "analysis" },
+  { id: "phone-private", source: "phone", target: "private" },
   { id: "store-customer", source: "store", target: "customer", color: "#d9d9d9", muted: true },
   { id: "ecommerce-customer", source: "ecommerce", target: "customer", color: "#d9d9d9", muted: true },
   { id: "company-customer", source: "company", target: "customer", color: "#d9d9d9", muted: true },
+  { id: "phone-analysis", source: "phone", target: "analysis" },
+  { id: "private-analysis", source: "private", target: "analysis" },
+  { id: "customer-analysis", source: "customer", target: "analysis", color: "#d9d9d9", muted: true },
+  { id: "overseas-whatsapp", source: "overseas", target: "whatsapp" },
+  { id: "whatsapp-analysis", source: "whatsapp", target: "analysis" },
 ];
 
 const operationNodes: FlowNode[] = [
-  { id: "strategy", title: "公司战略", icon: icon("corporate-strategy"), status: "done", x: 520, y: 52, width: 192, height: 88, large: true },
-  { id: "visual", title: "图文营销", icon: icon("visual-marketing"), status: "done", x: 60, y: 198, width: 124, height: 122 },
-  { id: "shortVideo", title: "短视频营销", icon: icon("short-video-marketing"), status: "done", x: 220, y: 198, width: 124, height: 122 },
-  { id: "live", title: "直播营销", icon: icon("live-streaming-marketing"), status: "doing", x: 380, y: 198, width: 124, height: 122 },
-  { id: "phone", title: "电话营销", icon: icon("telemarketing"), status: "pending", active: true, x: 540, y: 198, width: 124, height: 122 },
-  { id: "store", title: "实体店铺", icon: icon("brick-and-mortar-store"), status: "disabled", x: 700, y: 198, width: 124, height: 122 },
-  { id: "ecommerce", title: "电商销售", icon: icon("e-commerce-sales"), status: "disabled", x: 860, y: 198, width: 124, height: 122 },
-  { id: "overseas", title: "海外独立站", icon: icon("overseas-independent-station"), status: "doing", x: 1080, y: 198, width: 124, height: 122 },
-  { id: "private", title: "私域营销", icon: icon("private-domain-marketing"), status: "disabled", x: 340, y: 360, width: 124, height: 122 },
-  { id: "keyAccount", title: "大客户销售", icon: icon("key-account-sales"), status: "disabled", x: 825, y: 360, width: 124, height: 122 },
-  { id: "whatsapp", title: "WhatsApp", icon: icon("whatsApp"), status: "doing", x: 1080, y: 360, width: 124, height: 122 },
-  { id: "analysis", title: "营销分析", icon: icon("marketing-analysis"), status: "disabled", x: 520, y: 528, width: 192, height: 88, large: true },
+  {
+    id: "strategy",
+    title: "公司战略",
+    icon: icon("corporate-strategy"),
+    status: "done",
+    x: 520,
+    y: 52,
+    width: 192,
+    height: 88,
+    large: true,
+  },
+  {
+    id: "visual",
+    title: "图文营销",
+    icon: icon("visual-marketing"),
+    status: "done",
+    x: 60,
+    y: 198,
+    width: 124,
+    height: 122,
+  },
+  {
+    id: "shortVideo",
+    title: "短视频营销",
+    icon: icon("short-video-marketing"),
+    status: "done",
+    x: 220,
+    y: 198,
+    width: 124,
+    height: 122,
+  },
+  {
+    id: "live",
+    title: "直播营销",
+    icon: icon("live-streaming-marketing"),
+    status: "doing",
+    x: 380,
+    y: 198,
+    width: 124,
+    height: 122,
+  },
+  {
+    id: "phone",
+    title: "电话营销",
+    icon: icon("telemarketing"),
+    status: "pending",
+    active: true,
+    x: 540,
+    y: 198,
+    width: 124,
+    height: 122,
+  },
+  {
+    id: "store",
+    title: "实体店铺",
+    icon: icon("brick-and-mortar-store"),
+    status: "disabled",
+    x: 700,
+    y: 198,
+    width: 124,
+    height: 122,
+  },
+  {
+    id: "ecommerce",
+    title: "电商销售",
+    icon: icon("e-commerce-sales"),
+    status: "disabled",
+    x: 860,
+    y: 198,
+    width: 124,
+    height: 122,
+  },
+  {
+    id: "overseas",
+    title: "海外独立站",
+    icon: icon("overseas-independent-station"),
+    status: "doing",
+    x: 1080,
+    y: 198,
+    width: 124,
+    height: 122,
+  },
+  {
+    id: "private",
+    title: "私域营销",
+    icon: icon("private-domain-marketing"),
+    status: "disabled",
+    x: 340,
+    y: 360,
+    width: 124,
+    height: 122,
+  },
+  {
+    id: "keyAccount",
+    title: "大客户销售",
+    icon: icon("key-account-sales"),
+    status: "disabled",
+    x: 825,
+    y: 360,
+    width: 124,
+    height: 122,
+  },
+  {
+    id: "whatsapp",
+    title: "WhatsApp",
+    icon: icon("whatsApp"),
+    status: "doing",
+    x: 1080,
+    y: 360,
+    width: 124,
+    height: 122,
+  },
+  {
+    id: "analysis",
+    title: "营销分析",
+    icon: icon("marketing-analysis"),
+    status: "disabled",
+    x: 520,
+    y: 528,
+    width: 192,
+    height: 88,
+    large: true,
+  },
 ];
 
 const operationEdges: FlowEdge[] = [
+  { id: "analysis-strategy", source: "analysis", target: "strategy" },
   { id: "strategy-visual", source: "strategy", target: "visual" },
   { id: "strategy-shortVideo", source: "strategy", target: "shortVideo" },
   { id: "strategy-live", source: "strategy", target: "live" },
   { id: "strategy-phone", source: "strategy", target: "phone" },
-  { id: "strategy-store", source: "strategy", target: "store", color: "#d7d7d7", muted: true },
-  { id: "strategy-ecommerce", source: "strategy", target: "ecommerce", color: "#d7d7d7", muted: true },
+  {
+    id: "strategy-store",
+    source: "strategy",
+    target: "store",
+    color: "#d7d7d7",
+    muted: true,
+  },
+  {
+    id: "strategy-ecommerce",
+    source: "strategy",
+    target: "ecommerce",
+    color: "#d7d7d7",
+    muted: true,
+  },
   { id: "strategy-overseas", source: "strategy", target: "overseas" },
   { id: "visual-private", source: "visual", target: "private" },
   { id: "shortVideo-private", source: "shortVideo", target: "private" },
   { id: "live-private", source: "live", target: "private" },
-  { id: "phone-analysis", source: "phone", target: "analysis" },
+  { id: "phone-private", source: "phone", target: "private" },
   { id: "private-analysis", source: "private", target: "analysis" },
-  { id: "store-keyAccount", source: "store", target: "keyAccount", color: "#d7d7d7", muted: true },
-  { id: "ecommerce-keyAccount", source: "ecommerce", target: "keyAccount", color: "#d7d7d7", muted: true },
-  { id: "strategy-keyAccount", source: "strategy", target: "keyAccount", color: "#d7d7d7", muted: true },
+  {
+    id: "store-keyAccount",
+    source: "store",
+    target: "keyAccount",
+    color: "#d7d7d7",
+    muted: true,
+  },
+  {
+    id: "ecommerce-keyAccount",
+    source: "ecommerce",
+    target: "keyAccount",
+    color: "#d7d7d7",
+    muted: true,
+  },
+  {
+    id: "strategy-keyAccount",
+    source: "strategy",
+    target: "keyAccount",
+    color: "#d7d7d7",
+    muted: true,
+  },
+  {
+    id: "keyAccount-analysis",
+    source: "keyAccount",
+    target: "analysis",
+    color: "#d7d7d7",
+    muted: true,
+  },
   { id: "overseas-whatsapp", source: "overseas", target: "whatsapp" },
   { id: "whatsapp-analysis", source: "whatsapp", target: "analysis" },
 ];
@@ -592,15 +841,23 @@ const selectedDate = ref(new Date(2026, 2, 21));
 const calendarYear = ref(selectedDate.value.getFullYear());
 const calendarMonth = ref(selectedDate.value.getMonth());
 const calendarTitle = computed(
-  () => `${calendarYear.value} ${monthNames[calendarMonth.value]}`,
+  () => `${calendarYear.value} ${monthNames[calendarMonth.value]}`
 );
 const calendarDays = computed<CalendarDay[]>(() => {
-  const firstWeekday = new Date(calendarYear.value, calendarMonth.value, 1).getDay();
-  const previousMonthLastDate = new Date(calendarYear.value, calendarMonth.value, 0).getDate();
+  const firstWeekday = new Date(
+    calendarYear.value,
+    calendarMonth.value,
+    1
+  ).getDay();
+  const previousMonthLastDate = new Date(
+    calendarYear.value,
+    calendarMonth.value,
+    0
+  ).getDate();
   const currentMonthLastDate = new Date(
     calendarYear.value,
     calendarMonth.value + 1,
-    0,
+    0
   ).getDate();
   const days: CalendarDay[] = [];
 
@@ -646,17 +903,95 @@ const calendarDays = computed<CalendarDay[]>(() => {
 });
 
 const scheduleItems = [
-  { method: "图文营销", platform: "公众号", account: "吉星高照", title: "相约玉龙雪山看流星雨", time: "08 : 25", color: "#76da21" },
-  { method: "直播营销", platform: "抖音", account: "吉星高照官方店", title: "来直播间寻找你的吉星", time: "16 : 00", color: "#39b8f3" },
-  { method: "短视频营销", platform: "抖音", account: "吉星高照-玄元十四", title: "你来自哪颗星星", time: "12 : 28", color: "#39b8f3" },
-  { method: "独立站营销", platform: "网站", account: "JIXINGGAOZHAO", title: "JIXINGGAOZHAO", time: "12 : 28", color: "#ffb52f", active: true },
-  { method: "图文营销", platform: "公众号", account: "吉星高照", title: "相约玉龙雪山看流星雨", time: "08 : 25", color: "#76da21" },
-  { method: "直播营销", platform: "抖音", account: "吉星高照官方店", title: "来直播间寻找你的吉星", time: "16 : 00", color: "#39b8f3" },
-  { method: "短视频营销", platform: "抖音", account: "吉星高照-玄元十四", title: "你来自哪颗星星", time: "12 : 28", color: "#39b8f3" },
-  { method: "独立站营销", platform: "网站", account: "JIXINGGAOZHAO", title: "JIXINGGAOZHAO", time: "12 : 28", color: "#ffb52f" },
-  { method: "直播营销", platform: "抖音", account: "吉星高照官方店", title: "来直播间寻找你的吉星", time: "16 : 00", color: "#39b8f3" },
-  { method: "短视频营销", platform: "抖音", account: "吉星高照-玄元十四", title: "你来自哪颗星星", time: "12 : 28", color: "#39b8f3" },
-  { method: "独立站营销", platform: "网站", account: "JIXINGGAOZHAO", title: "JIXINGGAOZHAO", time: "12 : 28", color: "#ffb52f" },
+  {
+    method: "图文营销",
+    platform: "公众号",
+    account: "吉星高照",
+    title: "相约玉龙雪山看流星雨",
+    time: "08 : 25",
+    color: "#76da21",
+  },
+  {
+    method: "直播营销",
+    platform: "抖音",
+    account: "吉星高照官方店",
+    title: "来直播间寻找你的吉星",
+    time: "16 : 00",
+    color: "#39b8f3",
+  },
+  {
+    method: "短视频营销",
+    platform: "抖音",
+    account: "吉星高照-玄元十四",
+    title: "你来自哪颗星星",
+    time: "12 : 28",
+    color: "#39b8f3",
+  },
+  {
+    method: "独立站营销",
+    platform: "网站",
+    account: "JIXINGGAOZHAO",
+    title: "JIXINGGAOZHAO",
+    time: "12 : 28",
+    color: "#ffb52f",
+    active: true,
+  },
+  {
+    method: "图文营销",
+    platform: "公众号",
+    account: "吉星高照",
+    title: "相约玉龙雪山看流星雨",
+    time: "08 : 25",
+    color: "#76da21",
+  },
+  {
+    method: "直播营销",
+    platform: "抖音",
+    account: "吉星高照官方店",
+    title: "来直播间寻找你的吉星",
+    time: "16 : 00",
+    color: "#39b8f3",
+  },
+  {
+    method: "短视频营销",
+    platform: "抖音",
+    account: "吉星高照-玄元十四",
+    title: "你来自哪颗星星",
+    time: "12 : 28",
+    color: "#39b8f3",
+  },
+  {
+    method: "独立站营销",
+    platform: "网站",
+    account: "JIXINGGAOZHAO",
+    title: "JIXINGGAOZHAO",
+    time: "12 : 28",
+    color: "#ffb52f",
+  },
+  {
+    method: "直播营销",
+    platform: "抖音",
+    account: "吉星高照官方店",
+    title: "来直播间寻找你的吉星",
+    time: "16 : 00",
+    color: "#39b8f3",
+  },
+  {
+    method: "短视频营销",
+    platform: "抖音",
+    account: "吉星高照-玄元十四",
+    title: "你来自哪颗星星",
+    time: "12 : 28",
+    color: "#39b8f3",
+  },
+  {
+    method: "独立站营销",
+    platform: "网站",
+    account: "JIXINGGAOZHAO",
+    title: "JIXINGGAOZHAO",
+    time: "12 : 28",
+    color: "#ffb52f",
+  },
 ].map((item, index) => ({ ...item, index }));
 
 const feedbackFilters = ["当 周", "当 月"];
@@ -665,8 +1000,14 @@ const topPanels = [
   {
     title: "品牌战略反馈",
     groups: [
-      { title: "正面评价", items: ["手串很有文化感", "吉星匹配很准，体验神奇", "包装很有档次"] },
-      { title: "负面评价", items: ["客服回复太慢", "物流太慢，等了五天", "价格有点贵"] },
+      {
+        title: "正面评价",
+        items: ["手串很有文化感", "吉星匹配很准，体验神奇", "包装很有档次"],
+      },
+      {
+        title: "负面评价",
+        items: ["客服回复太慢", "物流太慢，等了五天", "价格有点贵"],
+      },
       {
         summaryTitle: "品牌满意度",
         summaryRows: [
@@ -679,17 +1020,45 @@ const topPanels = [
   {
     title: "产品反馈",
     groups: [
-      { title: "产品抱怨", items: ["手串价格比别家贵不少", "琉璃珠容易刮花", "包装盒子太简陋，送礼拿不出手", "五行珠缺土行，没法配全套"] },
-      { title: "产品需求", items: ["希望出木制款手串", "企业定制服务", "增加更多五行珠颜色选择"] },
-      { summaryTitle: "产品满意度", summaryRows: [{ label: "产品满意度：", value: "72%（较上月 ↓ 3%）" }] },
+      {
+        title: "产品抱怨",
+        items: [
+          "手串价格比别家贵不少",
+          "琉璃珠容易刮花",
+          "包装盒子太简陋，送礼拿不出手",
+          "五行珠缺土行，没法配全套",
+        ],
+      },
+      {
+        title: "产品需求",
+        items: ["希望出木制款手串", "企业定制服务", "增加更多五行珠颜色选择"],
+      },
+      {
+        summaryTitle: "产品满意度",
+        summaryRows: [{ label: "产品满意度：", value: "72%（较上月 ↓ 3%）" }],
+      },
     ],
   },
   {
     title: "服务反馈",
     groups: [
-      { title: "服务抱怨", items: ["客服半天不回消息", "售后处理拖了一周", "客服对吉星文化不熟悉，问啥都不懂", "换货流程太麻烦"] },
-      { title: "服务改进建议", items: ["希望有24小时自助查询", "增加售后进度跟踪功能"] },
-      { summaryTitle: "客服满意度", summaryRows: [{ label: "客服满意度：", value: "78%（较上月 ↓ 2%）" }] },
+      {
+        title: "服务抱怨",
+        items: [
+          "客服半天不回消息",
+          "售后处理拖了一周",
+          "客服对吉星文化不熟悉，问啥都不懂",
+          "换货流程太麻烦",
+        ],
+      },
+      {
+        title: "服务改进建议",
+        items: ["希望有24小时自助查询", "增加售后进度跟踪功能"],
+      },
+      {
+        summaryTitle: "客服满意度",
+        summaryRows: [{ label: "客服满意度：", value: "78%（较上月 ↓ 2%）" }],
+      },
     ],
   },
 ];
@@ -699,7 +1068,11 @@ const competitorPanel = {
   groups: [
     {
       title: "客户反馈中的竞品对比",
-      items: ["甲家便宜多了，但质量不如你们", "乙家的包装更好看", "丙家的客服响应快，但产品没文化"],
+      items: [
+        "甲家便宜多了，但质量不如你们",
+        "乙家的包装更好看",
+        "丙家的客服响应快，但产品没文化",
+      ],
     },
   ],
 };
@@ -707,9 +1080,21 @@ const competitorPanel = {
 const streamPanel = {
   title: "竞争对手直播间动态",
   leftGroups: [
-    { title: "开播动态", mode: "plain", items: ["甲：3场（峰值2000人）", "乙：2场（峰值800人）"] },
-    { title: "弹幕热词", mode: "tag", items: ["便宜", "质量好", "发货慢", "售后", "包装"] },
-    { title: "用户对竞品评价摘要", mode: "plain", items: ["正面：性价比高", "负面：容易坏"] },
+    {
+      title: "开播动态",
+      mode: "plain",
+      items: ["甲：3场（峰值2000人）", "乙：2场（峰值800人）"],
+    },
+    {
+      title: "弹幕热词",
+      mode: "tag",
+      items: ["便宜", "质量好", "发货慢", "售后", "包装"],
+    },
+    {
+      title: "用户对竞品评价摘要",
+      mode: "plain",
+      items: ["正面：性价比高", "负面：容易坏"],
+    },
   ],
   alertGroup: {
     title: "预警信息",
@@ -724,8 +1109,15 @@ const streamPanel = {
 const partnerCards = [
   { title: "平台投流", image: "/static/svg/platform-traffic-distribution.svg" },
   { title: "产品拍摄", image: "/static/svg/product-photography.svg" },
-  { title: "短视频制作", image: "/static/svg/short-video-production.svg", active: true },
-  { title: "独立站建设", image: "/static/svg/independent-website-construction.svg" },
+  {
+    title: "短视频制作",
+    image: "/static/svg/short-video-production.svg",
+    active: true,
+  },
+  {
+    title: "独立站建设",
+    image: "/static/svg/independent-website-construction.svg",
+  },
 ];
 
 onLoad((query) => {
@@ -817,7 +1209,11 @@ function shiftYear(delta: number) {
 }
 
 function selectCalendarDay(day: CalendarDay) {
-  const target = new Date(calendarYear.value, calendarMonth.value + day.monthOffset, day.date);
+  const target = new Date(
+    calendarYear.value,
+    calendarMonth.value + day.monthOffset,
+    day.date
+  );
   selectedDate.value = target;
   setCalendarCursor(target.getFullYear(), target.getMonth());
 }
@@ -1437,10 +1833,6 @@ function goHome() {
   color: #ffffff;
   background: #2e72ff;
   box-shadow: 0 8px 20px rgb(46 114 255 / 20%);
-}
-
-.feedback-hero {
-  margin-top: -24px;
 }
 
 .hero-note {

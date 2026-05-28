@@ -16,7 +16,11 @@
           :class="{ active: card.title === selectedTitle }"
           @click="openPartner(card)"
         >
-          <image class="mobile-partner-image" :src="card.image" mode="aspectFill" />
+          <image
+            class="mobile-partner-image"
+            :src="card.image"
+            mode="aspectFill"
+          />
           <text class="mobile-partner-title">{{ card.title }}</text>
         </button>
       </view>
@@ -24,12 +28,33 @@
 
     <view v-if="showContact" class="partner-modal-mask" @click="closeContact">
       <view class="partner-contact-modal" @click.stop>
-        <button class="partner-modal-close" @click="closeContact"></button>
+        <button class="partner-modal-close" @click="closeContact">
+          <svg
+            viewBox="0 0 14.0005 14.0002"
+            xmlns="http://www.w3.org/2000/svg"
+            xmlns:xlink="http://www.w3.org/1999/xlink"
+            width="14.000504"
+            height="14.000244"
+            fill="none"
+            customFrame="#000000"
+          >
+            <path
+              id="Icon"
+              d="M8.41425 7.00025L13.7072 1.70725C14.0982 1.31625 14.0982 0.68425 13.7072 0.29325C13.3162 -0.09775 12.6842 -0.09775 12.2933 0.29325L7.00025 5.58625L1.70725 0.29325C1.31625 -0.09775 0.68425 -0.09775 0.29325 0.29325C-0.09775 0.68425 -0.09775 1.31625 0.29325 1.70725L5.58625 7.00025L0.29325 12.2933C-0.09775 12.6842 -0.09775 13.3162 0.29325 13.7072C0.48825 13.9022 0.74425 14.0002 1.00025 14.0002C1.25625 14.0002 1.51225 13.9022 1.70725 13.7072L7.00025 8.41425L12.2933 13.7072C12.4882 13.9022 12.7443 14.0002 13.0002 14.0002C13.2562 14.0002 13.5122 13.9022 13.7072 13.7072C14.0982 13.3162 14.0982 12.6842 13.7072 12.2933L8.41425 7.00025Z"
+              fill="rgb(153,153,153)"
+              fill-rule="evenodd"
+            />
+          </svg>
+        </button>
         <text class="partner-modal-title">{{ selectedCard?.title }}</text>
         <view class="partner-qrcode-placeholder"></view>
         <text class="partner-contact-title">联 系 方 式</text>
-        <text class="partner-contact-line">电话：{{ selectedCard?.phone || defaultPhone }}</text>
-        <text class="partner-contact-line">微信号：{{ selectedCard?.wechat || defaultWechat }}</text>
+        <text class="partner-contact-line"
+          >电话：{{ selectedCard?.phone || defaultPhone }}</text
+        >
+        <text class="partner-contact-line"
+          >微信号：{{ selectedCard?.wechat || defaultWechat }}</text
+        >
       </view>
     </view>
   </view>
@@ -68,7 +93,7 @@ const mobileNavContentHeight = ref(44);
 const mobileRightSafeWidth = ref(58);
 
 const selectedCard = computed(() =>
-  props.cards.find((card) => card.title === selectedTitle.value),
+  props.cards.find((card) => card.title === selectedTitle.value)
 );
 
 const pageStyle = computed(
@@ -78,13 +103,15 @@ const pageStyle = computed(
       "--mobile-nav-height": `${mobileNavHeight.value}px`,
       "--mobile-nav-content-height": `${mobileNavContentHeight.value}px`,
       "--mobile-right-safe-width": `${mobileRightSafeWidth.value}px`,
-    }) as Record<string, string>,
+    } as Record<string, string>)
 );
 
 onMounted(() => {
   initMobileChrome();
   selectedTitle.value =
-    props.cards.find((card) => card.active)?.title || props.cards[0]?.title || "";
+    props.cards.find((card) => card.active)?.title ||
+    props.cards[0]?.title ||
+    "";
 });
 
 function openPartner(card: PartnerCard) {
@@ -204,7 +231,9 @@ function initMobileChrome() {
 .partner-content {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px 14px;
+  align-content: start;
+  align-items: start;
+  gap: 14px;
   box-sizing: border-box;
   min-height: 100%;
   padding: 24px 26px 36px;
@@ -213,9 +242,9 @@ function initMobileChrome() {
 .mobile-partner-card {
   box-sizing: border-box;
   min-width: 0;
-  min-height: 198px;
+  max-height: 180px;
   margin: 0;
-  padding: 14px 14px 18px;
+  padding: 12px 12px 14px;
   overflow: hidden;
   background: #ffffff;
   border: 1px solid transparent;
@@ -231,7 +260,7 @@ function initMobileChrome() {
 .mobile-partner-image {
   display: block;
   width: 100%;
-  height: 116px;
+  height: 108px;
   overflow: hidden;
   background: #f5f6f8;
   border-radius: 12px;
@@ -239,7 +268,7 @@ function initMobileChrome() {
 
 .mobile-partner-title {
   display: block;
-  margin-top: 18px;
+  margin-top: 14px;
   overflow: hidden;
   color: #303236;
   font-size: 17px;
@@ -258,7 +287,7 @@ function initMobileChrome() {
 
 .partner-contact-modal {
   position: fixed;
-  top: calc(var(--mobile-nav-height) + 200px);
+  top: calc(var(--mobile-nav-height) + 100px);
   left: 50%;
   box-sizing: border-box;
   width: min(286px, calc(100vw - 88px));
@@ -284,36 +313,19 @@ function initMobileChrome() {
 
 .partner-modal-close {
   position: absolute;
-  top: 20px;
-  right: 20px;
-  width: 28px;
-  height: 28px;
+  top: 14px;
+  right: 14px;
+  width: 24px;
+  height: 24px;
   margin: 0;
   padding: 0;
   background: transparent;
   border: 0;
   border-radius: 0;
   box-shadow: none;
-}
-
-.partner-modal-close::before,
-.partner-modal-close::after {
-  position: absolute;
-  top: 13px;
-  left: 4px;
-  width: 20px;
-  height: 2px;
-  content: "";
-  background: #8d8d8d;
-  border-radius: 999px;
-}
-
-.partner-modal-close::before {
-  transform: rotate(45deg);
-}
-
-.partner-modal-close::after {
-  transform: rotate(-45deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .partner-qrcode-placeholder {
