@@ -24,8 +24,11 @@ const BASE_CHAT_AGENT_CODE = "base_chat_agent";
 const STRATEGY_AGENT_CODE = "strategy_agent";
 const PROCESSING_POLL_INTERVAL_MS = 2500;
 const PROCESSING_POLL_MAX_ATTEMPTS = 160;
+const TITLE_REFRESH_POLL_INTERVAL_MS = 2500;
+const TITLE_REFRESH_POLL_MAX_ATTEMPTS = 8;
 
 const activeProcessingPolls = new Set<string>();
+const activeTitleRefreshPolls = new Set<string>();
 
 function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -154,6 +157,9 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
       this.activeAgentCode = result.session?.agentCode || BASE_CHAT_AGENT_CODE;
       this.sessions = this.sessions.map((session) => ({
         ...session,
+        ...(session.id === result.sessionId && result.session
+          ? result.session
+          : {}),
         isActive: session.id === result.sessionId,
       }));
       if (result.sessionId) {
@@ -178,7 +184,6 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
             method: "POST",
             data: {
               tenantId: this.getTenantId(),
-              title: "新的聊天",
               agentCode: BASE_CHAT_AGENT_CODE,
             },
           },
@@ -236,6 +241,7 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
         ];
         await this.loadSessions();
         await this.loadSession(result.sessionId);
+        this.startSessionTitleRefreshPoll(result.sessionId);
       } catch (err) {
         this.error = err instanceof Error ? err.message : "发送失败";
         throw err;
@@ -280,6 +286,7 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
           result.sessionId,
           result.assistantMessage,
         );
+        this.startSessionTitleRefreshPoll(result.sessionId);
       } catch (err) {
         this.error = this.isStrategyEntitlementDenied(err)
           ? "当前企业未开通战略智能体权益"
@@ -315,6 +322,47 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
 
       this.messages.splice(index, 1, message);
       return true;
+    },
+    getSessionTitleSource(session?: StrategyChatSessionSummary | null) {
+      const titleSource = session?.metadata?.titleSource;
+
+      return typeof titleSource === "string" ? titleSource : "";
+    },
+    isSessionTitleFinal(session?: StrategyChatSessionSummary | null) {
+      const titleSource = this.getSessionTitleSource(session);
+
+      return titleSource === "llm" || titleSource === "manual";
+    },
+    startSessionTitleRefreshPoll(sessionId?: string | null) {
+      if (!sessionId || activeTitleRefreshPolls.has(sessionId)) {
+        return;
+      }
+
+      activeTitleRefreshPolls.add(sessionId);
+      void this.pollSessionTitleRefresh(sessionId).finally(() =>
+        activeTitleRefreshPolls.delete(sessionId),
+      );
+    },
+    async pollSessionTitleRefresh(sessionId: string) {
+      for (
+        let attempt = 0;
+        attempt < TITLE_REFRESH_POLL_MAX_ATTEMPTS;
+        attempt += 1
+      ) {
+        await delay(TITLE_REFRESH_POLL_INTERVAL_MS);
+
+        try {
+          await this.loadSessions();
+        } catch {
+          continue;
+        }
+
+        const session = this.sessions.find((item) => item.id === sessionId);
+
+        if (!session || this.isSessionTitleFinal(session)) {
+          return;
+        }
+      }
     },
     startProcessingMessagePoll(
       sessionId: string,
@@ -368,6 +416,7 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
 
         if (!this.isProcessingMessage(latestMessage)) {
           await this.loadStrategySessionState(sessionId);
+          this.startSessionTitleRefreshPoll(sessionId);
           return;
         }
       }
@@ -451,6 +500,7 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
         await this.loadSessions();
         await this.loadSession(result.sessionId);
         await this.loadStrategySessionState(result.sessionId);
+        this.startSessionTitleRefreshPoll(result.sessionId);
       } catch (err) {
         this.error = this.isStrategyEntitlementDenied(err)
           ? "当前企业未开通战略智能体权益"
@@ -469,7 +519,7 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
       this.ensureClientStrategyAvailable();
 
       if (!type || this.loading || this.uploading) {
-        return;
+        return null;
       }
 
       this.error = "";
@@ -513,30 +563,7 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
           this.diagnosisId = result.diagnosisId;
         }
 
-        const title = result.report.title || "战略报告";
-        const message: AgentMessage = {
-          id: `local-report-${result.report.type}-${Date.now()}`,
-          sessionId: this.sessionId ?? "local",
-          role: "ASSISTANT",
-          content: `已为您打开《${title}》。`,
-          metadata: {
-            source: "strategy_report_detail",
-            tenantId: result.tenantId,
-            diagnosisId: result.diagnosisId,
-            ui: result.ui,
-            card: {
-              reason: "strategy_report",
-              tenantId: result.tenantId,
-              diagnosisId: result.diagnosisId,
-              ui: result.ui,
-              report: result.report,
-              nextActions: result.nextActions,
-            },
-          },
-          createdAt: new Date().toISOString(),
-        };
-
-        this.messages = [...this.messages, message];
+        return result;
       } catch (err) {
         this.error = err instanceof Error ? err.message : "读取报告失败";
         throw err;

@@ -271,6 +271,16 @@
       </view>
     </view>
 
+    <StrategyReportModal
+      :visible="isReportModalVisible"
+      :loading="reportModalLoading"
+      :report="activeReportResponse?.report ?? null"
+      :next-actions="activeReportResponse?.nextActions ?? []"
+      :actions-disabled="isBusy"
+      @close="closeReportModal"
+      @action="handleReportModalAction"
+    />
+
     <view v-if="isSettingsVisible" class="settings-overlay" @click="closeSettings">
       <view class="settings-panel" @click.stop>
         <view class="settings-nav">
@@ -386,8 +396,9 @@ import { computed, nextTick, reactive, ref, watch } from "vue";
 import { request } from "@/services/api";
 import { useAuthStore } from "@/stores/auth";
 import { useStrategyChatStore } from "@/stores/strategyChat";
-import type { LoginResponse } from "@/types/strategy";
+import type { LoginResponse, StrategyReportResponse } from "@/types/strategy";
 import StrategyMessageCard from "./components/StrategyMessageCard.vue";
+import StrategyReportModal from "./components/StrategyReportModal.vue";
 
 type BoardType =
   | "brand-strategy"
@@ -498,7 +509,10 @@ const isSettingsVisible = ref(false);
 const isBoardMenuVisible = ref(false);
 const isMoreMenuVisible = ref(false);
 const isMobileSidebarOpen = ref(false);
+const isReportModalVisible = ref(false);
+const reportModalLoading = ref(false);
 const activeComposerMode = ref<ComposerModeId | null>(null);
+const activeReportResponse = ref<StrategyReportResponse | null>(null);
 const mobileStatusBarHeight = ref(0);
 const mobileNavHeight = ref(56);
 const mobileNavContentHeight = ref(44);
@@ -720,7 +734,11 @@ const reportActionTypes: Record<string, string> = {
 };
 
 const isBusy = computed(
-  () => pageLoading.value || chatStore.loading || chatStore.uploading,
+  () =>
+    pageLoading.value ||
+    chatStore.loading ||
+    chatStore.uploading ||
+    reportModalLoading.value,
 );
 const showMessages = computed(() => chatStore.messages.length > 0);
 const strategyNotice = computed(
@@ -1137,9 +1155,7 @@ async function handleCardAction(
 
     if (reportType) {
       try {
-        await chatStore.openReport(reportType, { diagnosisId });
-        syncComposerModeWithCurrentSession();
-        await scrollToBottom();
+        await openReportModal(reportType, { diagnosisId });
       } catch (err) {
         showError(err, "读取报告失败");
       }
@@ -1151,9 +1167,7 @@ async function handleCardAction(
 
   if (mappedReportType) {
     try {
-      await chatStore.openReport(mappedReportType);
-      syncComposerModeWithCurrentSession();
-      await scrollToBottom();
+      await openReportModal(mappedReportType);
     } catch (err) {
       showError(err, "读取报告失败");
     }
@@ -1189,6 +1203,50 @@ async function handleCardAction(
     await scrollToBottom();
   } catch (err) {
     showError(err, "发送失败");
+  }
+}
+
+async function openReportModal(
+  reportType: string,
+  options: { diagnosisId?: string | null } = {},
+) {
+  activeReportResponse.value = null;
+  isReportModalVisible.value = true;
+  reportModalLoading.value = true;
+
+  try {
+    const result = await chatStore.openReport(reportType, options);
+
+    if (!result) {
+      isReportModalVisible.value = false;
+      return;
+    }
+
+    activeReportResponse.value = result;
+    syncComposerModeWithCurrentSession();
+  } catch (err) {
+    isReportModalVisible.value = false;
+    throw err;
+  } finally {
+    reportModalLoading.value = false;
+  }
+}
+
+function closeReportModal() {
+  if (!reportModalLoading.value) {
+    isReportModalVisible.value = false;
+  }
+}
+
+async function handleReportModalAction(action: string) {
+  if (action === "open_dashboard") {
+    closeReportModal();
+  }
+
+  await handleCardAction(action);
+
+  if (action === "rediagnose" || action === "sync_reports") {
+    closeReportModal();
   }
 }
 
