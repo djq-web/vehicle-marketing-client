@@ -487,6 +487,7 @@ type LocalSettings = {
 };
 
 const LOCAL_SETTINGS_KEY = "vehicle_marketing_client_account_settings";
+const STRATEGY_AGENT_CODE = "strategy_agent";
 
 const authStore = useAuthStore();
 const chatStore = useStrategyChatStore();
@@ -598,7 +599,7 @@ const composerModes: Record<ComposerModeId, ComposerMode> = {
   strategy: {
     id: "strategy",
     label: "战略诊断",
-    placeholder: "描述企业现状、市场问题或你想诊断的战略方向",
+    placeholder: "描述企业现状或你想诊断的战略方向",
   },
 };
 
@@ -803,6 +804,9 @@ const composerPlaceholder = computed(
 const visibleQuickActions = computed(() =>
   activeComposerMode.value === "strategy" ? strategyModeActions : quickActions,
 );
+const isStrategyComposerMode = computed(
+  () => activeComposerMode.value === "strategy",
+);
 
 onLoad(async () => {
   initMobileChrome();
@@ -1004,6 +1008,7 @@ async function refresh() {
 
   try {
     await chatStore.initialize();
+    syncComposerModeWithCurrentSession();
     await scrollToBottom();
   } catch (err) {
     showError(err, "读取会话失败");
@@ -1015,6 +1020,7 @@ async function refresh() {
 async function createSession() {
   try {
     await chatStore.createSession();
+    activeComposerMode.value = null;
     closeMobileSidebar();
     await scrollToBottom();
   } catch (err) {
@@ -1025,6 +1031,7 @@ async function createSession() {
 async function selectSession(sessionId: string) {
   try {
     await chatStore.selectSession(sessionId);
+    syncComposerModeWithCurrentSession();
     closeMobileSidebar();
     await scrollToBottom();
   } catch (err) {
@@ -1036,6 +1043,7 @@ async function handleFeatureSelect(feature: Feature) {
   if (feature.action === "strategy-chat") {
     try {
       await chatStore.enterStrategy();
+      activeComposerMode.value = "strategy";
       await scrollToBottom();
     } catch (err) {
       showError(err, "进入失败");
@@ -1066,7 +1074,7 @@ function handleQuickAction(action: QuickAction) {
   }
 
   if (action.type === "mode") {
-    activeComposerMode.value = action.mode;
+    enterComposerMode(action.mode);
     closeMoreMenu();
     closeBoardMenu();
     syncNativeTextareaCursor();
@@ -1080,6 +1088,15 @@ function handleQuickAction(action: QuickAction) {
 function cancelComposerMode() {
   activeComposerMode.value = null;
   closeMoreMenu();
+}
+
+function enterComposerMode(mode: ComposerModeId) {
+  activeComposerMode.value = mode;
+}
+
+function syncComposerModeWithCurrentSession() {
+  activeComposerMode.value =
+    chatStore.activeAgentCode === STRATEGY_AGENT_CODE ? "strategy" : null;
 }
 
 function toggleMoreMenu() {
@@ -1121,6 +1138,7 @@ async function handleCardAction(
     if (reportType) {
       try {
         await chatStore.openReport(reportType, { diagnosisId });
+        syncComposerModeWithCurrentSession();
         await scrollToBottom();
       } catch (err) {
         showError(err, "读取报告失败");
@@ -1134,6 +1152,7 @@ async function handleCardAction(
   if (mappedReportType) {
     try {
       await chatStore.openReport(mappedReportType);
+      syncComposerModeWithCurrentSession();
       await scrollToBottom();
     } catch (err) {
       showError(err, "读取报告失败");
@@ -1166,6 +1185,7 @@ async function handleCardAction(
 
   try {
     await chatStore.sendStrategy(prompt);
+    syncComposerModeWithCurrentSession();
     await scrollToBottom();
   } catch (err) {
     showError(err, "发送失败");
@@ -1428,11 +1448,12 @@ async function sendPreset(content: string, strategy = false) {
   }
 
   try {
-    if (strategy) {
+    if (strategy || isStrategyComposerMode.value) {
       await chatStore.sendStrategy(content);
     } else {
       await chatStore.sendBase(content);
     }
+    syncComposerModeWithCurrentSession();
     await scrollToBottom();
   } catch (err) {
     showError(err, "发送失败");
@@ -1450,11 +1471,12 @@ async function sendMessage() {
   closeMoreMenu();
 
   try {
-    if (activeComposerMode.value === "strategy") {
+    if (isStrategyComposerMode.value) {
       await chatStore.sendStrategy(content);
     } else {
       await chatStore.sendBase(content);
     }
+    syncComposerModeWithCurrentSession();
     await scrollToBottom();
   } catch (err) {
     draft.value = content;
@@ -1503,11 +1525,25 @@ function chooseMaterial() {
   }
 
   closeMoreMenu();
+  const supportedExtensions = [
+    "pdf",
+    "txt",
+    "md",
+    "markdown",
+    "csv",
+    "json",
+    "jpg",
+    "jpeg",
+    "png",
+    "webp",
+    "bmp",
+    "gif",
+  ];
 
   // #ifdef MP-WEIXIN
   uni.chooseMessageFile({
     count: 1,
-    type: "file",
+    type: "all",
     success: (res) => {
       const file = res.tempFiles[0] as PickedFile | undefined;
       uploadPickedFile(file);
@@ -1520,6 +1556,7 @@ function chooseMaterial() {
   const h5Uni = uni as unknown as {
     chooseFile?: (options: {
       count: number;
+      extension?: string[];
       success: (res: { tempFiles: PickedFile[] }) => void;
     }) => void;
   };
@@ -1528,6 +1565,7 @@ function chooseMaterial() {
   if (chooseFile) {
     (chooseFile as NonNullable<typeof chooseFile>)({
       count: 1,
+      extension: supportedExtensions,
       success: (res) => uploadPickedFile(res.tempFiles[0]),
     });
     return;
@@ -1555,6 +1593,7 @@ async function uploadPickedFile(file?: PickedFile) {
       filePath,
       fileName: file?.name,
     });
+    syncComposerModeWithCurrentSession();
     await scrollToBottom();
     uni.showToast({
       title: "资料已上传",

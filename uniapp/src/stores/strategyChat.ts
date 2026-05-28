@@ -1,11 +1,17 @@
 import { defineStore } from "pinia";
-import { ApiError, request, upload } from "@/services/api";
+import {
+  API_LONG_REQUEST_TIMEOUT_MS,
+  ApiError,
+  request,
+  upload,
+} from "@/services/api";
 import { useAuthStore } from "@/stores/auth";
 import type {
   AgentChatMessageResponse,
   AgentChatSessionResponse,
   AgentChatSessionsResponse,
   AgentMessage,
+  AgentMessageResponse,
   PendingFrameworkUpdate,
   StrategyChatResponse,
   StrategyChatSessionResponse,
@@ -16,6 +22,14 @@ import type {
 
 const BASE_CHAT_AGENT_CODE = "base_chat_agent";
 const STRATEGY_AGENT_CODE = "strategy_agent";
+const PROCESSING_POLL_INTERVAL_MS = 2500;
+const PROCESSING_POLL_MAX_ATTEMPTS = 160;
+
+const activeProcessingPolls = new Set<string>();
+
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 type UploadCandidate = {
   filePath: string;
@@ -90,7 +104,9 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
       this.initialized = true;
 
       if (!this.isClientAccount()) {
-        this.resetUnavailableState("当前账号不是企业租户账号，无法使用会话功能");
+        this.resetUnavailableState(
+          "当前账号不是企业租户账号，无法使用会话功能",
+        );
         return;
       }
 
@@ -140,6 +156,9 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
         ...session,
         isActive: session.id === result.sessionId,
       }));
+      if (result.sessionId) {
+        this.startProcessingMessagePolls(result.sessionId);
+      }
 
       if (this.activeAgentCode === STRATEGY_AGENT_CODE) {
         await this.loadStrategySessionState(result.sessionId);
@@ -244,6 +263,7 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
             sessionId: this.sessionId ?? undefined,
             content: normalized,
           },
+          timeout: API_LONG_REQUEST_TIMEOUT_MS,
         });
 
         this.diagnosisId = result.diagnosisId;
@@ -256,6 +276,10 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
         await this.loadSessions();
         await this.loadSession(result.sessionId);
         await this.loadStrategySessionState(result.sessionId);
+        this.startProcessingMessagePoll(
+          result.sessionId,
+          result.assistantMessage,
+        );
       } catch (err) {
         this.error = this.isStrategyEntitlementDenied(err)
           ? "当前企业未开通战略智能体权益"
@@ -265,6 +289,87 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
         throw err;
       } finally {
         this.loading = false;
+      }
+    },
+    isProcessingMessage(message?: AgentMessage | null) {
+      if (!message?.metadata) {
+        return false;
+      }
+
+      const card = message.metadata.card;
+
+      return (
+        message.metadata.processing === true ||
+        (typeof card === "object" &&
+          card !== null &&
+          "processing" in card &&
+          card.processing === true)
+      );
+    },
+    replaceMessage(message: AgentMessage) {
+      const index = this.messages.findIndex((item) => item.id === message.id);
+
+      if (index === -1) {
+        return false;
+      }
+
+      this.messages.splice(index, 1, message);
+      return true;
+    },
+    startProcessingMessagePoll(
+      sessionId: string,
+      assistantMessage?: AgentMessage | null,
+    ) {
+      if (!assistantMessage || !this.isProcessingMessage(assistantMessage)) {
+        return;
+      }
+
+      if (activeProcessingPolls.has(assistantMessage.id)) {
+        return;
+      }
+
+      activeProcessingPolls.add(assistantMessage.id);
+      void this.pollProcessingMessage(sessionId, assistantMessage.id).finally(
+        () => activeProcessingPolls.delete(assistantMessage.id),
+      );
+    },
+    startProcessingMessagePolls(sessionId: string) {
+      this.messages
+        .filter((message) => this.isProcessingMessage(message))
+        .forEach((message) =>
+          this.startProcessingMessagePoll(sessionId, message),
+        );
+    },
+    async pollProcessingMessage(sessionId: string, messageId: string) {
+      for (
+        let attempt = 0;
+        attempt < PROCESSING_POLL_MAX_ATTEMPTS;
+        attempt += 1
+      ) {
+        await delay(PROCESSING_POLL_INTERVAL_MS);
+
+        if (this.sessionId !== sessionId) {
+          return;
+        }
+
+        try {
+          const result = await request<AgentMessageResponse>(
+            `/agent/sessions/${encodeURIComponent(sessionId)}/messages/${encodeURIComponent(messageId)}`,
+          );
+
+          this.replaceMessage(result.message);
+        } catch {
+          continue;
+        }
+
+        const latestMessage = this.messages.find(
+          (message) => message.id === messageId,
+        );
+
+        if (!this.isProcessingMessage(latestMessage)) {
+          await this.loadStrategySessionState(sessionId);
+          return;
+        }
       }
     },
     async enterStrategy() {
@@ -332,6 +437,7 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
             filePath: file.filePath,
             fileName: file.fileName,
             formData,
+            timeout: API_LONG_REQUEST_TIMEOUT_MS,
           },
         );
 
@@ -390,6 +496,7 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
               tenantId: this.getTenantId(),
               types: [type],
             },
+            timeout: API_LONG_REQUEST_TIMEOUT_MS,
           });
           result = await request<StrategyReportResponse>(
             `/strategy/reports/${encodeURIComponent(type)}`,

@@ -55,6 +55,10 @@
       </view>
     </view>
 
+    <view v-if="blockers.length" class="blocker-list">
+      <text v-for="blocker in blockers" :key="blocker">{{ blocker }}</text>
+    </view>
+
     <view v-if="pendingUpdateText" class="pending-update">
       <text>{{ pendingUpdateText }}</text>
     </view>
@@ -108,6 +112,11 @@ const asArray = (value: unknown): Record<string, unknown>[] =>
     : [];
 
 const diagnosis = computed(() => asRecord(props.card.diagnosis));
+const progress = computed(() => asRecord(props.card.progress));
+const progressCurrentStage = computed(() =>
+  asRecord(progress.value.currentStage),
+);
+const progressFacts = computed(() => asRecord(progress.value.facts));
 const pendingFrameworkUpdate = computed(() =>
   asRecord(props.card.pendingFrameworkUpdate),
 );
@@ -119,8 +128,43 @@ const reports = computed(() =>
     ? asArray(props.card.reports)
     : asArray(diagnosis.value.reports),
 );
-const nextActions = computed(() =>
-  (props.nextActions ?? []).filter(Boolean),
+const progressSteps = computed<ProgressStep[]>(() =>
+  asArray(progress.value.steps)
+    .map((step, index) => ({
+      key: String(step.key || `step-${index}`),
+      index: typeof step.index === "number" ? step.index : index + 1,
+      title: String(step.title || ""),
+      description: String(step.description || ""),
+      state: normalizeStepState(step.state),
+      statusText: String(step.statusText || ""),
+    }))
+    .filter((step) => step.title),
+);
+const nextActions = computed(() => {
+  const explicitActions = (props.nextActions ?? []).filter(Boolean);
+
+  if (explicitActions.length) {
+    return explicitActions;
+  }
+
+  return (
+    Array.isArray(progress.value.nextSuggestions)
+      ? progress.value.nextSuggestions
+      : []
+  )
+    .map((item) => {
+      if (typeof item === "string") {
+        return item;
+      }
+
+      return String(asRecord(item).action || "");
+    })
+    .filter(Boolean);
+});
+const blockers = computed(() =>
+  (Array.isArray(progress.value.blockers) ? progress.value.blockers : [])
+    .map((item) => String(item || "").trim())
+    .filter(Boolean),
 );
 
 const statusRank = computed(() => {
@@ -151,7 +195,7 @@ const staleReportCount = computed(
   () => reports.value.filter((report) => report.needsSync === true).length,
 );
 
-const steps = computed<ProgressStep[]>(() => {
+const fallbackSteps = computed<ProgressStep[]>(() => {
   const rank = statusRank.value;
   const reportCount = reports.value.length;
 
@@ -190,10 +234,19 @@ const steps = computed<ProgressStep[]>(() => {
         rank >= 5
           ? "19点战略框架已确认。"
           : rank === 4
-            ? "框架草稿已生成，正在确认或继续完善。"
+            ? status.value === "framework_refining"
+              ? "正在根据补充信息完善框架。"
+              : "框架草稿已生成，等待确认。"
             : "等待表单确认后生成框架。",
       state: rank >= 5 ? "done" : rank === 4 ? "current" : "pending",
-      statusText: rank >= 5 ? "已确认" : rank === 4 ? "完善中" : "待生成",
+      statusText:
+        rank >= 5
+          ? "已确认"
+          : rank === 4
+            ? status.value === "framework_refining"
+              ? "完善中"
+              : "待确认"
+            : "待生成",
     },
     {
       key: "reports",
@@ -209,7 +262,13 @@ const steps = computed<ProgressStep[]>(() => {
               : "等待框架确认后生成报告。",
       state: rank >= 7 ? "done" : rank >= 5 ? "current" : "pending",
       statusText:
-        rank >= 7 ? "已生成" : rank === 6 ? "生成中" : rank === 5 ? "可生成" : "待生成",
+        rank >= 7
+          ? "已生成"
+          : rank === 6
+            ? "生成中"
+            : rank === 5
+              ? "可生成"
+              : "待生成",
     },
     {
       key: "dashboard",
@@ -224,24 +283,41 @@ const steps = computed<ProgressStep[]>(() => {
     },
   ];
 });
+const steps = computed<ProgressStep[]>(() =>
+  progressSteps.value.length ? progressSteps.value : fallbackSteps.value,
+);
 
 const completedStepCount = computed(
   () => steps.value.filter((step) => step.state === "done").length,
 );
 const progressPercent = computed(() => {
+  if (typeof progress.value.percent === "number") {
+    return `${Math.min(100, Math.max(0, progress.value.percent))}%`;
+  }
+
   if (steps.value.length <= 1) {
     return "0%";
   }
 
-  const currentIndex = steps.value.findIndex((step) => step.state === "current");
+  const currentIndex = steps.value.findIndex(
+    (step) => step.state === "current",
+  );
   const activeIndex =
-    currentIndex >= 0 ? currentIndex : Math.max(0, completedStepCount.value - 1);
+    currentIndex >= 0
+      ? currentIndex
+      : Math.max(0, completedStepCount.value - 1);
   const percent = Math.round((activeIndex / (steps.value.length - 1)) * 100);
 
   return `${Math.min(100, Math.max(0, percent))}%`;
 });
 
 const currentStageLabel = computed(() => {
+  const label = String(progressCurrentStage.value.label || "").trim();
+
+  if (label) {
+    return label;
+  }
+
   const labels: Record<string, string> = {
     not_started: "尚未开始诊断",
     collecting_info: "正在收集企业信息和资料",
@@ -259,11 +335,21 @@ const currentStageLabel = computed(() => {
 });
 
 const currentStageDescription = computed(() => {
+  const description = String(
+    progressCurrentStage.value.description || "",
+  ).trim();
+
+  if (description) {
+    return description;
+  }
+
   const descriptions: Record<string, string> = {
     not_started: "当前企业还没有开始战略诊断。",
-    collecting_info: "请继续补充企业信息或上传资料，资料充足后可生成战略分析表单。",
+    collecting_info:
+      "请继续补充企业信息或上传资料，资料充足后可生成战略分析表单。",
     rediagnosing: "本轮诊断已重新开始，后续结果会以新诊断数据为准。",
-    form_draft_generated: "请核对当前战略分析表单，确认无误后进入19点战略框架生成。",
+    form_draft_generated:
+      "请核对当前战略分析表单，确认无误后进入19点战略框架生成。",
     form_confirmed: "下一步可以生成19点战略框架。",
     framework_draft_generated: "请确认框架，或继续补充证据和关键判断。",
     framework_refining: "当前正在根据补充信息完善框架。",
@@ -275,12 +361,29 @@ const currentStageDescription = computed(() => {
   return descriptions[status.value] || "已读取当前诊断状态。";
 });
 
-const diagnosisTitle = computed(
-  () => String(diagnosis.value.title || props.card.title || "当前企业诊断"),
+const diagnosisTitle = computed(() =>
+  String(
+    progressFacts.value.diagnosisTitle ||
+      diagnosis.value.title ||
+      props.card.title ||
+      "当前企业诊断",
+  ),
 );
 const formStatusText = computed(() => {
+  const progressText = String(
+    progressFacts.value.analysisFormStatusText ||
+      progressFacts.value.formStatusText ||
+      "",
+  ).trim();
+
+  if (progressText) {
+    return progressText;
+  }
+
   const formStatus = String(
-    diagnosis.value.analysisFormStatus || asRecord(props.card.form).status || "",
+    diagnosis.value.analysisFormStatus ||
+      asRecord(props.card.form).status ||
+      "",
   );
 
   if (formStatus === "confirmed") {
@@ -294,6 +397,14 @@ const formStatusText = computed(() => {
   return "未生成";
 });
 const frameworkStatusText = computed(() => {
+  const progressText = String(
+    progressFacts.value.frameworkStatusText || "",
+  ).trim();
+
+  if (progressText) {
+    return progressText;
+  }
+
   const frameworkStatus = String(
     diagnosis.value.frameworkStatus ||
       asRecord(props.card.framework).status ||
@@ -311,6 +422,14 @@ const frameworkStatusText = computed(() => {
   return "未生成";
 });
 const reportsStatusText = computed(() => {
+  const progressText = String(
+    progressFacts.value.reportsStatusText || "",
+  ).trim();
+
+  if (progressText) {
+    return progressText;
+  }
+
   if (!reports.value.length) {
     return "未生成";
   }
@@ -372,6 +491,16 @@ function actionLabel(action: string) {
   };
 
   return labels[action] || action;
+}
+
+function normalizeStepState(value: unknown): StepState {
+  const state = String(value || "");
+
+  if (state === "done" || state === "current" || state === "pending") {
+    return state;
+  }
+
+  return "pending";
 }
 </script>
 
@@ -586,6 +715,19 @@ function actionLabel(action: string) {
 }
 
 .pending-update {
+  padding: 9px 10px;
+  color: #8a4b00;
+  font-size: 12px;
+  line-height: 1.5;
+  background: #fff8eb;
+  border: 1px solid #fed7aa;
+  border-radius: 8px;
+}
+
+.blocker-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   padding: 9px 10px;
   color: #8a4b00;
   font-size: 12px;

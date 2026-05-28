@@ -9,28 +9,31 @@
     </button>
 
     <template v-if="activeType === 'brand-strategy'">
-      <section class="basic-hero">
-        <image
-          class="basic-hero-icon"
-          :src="basicBoard.icon"
-          mode="aspectFit"
-        />
-        <text class="board-title">{{ basicBoard.title }}</text>
-        <text class="title-underline"></text>
-        <text class="board-subtitle">{{ basicBoard.subtitle }}</text>
-      </section>
+      <BrandStrategyMobile v-if="isMobileLayout" @back="goHome" />
+      <template v-else>
+        <section class="basic-hero">
+          <image
+            class="basic-hero-icon"
+            :src="basicBoard.icon"
+            mode="aspectFit"
+          />
+          <text class="board-title">{{ basicBoard.title }}</text>
+          <text class="title-underline"></text>
+          <text class="board-subtitle">{{ basicBoard.subtitle }}</text>
+        </section>
 
-      <section class="metric-grid">
-        <view
-          v-for="card in basicBoard.cards"
-          :key="card.label"
-          class="metric-card"
-        >
-          <text class="metric-label">{{ card.label }}</text>
-          <text class="metric-value">{{ card.value }}</text>
-          <text class="metric-caption">{{ card.caption }}</text>
-        </view>
-      </section>
+        <section class="metric-grid">
+          <view
+            v-for="card in basicBoard.cards"
+            :key="card.label"
+            class="metric-card"
+          >
+            <text class="metric-label">{{ card.label }}</text>
+            <text class="metric-value">{{ card.value }}</text>
+            <text class="metric-caption">{{ card.caption }}</text>
+          </view>
+        </section>
+      </template>
     </template>
 
     <template v-else-if="activeType === 'key-metrics'">
@@ -333,6 +336,7 @@
 <script setup lang="ts">
 import { onLoad } from "@dcloudio/uni-app";
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import BrandStrategyMobile from "./components/BrandStrategyMobile.vue";
 import EcologicalPartnerMobile from "./components/EcologicalPartnerMobile.vue";
 import KeyMetricsDesktop from "./components/KeyMetricsDesktop.vue";
 import KeyMetricsMobile from "./components/KeyMetricsMobile.vue";

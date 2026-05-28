@@ -122,6 +122,7 @@ export type StrategyChatResponse = {
   intent: string;
   action: string;
   succeeded: boolean;
+  processing?: boolean;
   userMessage: AgentMessage;
   assistantMessage: AgentMessage;
   result: Record<string, unknown>;
@@ -135,6 +136,13 @@ export type AgentChatMessageResponse = {
   agentCode: string;
   userMessage: AgentMessage;
   assistantMessage: AgentMessage;
+  ui: StrategyUiDescriptor;
+};
+
+export type AgentMessageResponse = {
+  tenantId: string;
+  sessionId: string;
+  message: AgentMessage;
   ui: StrategyUiDescriptor;
 };
 

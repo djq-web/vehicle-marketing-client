@@ -1,6 +1,13 @@
 const API_BASE_URL = (
   import.meta.env.VITE_API_BASE_URL || "http://localhost:5010/api"
 ).replace(/\/$/, "");
+const DEFAULT_REQUEST_TIMEOUT_MS = Number(
+  import.meta.env.VITE_API_TIMEOUT_MS || 120000,
+);
+
+export const API_LONG_REQUEST_TIMEOUT_MS = Number(
+  import.meta.env.VITE_API_LONG_TIMEOUT_MS || 600000,
+);
 
 export const AUTH_TOKEN_KEY = "vehicle_marketing_client_token";
 export const AUTH_USER_KEY = "vehicle_marketing_client_user";
@@ -13,6 +20,7 @@ type RequestOptions = {
   query?: Record<string, QueryValue>;
   headers?: Record<string, string>;
   skipAuth?: boolean;
+  timeout?: number;
 };
 
 type UploadOptions = {
@@ -22,6 +30,7 @@ type UploadOptions = {
   formData?: Record<string, string>;
   headers?: Record<string, string>;
   skipAuth?: boolean;
+  timeout?: number;
 };
 
 export class ApiError extends Error {
@@ -39,7 +48,9 @@ export class ApiError extends Error {
 function buildUrl(path: string, query?: Record<string, QueryValue>) {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
   const params = Object.entries(query ?? {})
-    .filter(([, value]) => value !== undefined && value !== null && value !== "")
+    .filter(
+      ([, value]) => value !== undefined && value !== null && value !== "",
+    )
     .map(
       ([key, value]) =>
         `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`,
@@ -89,12 +100,15 @@ export function request<T>(path: string, options: RequestOptions = {}) {
       method: options.method ?? "GET",
       data: options.data,
       header: getAuthHeaders(options.skipAuth, options.headers),
+      timeout: options.timeout ?? DEFAULT_REQUEST_TIMEOUT_MS,
       success: (response) => {
         const status = response.statusCode;
         const payload = normalizePayload(response.data);
 
         if (status < 200 || status >= 300) {
-          reject(new ApiError(resolveErrorMessage(payload, status), status, payload));
+          reject(
+            new ApiError(resolveErrorMessage(payload, status), status, payload),
+          );
           return;
         }
 
@@ -116,12 +130,15 @@ export function upload<T>(path: string, options: UploadOptions) {
       fileName: options.fileName,
       formData: options.formData,
       header: getAuthHeaders(options.skipAuth, options.headers),
+      timeout: options.timeout ?? API_LONG_REQUEST_TIMEOUT_MS,
       success: (response) => {
         const status = response.statusCode;
         const payload = normalizePayload(response.data);
 
         if (status < 200 || status >= 300) {
-          reject(new ApiError(resolveErrorMessage(payload, status), status, payload));
+          reject(
+            new ApiError(resolveErrorMessage(payload, status), status, payload),
+          );
           return;
         }
 
