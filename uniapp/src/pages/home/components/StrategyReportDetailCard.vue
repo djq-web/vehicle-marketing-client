@@ -94,8 +94,9 @@ const contentBlocks = computed<ContentBlock[]>(() =>
     .filter(Boolean)
     .map(toContentBlock),
 );
+const reportActionTypes = new Set(["sync_reports"]);
 const actionItems = computed(() =>
-  (props.nextActions ?? []).filter((action) => action !== "generate_reports"),
+  (props.nextActions ?? []).filter((action) => reportActionTypes.has(action)),
 );
 
 function stringValue(value: unknown) {
@@ -171,8 +172,6 @@ function statusLabel(value: string) {
 
 function actionLabel(action: string) {
   const labels: Record<string, string> = {
-    open_dashboard: "打开看板",
-    rediagnose: "重新诊断",
     sync_reports: "同步报告",
   };
 

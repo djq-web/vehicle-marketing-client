@@ -20,7 +20,6 @@ import type {
   StrategyReportResponse,
 } from "@/types/strategy";
 
-const BASE_CHAT_AGENT_CODE = "base_chat_agent";
 const STRATEGY_AGENT_CODE = "strategy_agent";
 const PROCESSING_POLL_INTERVAL_MS = 2500;
 const PROCESSING_POLL_MAX_ATTEMPTS = 160;
@@ -34,18 +33,28 @@ function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function resolveAgentCode(agentCode?: string | null) {
+  return agentCode || STRATEGY_AGENT_CODE;
+}
+
 type UploadCandidate = {
   filePath: string;
   fileName?: string;
+};
+
+type OptimisticExchange = {
+  requestId: string;
+  userMessageId: string;
 };
 
 export const useStrategyChatStore = defineStore("strategy-chat", {
   state: () => ({
     diagnosisId: null as string | null,
     sessionId: null as string | null,
-    activeAgentCode: BASE_CHAT_AGENT_CODE,
+    activeAgentCode: STRATEGY_AGENT_CODE,
     sessions: [] as StrategyChatSessionSummary[],
     messages: [] as AgentMessage[],
+    animatedAssistantMessageIds: {} as Record<string, true>,
     pendingFrameworkUpdate: null as PendingFrameworkUpdate | null,
     loading: false,
     uploading: false,
@@ -76,10 +85,11 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
       this.error = "";
       this.sessions = [];
       this.messages = [];
+      this.animatedAssistantMessageIds = {};
       this.pendingFrameworkUpdate = null;
       this.diagnosisId = null;
       this.sessionId = null;
-      this.activeAgentCode = BASE_CHAT_AGENT_CODE;
+      this.activeAgentCode = STRATEGY_AGENT_CODE;
     },
     isStrategyEntitlementDenied(err: unknown) {
       return (
@@ -138,13 +148,20 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
         this.sessionId = result.sessions[0].id;
       }
     },
-    async loadSession(targetSessionId?: string | null) {
+    async loadSession(
+      targetSessionId?: string | null,
+      options: { preserveAnimations?: boolean } = {},
+    ) {
+      if (!options.preserveAnimations) {
+        this.clearMessageAnimations();
+      }
+
       const resolvedSessionId = targetSessionId ?? this.sessionId;
       if (!resolvedSessionId) {
         this.sessionId = null;
         this.messages = [];
         this.pendingFrameworkUpdate = null;
-        this.activeAgentCode = BASE_CHAT_AGENT_CODE;
+        this.activeAgentCode = STRATEGY_AGENT_CODE;
         return;
       }
 
@@ -154,7 +171,7 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
 
       this.sessionId = result.sessionId;
       this.messages = result.messages;
-      this.activeAgentCode = result.session?.agentCode || BASE_CHAT_AGENT_CODE;
+      this.activeAgentCode = resolveAgentCode(result.session?.agentCode);
       this.sessions = this.sessions.map((session) => ({
         ...session,
         ...(session.id === result.sessionId && result.session
@@ -184,15 +201,17 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
             method: "POST",
             data: {
               tenantId: this.getTenantId(),
-              agentCode: BASE_CHAT_AGENT_CODE,
+              agentCode: STRATEGY_AGENT_CODE,
             },
           },
         );
 
         this.sessionId = result.sessionId;
+        this.diagnosisId = result.diagnosisId ?? this.diagnosisId;
         this.messages = result.messages;
-        this.pendingFrameworkUpdate = null;
-        this.activeAgentCode = BASE_CHAT_AGENT_CODE;
+        this.markAssistantMessagesForAnimation(result.messages);
+        this.pendingFrameworkUpdate = result.pendingFrameworkUpdate ?? null;
+        this.activeAgentCode = resolveAgentCode(result.agentCode);
         await this.loadSessions();
       } catch (err) {
         this.error = err instanceof Error ? err.message : "创建会话失败";
@@ -206,6 +225,86 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
       this.sessionId = sessionId;
       await this.loadSession(sessionId);
     },
+    createOptimisticExchange(content: string): OptimisticExchange {
+      const requestId = `local-${Date.now()}-${Math.random()
+        .toString(36)
+        .slice(2, 8)}`;
+      const pendingSessionId = this.sessionId || `local-session-${requestId}`;
+      const createdAt = new Date().toISOString();
+      const userMessage: AgentMessage = {
+        id: `${requestId}-user`,
+        sessionId: pendingSessionId,
+        role: "USER",
+        content,
+        metadata: {
+          source: "local_optimistic",
+          localRequestId: requestId,
+          localStatus: "pending",
+        },
+        createdAt,
+      };
+
+      this.messages = [...this.messages, userMessage];
+
+      return {
+        requestId,
+        userMessageId: userMessage.id,
+      };
+    },
+    replaceOptimisticExchange(
+      exchange: OptimisticExchange,
+      userMessage: AgentMessage,
+      assistantMessage: AgentMessage,
+    ) {
+      const startIndex = this.messages.findIndex(
+        (message) => message.id === exchange.userMessageId,
+      );
+
+      if (startIndex === -1) {
+        this.messages = [...this.messages, userMessage, assistantMessage];
+        return;
+      }
+
+      const nextMessages = [...this.messages];
+      nextMessages.splice(startIndex, 1, userMessage, assistantMessage);
+      this.messages = nextMessages;
+    },
+    replaceOptimisticExchangeWithMessages(
+      exchange: OptimisticExchange,
+      messages: AgentMessage[],
+    ) {
+      const startIndex = this.messages.findIndex(
+        (message) => message.id === exchange.userMessageId,
+      );
+
+      if (startIndex === -1) {
+        this.messages = [...this.messages, ...messages];
+        return;
+      }
+
+      const nextMessages = [...this.messages];
+      nextMessages.splice(startIndex, 1, ...messages);
+      this.messages = nextMessages;
+    },
+    failOptimisticExchange(exchange: OptimisticExchange) {
+      const userIndex = this.messages.findIndex(
+        (message) => message.id === exchange.userMessageId,
+      );
+
+      if (userIndex === -1) {
+        return;
+      }
+
+      const failedUserMessage: AgentMessage = {
+        ...this.messages[userIndex],
+        metadata: {
+          ...(this.messages[userIndex].metadata ?? {}),
+          localStatus: "failed",
+        },
+      };
+
+      this.messages.splice(userIndex, 1, failedUserMessage);
+    },
     async sendBase(content: string) {
       this.ensureClientStrategyAvailable();
       const normalized = content.trim();
@@ -216,10 +315,29 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
 
       this.error = "";
       this.loading = true;
+      const optimisticExchange = this.createOptimisticExchange(normalized);
 
       try {
         if (!this.sessionId) {
-          await this.createSession();
+          const session = await request<AgentChatSessionResponse>(
+            "/agent/sessions",
+            {
+              method: "POST",
+              data: {
+                tenantId: this.getTenantId(),
+                agentCode: STRATEGY_AGENT_CODE,
+              },
+            },
+          );
+
+          if (!session.sessionId) {
+            throw new Error("创建会话失败");
+          }
+
+          this.sessionId = session.sessionId;
+          this.diagnosisId = session.diagnosisId ?? this.diagnosisId;
+          this.pendingFrameworkUpdate = session.pendingFrameworkUpdate ?? null;
+          this.activeAgentCode = resolveAgentCode(session.agentCode);
         }
 
         const result = await request<AgentChatMessageResponse>(
@@ -233,17 +351,27 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
         );
 
         this.sessionId = result.sessionId;
-        this.activeAgentCode = result.agentCode || BASE_CHAT_AGENT_CODE;
-        this.messages = [
-          ...this.messages,
-          result.userMessage,
-          result.assistantMessage,
-        ];
+        this.diagnosisId = result.diagnosisId ?? this.diagnosisId;
+        this.activeAgentCode = resolveAgentCode(result.agentCode);
+        this.markAssistantMessageForAnimation(result.assistantMessage);
+        if (result.messages?.length) {
+          this.replaceOptimisticExchangeWithMessages(
+            optimisticExchange,
+            result.messages,
+          );
+        } else {
+          this.replaceOptimisticExchange(
+            optimisticExchange,
+            result.userMessage,
+            result.assistantMessage,
+          );
+        }
         await this.loadSessions();
-        await this.loadSession(result.sessionId);
+        await this.loadSession(result.sessionId, { preserveAnimations: true });
         this.startSessionTitleRefreshPoll(result.sessionId);
       } catch (err) {
         this.error = err instanceof Error ? err.message : "发送失败";
+        this.failOptimisticExchange(optimisticExchange);
         throw err;
       } finally {
         this.loading = false;
@@ -260,6 +388,7 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
       this.error = "";
       this.loading = true;
       this.activeAgentCode = STRATEGY_AGENT_CODE;
+      const optimisticExchange = this.createOptimisticExchange(normalized);
 
       try {
         const result = await request<StrategyChatResponse>("/strategy/chat", {
@@ -274,13 +403,21 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
 
         this.diagnosisId = result.diagnosisId;
         this.sessionId = result.sessionId;
-        this.messages = [
-          ...this.messages,
-          result.userMessage,
-          result.assistantMessage,
-        ];
+        this.markAssistantMessageForAnimation(result.assistantMessage);
+        if (result.messages?.length) {
+          this.replaceOptimisticExchangeWithMessages(
+            optimisticExchange,
+            result.messages,
+          );
+        } else {
+          this.replaceOptimisticExchange(
+            optimisticExchange,
+            result.userMessage,
+            result.assistantMessage,
+          );
+        }
         await this.loadSessions();
-        await this.loadSession(result.sessionId);
+        await this.loadSession(result.sessionId, { preserveAnimations: true });
         await this.loadStrategySessionState(result.sessionId);
         this.startProcessingMessagePoll(
           result.sessionId,
@@ -293,6 +430,7 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
           : err instanceof Error
             ? err.message
             : "发送失败";
+        this.failOptimisticExchange(optimisticExchange);
         throw err;
       } finally {
         this.loading = false;
@@ -322,6 +460,39 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
 
       this.messages.splice(index, 1, message);
       return true;
+    },
+    clearMessageAnimations() {
+      this.animatedAssistantMessageIds = {};
+    },
+    markAssistantMessageForAnimation(message?: AgentMessage | null) {
+      if (message?.role !== "ASSISTANT" || !message.content?.trim()) {
+        return;
+      }
+
+      this.animatedAssistantMessageIds = {
+        ...this.animatedAssistantMessageIds,
+        [message.id]: true,
+      };
+    },
+    markAssistantMessagesForAnimation(messages?: AgentMessage[] | null) {
+      messages?.forEach((message) => {
+        this.markAssistantMessageForAnimation(message);
+      });
+    },
+    shouldAnimateAssistantMessage(message?: AgentMessage | null) {
+      return (
+        message?.role === "ASSISTANT" &&
+        Boolean(message.id && this.animatedAssistantMessageIds[message.id])
+      );
+    },
+    finishAssistantMessageAnimation(messageId: string) {
+      if (!this.animatedAssistantMessageIds[messageId]) {
+        return;
+      }
+
+      const next = { ...this.animatedAssistantMessageIds };
+      delete next[messageId];
+      this.animatedAssistantMessageIds = next;
     },
     getSessionTitleSource(session?: StrategyChatSessionSummary | null) {
       const titleSource = session?.metadata?.titleSource;
@@ -405,7 +576,18 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
             `/agent/sessions/${encodeURIComponent(sessionId)}/messages/${encodeURIComponent(messageId)}`,
           );
 
+          const currentMessage = this.messages.find(
+            (message) => message.id === messageId,
+          );
+          const wasProcessing = this.isProcessingMessage(currentMessage);
           this.replaceMessage(result.message);
+          if (
+            wasProcessing &&
+            result.message.role === "ASSISTANT" &&
+            !this.isProcessingMessage(result.message)
+          ) {
+            this.markAssistantMessageForAnimation(result.message);
+          }
         } catch {
           continue;
         }
@@ -480,6 +662,10 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
           formData.sessionId = this.sessionId;
         }
 
+        if (file.fileName) {
+          formData.originalName = encodeURIComponent(file.fileName);
+        }
+
         const result = await upload<StrategyFileUploadResponse>(
           "/strategy/files/upload",
           {
@@ -497,8 +683,9 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
           result.userMessage,
           result.assistantMessage,
         ];
+        this.markAssistantMessageForAnimation(result.assistantMessage);
         await this.loadSessions();
-        await this.loadSession(result.sessionId);
+        await this.loadSession(result.sessionId, { preserveAnimations: true });
         await this.loadStrategySessionState(result.sessionId);
         this.startSessionTitleRefreshPoll(result.sessionId);
       } catch (err) {

@@ -63,17 +63,6 @@
       <text>{{ pendingUpdateText }}</text>
     </view>
 
-    <view v-if="nextActions.length" class="progress-actions">
-      <button
-        v-for="action in nextActions"
-        :key="action"
-        class="progress-action"
-        :disabled="actionsDisabled"
-        @click="emit('action', action)"
-      >
-        {{ actionLabel(action) }}
-      </button>
-    </view>
   </view>
 </template>
 
@@ -84,10 +73,6 @@ const props = defineProps<{
   card: Record<string, unknown>;
   nextActions?: string[];
   actionsDisabled?: boolean;
-}>();
-
-const emit = defineEmits<{
-  action: [action: string];
 }>();
 
 type StepState = "done" | "current" | "pending";
@@ -140,27 +125,6 @@ const progressSteps = computed<ProgressStep[]>(() =>
     }))
     .filter((step) => step.title),
 );
-const nextActions = computed(() => {
-  const explicitActions = (props.nextActions ?? []).filter(Boolean);
-
-  if (explicitActions.length) {
-    return explicitActions;
-  }
-
-  return (
-    Array.isArray(progress.value.nextSuggestions)
-      ? progress.value.nextSuggestions
-      : []
-  )
-    .map((item) => {
-      if (typeof item === "string") {
-        return item;
-      }
-
-      return String(asRecord(item).action || "");
-    })
-    .filter(Boolean);
-});
 const blockers = computed(() =>
   (Array.isArray(progress.value.blockers) ? progress.value.blockers : [])
     .map((item) => String(item || "").trim())
@@ -229,10 +193,10 @@ const fallbackSteps = computed<ProgressStep[]>(() => {
     {
       key: "framework",
       index: 3,
-      title: "19点战略框架",
+      title: "战略框架",
       description:
         rank >= 5
-          ? "19点战略框架已确认。"
+          ? "战略框架已确认。"
           : rank === 4
             ? status.value === "framework_refining"
               ? "正在根据补充信息完善框架。"
@@ -324,9 +288,9 @@ const currentStageLabel = computed(() => {
     rediagnosing: "重新诊断已启动",
     form_draft_generated: "表单草稿待确认",
     form_confirmed: "表单已确认",
-    framework_draft_generated: "19点框架草稿待确认",
-    framework_refining: "19点框架完善中",
-    framework_confirmed: "19点框架已确认",
+    framework_draft_generated: "战略框架草稿待确认",
+    framework_refining: "战略框架完善中",
+    framework_confirmed: "战略框架已确认",
     reports_generating: "报告生成中",
     completed: "战略诊断已完成",
   };
@@ -349,8 +313,8 @@ const currentStageDescription = computed(() => {
       "请继续补充企业信息或上传资料，资料充足后可生成战略分析表单。",
     rediagnosing: "本轮诊断已重新开始，后续结果会以新诊断数据为准。",
     form_draft_generated:
-      "请核对当前战略分析表单，确认无误后进入19点战略框架生成。",
-    form_confirmed: "下一步可以生成19点战略框架。",
+      "请核对当前战略分析表单，确认无误后进入战略框架生成。",
+    form_confirmed: "下一步可以生成战略框架。",
     framework_draft_generated: "请确认框架，或继续补充证据和关键判断。",
     framework_refining: "当前正在根据补充信息完善框架。",
     framework_confirmed: "下一步可以生成7份战略报告。",
@@ -456,42 +420,6 @@ const pendingUpdateText = computed(() => {
     ? `当前有待确认框架修改：${pointTexts.join("、")}。`
     : "当前有待确认框架修改。";
 });
-
-function actionLabel(action: string) {
-  const labels: Record<string, string> = {
-    start_diagnosis: "开始诊断",
-    provide_info: "补充企业信息",
-    upload_files: "上传资料",
-    upload_more_files: "继续上传资料",
-    view_files: "查看当前资料",
-    generate_form: "生成表单",
-    supplement_form: "补充字段",
-    confirm_form: "确认表单",
-    generate_framework: "生成19点框架",
-    refine_framework: "继续完善框架",
-    confirm_framework: "确认框架",
-    generate_reports: "生成报告",
-    wait_reports: "查看进度",
-    sync_reports: "同步报告",
-    open_dashboard: "打开看板",
-    view_enterprise_diagnosis_report: "查看诊断报告",
-    view_enterprise_solution_report: "查看方案报告",
-    view_beidou_declaration: "查看北斗宣言",
-    view_strategy_positioning_report: "查看战略定位报告",
-    view_advantages_barriers_report: "查看优势与壁垒报告",
-    view_business_model_panorama: "查看商业模式全景图",
-    view_brand_experience_blueprint: "查看品牌与体验蓝图",
-    rediagnose: "重新诊断",
-    confirm_framework_update: "确认修改",
-    cancel_framework_update: "取消修改",
-    continue_refine_framework: "继续完善框架",
-    answer_refinement_questions: "回答追问",
-    update_framework: "提交框架修改",
-    check_status: "查看进度",
-  };
-
-  return labels[action] || action;
-}
 
 function normalizeStepState(value: unknown): StepState {
   const state = String(value || "");
@@ -735,34 +663,6 @@ function normalizeStepState(value: unknown): StepState {
   background: #fff8eb;
   border: 1px solid #fed7aa;
   border-radius: 8px;
-}
-
-.progress-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.progress-action {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 30px;
-  margin: 0;
-  padding: 0 11px;
-  color: #1267ff;
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 28px;
-  background: #edf5ff;
-  border: 1px solid #c9ddff;
-  border-radius: 7px;
-}
-
-.progress-action[disabled] {
-  color: #9aa7b8;
-  background: #f4f6f8;
-  border-color: #e5e7eb;
 }
 
 @media (max-width: 720px) {

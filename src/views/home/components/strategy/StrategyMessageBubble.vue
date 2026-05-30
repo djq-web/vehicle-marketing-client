@@ -50,10 +50,6 @@ const timeText = computed(() =>
 .message-bubble {
   max-width: min(760px, 82%);
   padding: 12px 14px 10px;
-  background: #ffffff;
-  border: 1px solid #e4eaf2;
-  border-radius: 8px;
-  box-shadow: 0 4px 14px rgb(31 45 61 / 5%);
 }
 
 .mine .message-bubble {

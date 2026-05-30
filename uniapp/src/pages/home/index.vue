@@ -112,19 +112,32 @@
               :class="{ mine: message.role === 'USER' }"
             >
               <view class="message-bubble">
-                <text class="message-content">{{ message.content }}</text>
+                <text v-if="message.role === 'USER'" class="message-content">
+                  {{ message.content }}
+                </text>
+                <MessageMarkdown
+                  v-else
+                  class="message-content"
+                  :content="message.content"
+                  :animate="chatStore.shouldAnimateAssistantMessage(message)"
+                  @animation-finished="
+                    chatStore.finishAssistantMessageAnimation(message.id)
+                  "
+                  @typing-progress="scrollToBottom"
+                />
                 <StrategyMessageCard
                   v-if="message.metadata?.card"
                   :metadata="message.metadata"
                   :actions-disabled="isBusy"
+                  :show-next-actions="message.id === latestActionableMessageId"
                   @action="handleCardAction"
                 />
-                <text class="message-time">{{ formatTime(message.createdAt) }}</text>
+                <!-- <text class="message-time">{{ formatTime(message.createdAt) }}</text> -->
               </view>
             </view>
 
             <view v-if="isBusy" class="assistant-loading">
-              {{ chatStore.uploading ? "正在上传并解析资料" : "正在处理" }}
+              {{ assistantLoadingText }}
             </view>
           </view>
         </scroll-view>
@@ -391,12 +404,13 @@
 </template>
 
 <script setup lang="ts">
-import { onLoad } from "@dcloudio/uni-app";
+import { onLoad, onUnload } from "@dcloudio/uni-app";
 import { computed, nextTick, reactive, ref, watch } from "vue";
 import { request } from "@/services/api";
 import { useAuthStore } from "@/stores/auth";
 import { useStrategyChatStore } from "@/stores/strategyChat";
 import type { LoginResponse, StrategyReportResponse } from "@/types/strategy";
+import MessageMarkdown from "./components/MessageMarkdown.vue";
 import StrategyMessageCard from "./components/StrategyMessageCard.vue";
 import StrategyReportModal from "./components/StrategyReportModal.vue";
 
@@ -499,6 +513,7 @@ type LocalSettings = {
 
 const LOCAL_SETTINGS_KEY = "vehicle_marketing_client_account_settings";
 const STRATEGY_AGENT_CODE = "strategy_agent";
+const BUSY_ELAPSED_VISIBLE_THRESHOLD_SECONDS = 10;
 
 const authStore = useAuthStore();
 const chatStore = useStrategyChatStore();
@@ -525,7 +540,10 @@ const boardMenuCloseTimer = ref<ReturnType<typeof setTimeout> | null>(null);
 const draft = ref("");
 const messageScrollTop = ref(0);
 const settingsLoading = ref(false);
+const busyStartedAt = ref<number | null>(null);
+const busyElapsedSeconds = ref(0);
 const meContext = ref<MeContext | null>(null);
+let busyTimer: ReturnType<typeof setInterval> | null = null;
 const settingsForm = reactive({
   avatarUrl: "",
   nickname: "",
@@ -597,14 +615,14 @@ const quickActions: QuickAction[] = [
   { label: "/ 看板", type: "board" },
   { label: "/ 任务管理", type: "prompt", prompt: "创建任务管理计划", interactive: false },
   { label: "/ 战略诊断", type: "mode", mode: "strategy" },
-  { label: "/ 战略拆解", type: "prompt", prompt: "生成19点战略框架", strategy: true, interactive: false },
+  { label: "/ 战略拆解", type: "prompt", prompt: "生成战略框架", strategy: true, interactive: false },
   { label: "/ 上传素材", type: "upload", interactive: false },
   { label: "/ 图文营销", type: "prompt", prompt: "生成图文营销方案", interactive: false },
 ];
 
 const strategyModeActions: QuickAction[] = [
   { label: "/ 上传资料", type: "upload", interactive: false },
-  { label: "/ 战略拆解", type: "prompt", prompt: "生成19点战略框架", strategy: true, interactive: false },
+  { label: "/ 战略拆解", type: "prompt", prompt: "生成战略框架", strategy: true, interactive: false },
   { label: "/ 生成报告", type: "prompt", prompt: "生成全部7份战略报告", strategy: true },
   { label: "/ 打开看板", type: "prompt", prompt: "打开品牌战略看板", strategy: true },
 ];
@@ -699,10 +717,11 @@ const actionPrompts: Record<string, string> = {
   start_diagnosis: "开始战略诊断",
   provide_info: "我想补充企业信息",
   view_files: "查看当前资料",
+  view_form: "查看战略分析表单",
   generate_form: "生成战略分析表单",
   confirm_form: "确认",
-  generate_framework: "生成19点战略框架",
-  refine_framework: "请基于当前19点战略框架生成需要继续追问的问题",
+  generate_framework: "生成战略框架",
+  refine_framework: "请基于当前战略框架生成需要继续追问的问题",
   confirm_framework: "确认",
   generate_reports: "生成全部7份战略报告",
   wait_reports: "查看当前诊断进度",
@@ -714,10 +733,14 @@ const actionPrompts: Record<string, string> = {
   view_advantages_barriers_report: "查看优势与壁垒报告",
   view_business_model_panorama: "查看商业模式全景图",
   view_brand_experience_blueprint: "查看品牌与体验蓝图",
+  web_search_evidence: "联网搜索企业公开资料并整理战略诊断证据",
+  apply_search_to_form: "把最近一次联网搜索结果补充到战略分析表单",
+  apply_search_to_framework:
+    "把最近一次联网搜索结果整理成战略框架待确认修改",
   rediagnose: "重新诊断",
   confirm_framework_update: "确认修改",
   cancel_framework_update: "取消修改",
-  continue_refine_framework: "继续完善19点战略框架",
+  continue_refine_framework: "继续完善战略框架",
   answer_refinement_questions: "我来回答追问问题",
   update_framework: "提交框架修改",
   check_status: "查看当前诊断进度",
@@ -740,7 +763,29 @@ const isBusy = computed(
     chatStore.uploading ||
     reportModalLoading.value,
 );
+const assistantLoadingText = computed(() => {
+  const text = chatStore.uploading
+    ? "正在上传并解析资料"
+    : reportModalLoading.value
+      ? "正在加载报告"
+      : "正在处理";
+
+  return busyElapsedSeconds.value >= BUSY_ELAPSED_VISIBLE_THRESHOLD_SECONDS
+    ? `${text}，已耗时 ${busyElapsedSeconds.value} 秒`
+    : text;
+});
 const showMessages = computed(() => chatStore.messages.length > 0);
+const latestActionableMessageId = computed(() => {
+  for (let index = chatStore.messages.length - 1; index >= 0; index -= 1) {
+    const message = chatStore.messages[index];
+
+    if (message.role === "ASSISTANT" && message.metadata?.card) {
+      return message.id;
+    }
+  }
+
+  return "";
+});
 const strategyNotice = computed(
   () => chatStore.error || chatStore.unavailableReason,
 );
@@ -841,6 +886,10 @@ onLoad(async () => {
   await refresh();
 });
 
+onUnload(() => {
+  stopBusyTimer();
+});
+
 watch(draft, () => {
   editorCursor.value = clampCursor(editorCursor.value);
   updateBoardMenu();
@@ -852,6 +901,15 @@ watch(
     scrollToBottom();
   },
 );
+
+watch(isBusy, (busy) => {
+  if (busy) {
+    startBusyTimer();
+    return;
+  }
+
+  stopBusyTimer();
+});
 
 function toggleSidebar() {
   isSidebarCollapsed.value = !isSidebarCollapsed.value;
@@ -1038,7 +1096,7 @@ async function refresh() {
 async function createSession() {
   try {
     await chatStore.createSession();
-    activeComposerMode.value = null;
+    syncComposerModeWithCurrentSession();
     closeMobileSidebar();
     await scrollToBottom();
   } catch (err) {
@@ -1667,6 +1725,38 @@ async function scrollToBottom() {
   messageScrollTop.value += 100000;
 }
 
+function startBusyTimer() {
+  if (!busyStartedAt.value) {
+    busyStartedAt.value = Date.now();
+    busyElapsedSeconds.value = 0;
+  }
+
+  if (busyTimer) {
+    return;
+  }
+
+  busyTimer = setInterval(() => {
+    if (!busyStartedAt.value) {
+      busyElapsedSeconds.value = 0;
+      return;
+    }
+
+    busyElapsedSeconds.value = Math.floor(
+      (Date.now() - busyStartedAt.value) / 1000,
+    );
+  }, 1000);
+}
+
+function stopBusyTimer() {
+  if (busyTimer) {
+    clearInterval(busyTimer);
+    busyTimer = null;
+  }
+
+  busyStartedAt.value = null;
+  busyElapsedSeconds.value = 0;
+}
+
 function formatTime(value: string) {
   const date = new Date(value);
   const hours = `${date.getHours()}`.padStart(2, "0");
@@ -2227,10 +2317,6 @@ page {
   max-width: min(760px, 82%);
   overflow: hidden;
   padding: 12px 14px 10px;
-  background: #ffffff;
-  border: 1px solid #e4eaf2;
-  border-radius: 8px;
-  box-shadow: 0 4px 14px rgb(31 45 61 / 5%);
 }
 
 .message-row.mine .message-bubble {

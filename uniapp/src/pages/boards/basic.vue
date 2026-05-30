@@ -9,28 +9,102 @@
     </button>
 
     <template v-if="activeType === 'brand-strategy'">
-      <BrandStrategyMobile v-if="isMobileLayout" @back="goHome" />
+      <BrandStrategyMobile
+        v-if="isMobileLayout"
+        :cards="brandStrategyCards"
+        :loading="brandDashboardLoading"
+        :error="brandDashboardError"
+        :message="brandDashboardMessage"
+        @back="goHome"
+        @refresh="loadBrandDashboard"
+        @report="openBoardReport"
+      />
       <template v-else>
-        <section class="basic-hero">
+        <section class="basic-hero brand-dashboard-hero">
           <image
             class="basic-hero-icon"
-            :src="basicBoard.icon"
+            :src="brandDashboardView.icon"
             mode="aspectFit"
           />
-          <text class="board-title">{{ basicBoard.title }}</text>
+          <text class="board-title">{{ brandDashboardView.title }}</text>
           <text class="title-underline"></text>
-          <text class="board-subtitle">{{ basicBoard.subtitle }}</text>
+          <text class="board-subtitle">{{ brandDashboardView.subtitle }}</text>
+          <button class="brand-refresh-button" @click="loadBrandDashboard">
+            刷新看板
+          </button>
         </section>
 
-        <section class="metric-grid">
+        <section
+          v-if="brandDashboardLoading"
+          class="brand-dashboard-state brand-dashboard-state--loading"
+        >
+          <view class="brand-dashboard-spinner"></view>
+          <text>正在读取品牌战略看板</text>
+        </section>
+
+        <section v-else-if="brandDashboardError" class="brand-dashboard-state">
+          <text class="brand-dashboard-state-title">看板暂时无法打开</text>
+          <text class="brand-dashboard-state-message">{{
+            brandDashboardError
+          }}</text>
+          <button class="brand-dashboard-state-button" @click="loadBrandDashboard">
+            重新加载
+          </button>
+        </section>
+
+        <section
+          v-else-if="!brandStrategyCards.length"
+          class="brand-dashboard-state"
+        >
+          <text class="brand-dashboard-state-title">暂无品牌战略看板</text>
+          <text class="brand-dashboard-state-message">{{
+            brandDashboardMessage || "完成战略诊断后，这里会展示品牌战略看板。"
+          }}</text>
+          <button class="brand-dashboard-state-button" @click="goHome">
+            返回会话
+          </button>
+        </section>
+
+        <section v-else class="brand-dashboard-grid">
           <view
-            v-for="card in basicBoard.cards"
-            :key="card.label"
-            class="metric-card"
+            v-for="card in brandStrategyCards"
+            :key="card.key"
+            class="brand-dashboard-card"
+            :class="{
+              'brand-dashboard-card--document': card.type === 'document',
+              'brand-dashboard-card--disabled':
+                card.type === 'document' && card.disabled,
+            }"
+            @click="handleBrandCardClick(card)"
           >
-            <text class="metric-label">{{ card.label }}</text>
-            <text class="metric-value">{{ card.value }}</text>
-            <text class="metric-caption">{{ card.caption }}</text>
+            <template v-if="card.type === 'document'">
+              <view class="brand-document-icon" aria-hidden="true">
+                <text></text>
+                <text></text>
+                <text></text>
+              </view>
+              <text class="brand-document-title">{{ card.title }}</text>
+              <text v-if="card.statusText" class="brand-document-status">{{
+                card.statusText
+              }}</text>
+            </template>
+            <template v-else>
+              <text class="brand-point-code">{{ card.key }}</text>
+              <text class="brand-card-title">{{ card.title }}</text>
+              <view class="brand-star-row">
+                <text
+                  v-for="index in starIndexes"
+                  :key="`${card.key}-${index}`"
+                  class="brand-star"
+                  :style="`color:${card.color}`"
+                >
+                  ★
+                </text>
+              </view>
+              <view class="brand-card-copy">
+                <text v-for="line in card.lines" :key="line">{{ line }}</text>
+              </view>
+            </template>
           </view>
         </section>
       </template>
@@ -330,12 +404,33 @@
         </section>
       </template>
     </template>
+
+    <StrategyReportModal
+      :visible="isReportModalVisible"
+      :loading="reportModalLoading"
+      :report="activeReportResponse?.report ?? null"
+      :next-actions="activeReportResponse?.nextActions ?? []"
+      :actions-disabled="reportModalLoading"
+      @close="closeReportModal"
+      @action="handleReportModalAction"
+    />
   </view>
 </template>
 
 <script setup lang="ts">
 import { onLoad } from "@dcloudio/uni-app";
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import { request } from "@/services/api";
+import { useAuthStore } from "@/stores/auth";
+import { useStrategyChatStore } from "@/stores/strategyChat";
+import type {
+  BrandStrategyCard,
+  BrandStrategyDashboard,
+  StrategyDashboardPoint,
+  StrategyDashboardReport,
+  StrategyDashboardResponse,
+  StrategyReportResponse,
+} from "@/types/strategy";
 import BrandStrategyMobile from "./components/BrandStrategyMobile.vue";
 import EcologicalPartnerMobile from "./components/EcologicalPartnerMobile.vue";
 import KeyMetricsDesktop from "./components/KeyMetricsDesktop.vue";
@@ -344,6 +439,7 @@ import MarketFeedbackMobile from "./components/MarketFeedbackMobile.vue";
 import MarketingCalendarMobile from "./components/MarketingCalendarMobile.vue";
 import MarketingOperationsDesktop from "./components/MarketingOperationsDesktop.vue";
 import MarketingOperationsMobile from "./components/MarketingOperationsMobile.vue";
+import StrategyReportModal from "../home/components/StrategyReportModal.vue";
 
 type BoardType =
   | "brand-strategy"
@@ -403,6 +499,14 @@ const activeTime = ref("当月");
 const activeFeedbackFilter = ref("当 月");
 const isMobileLayout = ref(false);
 const timeOptions = ["当天", "当月", "当季", "当年"];
+const authStore = useAuthStore();
+const strategyChatStore = useStrategyChatStore();
+const brandDashboardLoading = ref(false);
+const brandDashboardError = ref("");
+const brandDashboardResponse = ref<StrategyDashboardResponse | null>(null);
+const activeReportResponse = ref<StrategyReportResponse | null>(null);
+const isReportModalVisible = ref(false);
+const reportModalLoading = ref(false);
 
 const isFlowBoard = computed(
   () =>
@@ -419,16 +523,92 @@ const boardTitles: Record<BoardType, string> = {
   "ecological-partner": "生态伙伴看板",
 };
 
-const basicBoard = {
+const brandDashboardView = computed(() => ({
   title: "品牌战略看板",
-  subtitle: "锚定方向，塑造品牌心智",
+  subtitle: brandDashboardSubtitle.value,
   icon: "/static/svg/brand-strategy.svg",
-  cards: [
-    { label: "核心目标", value: "86%", caption: "本月达成率" },
-    { label: "增长机会", value: "12", caption: "待推进事项" },
-    { label: "风险预警", value: "3", caption: "需关注问题" },
-  ],
-};
+}));
+
+const brandDashboardMessage = computed(
+  () => brandDashboardResponse.value?.message ?? "",
+);
+
+const brandDashboardSubtitle = computed(() => {
+  const dashboard = brandDashboardResponse.value?.dashboard;
+  const summary = cleanText(dashboard?.summary);
+
+  if (summary) {
+    return summary;
+  }
+
+  if (brandDashboardResponse.value?.completed === false) {
+    return brandDashboardResponse.value.message;
+  }
+
+  return "锚定方向，塑造品牌心智";
+});
+
+const starIndexes = [0, 1, 2, 3, 4, 5, 6];
+
+const pointDisplayPlan: Array<{ code: string; color: string }> = [
+  { code: "M01", color: "#ff4343" },
+  { code: "M02", color: "#ff4343" },
+  { code: "M03", color: "#ff4343" },
+  { code: "M04", color: "#54d830" },
+  { code: "M05", color: "#54d830" },
+  { code: "M06", color: "#54d830" },
+  { code: "M07", color: "#ff8f1f" },
+  { code: "M08", color: "#ff8f1f" },
+  { code: "M09", color: "#ff8f1f" },
+  { code: "M10", color: "#d948ff" },
+  { code: "M11", color: "#d948ff" },
+  { code: "M15", color: "#1267ff" },
+  { code: "M16", color: "#1267ff" },
+  { code: "M17", color: "#1267ff" },
+];
+
+const reportDisplayPlan = [
+  {
+    after: "M03",
+    reportType: "beidou_declaration",
+    title: "北斗宣言",
+    titleLines: ["北斗宣言"],
+  },
+  {
+    after: "M06",
+    reportType: "strategy_positioning",
+    title: "战略定位与品牌承诺图",
+    titleLines: ["战略定位", "与品牌承诺图"],
+  },
+  {
+    after: "M09",
+    reportType: "advantages_barriers",
+    title: "优势、壁垒与信任状体系",
+    titleLines: ["优势、壁垒", "与信任状体系"],
+  },
+  {
+    after: "M11",
+    reportType: "business_model_panorama",
+    title: "商业模式与体验交付全景图",
+    titleLines: ["商业模式与", "体验交付全景图"],
+  },
+  {
+    after: "M17",
+    reportType: "brand_experience_blueprint",
+    title: "品牌引力场与体验蓝图",
+    titleLines: ["品牌引力场", "与体验蓝图"],
+  },
+];
+
+const brandStrategyCards = computed<BrandStrategyCard[]>(() => {
+  const dashboard = brandDashboardResponse.value?.dashboard;
+
+  if (!dashboard) {
+    return [];
+  }
+
+  return buildBrandStrategyCards(dashboard);
+});
 
 const statusLegend: Array<{ label: string; type: Status }> = [
   { label: "已完成", type: "done" },
@@ -1124,7 +1304,242 @@ const partnerCards = [
   },
 ];
 
+async function loadBrandDashboard() {
+  brandDashboardLoading.value = true;
+  brandDashboardError.value = "";
+
+  try {
+    const result = await request<StrategyDashboardResponse>(
+      "/strategy/dashboard",
+      {
+        query: {
+          tenantId: authStore.tenantId,
+        },
+      },
+    );
+
+    brandDashboardResponse.value = result;
+  } catch (err) {
+    brandDashboardError.value = resolveErrorMessage(
+      err,
+      "读取品牌战略看板失败",
+    );
+  } finally {
+    brandDashboardLoading.value = false;
+  }
+}
+
+function buildBrandStrategyCards(
+  dashboard: BrandStrategyDashboard,
+): BrandStrategyCard[] {
+  const points = dashboard.sections?.strategicPoints ?? [];
+  const pointByCode = new Map(
+    points.map((point) => [point.code.toUpperCase(), point]),
+  );
+  const reportByType = new Map(
+    (dashboard.reports ?? []).map((report) => [report.type, report]),
+  );
+  const cards: BrandStrategyCard[] = [];
+
+  for (const pointPlan of pointDisplayPlan) {
+    const point = pointByCode.get(pointPlan.code);
+    if (point) {
+      cards.push(toPointCard(point, pointPlan.color));
+    }
+
+    if (pointPlan.code === "M11") {
+      const supportCard = toSupportSystemCard(dashboard);
+      if (supportCard) {
+        cards.push(supportCard);
+      }
+    }
+
+    const reportPlan = reportDisplayPlan.find(
+      (item) => item.after === pointPlan.code,
+    );
+    if (reportPlan) {
+      cards.push(
+        toReportCard(reportPlan, reportByType.get(reportPlan.reportType)),
+      );
+    }
+  }
+
+  return cards;
+}
+
+function toPointCard(
+  point: StrategyDashboardPoint,
+  color: string,
+): BrandStrategyCard {
+  return {
+    type: "text",
+    key: point.code,
+    title: normalizePointTitle(point.title),
+    color,
+    lines: toDisplayLines(
+      cleanText(point.summary) ||
+        cleanText(point.recommendation) ||
+        "该战略点已生成，等待进一步完善。",
+    ),
+  };
+}
+
+function toSupportSystemCard(
+  dashboard: BrandStrategyDashboard,
+): BrandStrategyCard | null {
+  const supportSystem = dashboard.sections?.supportSystem;
+  if (!supportSystem) {
+    return null;
+  }
+
+  const summary =
+    cleanText(supportSystem.summary) ||
+    (supportSystem.points ?? [])
+      .map((point) => cleanText(point.summary) || cleanText(point.recommendation))
+      .filter(Boolean)
+      .join("；");
+
+  return {
+    type: "text",
+    key: "M12-M14",
+    title: cleanText(supportSystem.title) || "支撑体系",
+    color: "#d948ff",
+    lines: toDisplayLines(summary || "支撑体系已生成，等待进一步完善。"),
+  };
+}
+
+function toReportCard(
+  plan: (typeof reportDisplayPlan)[number],
+  report?: StrategyDashboardReport,
+): BrandStrategyCard {
+  const isGenerated = report?.isGenerated === true;
+
+  return {
+    type: "document",
+    key: plan.reportType,
+    title: cleanText(report?.title) || plan.title,
+    titleLines: plan.titleLines,
+    reportType: plan.reportType,
+    statusText: reportStatusText(report),
+    disabled: !isGenerated,
+    needsSync: report?.needsSync === true,
+  };
+}
+
+function reportStatusText(report?: StrategyDashboardReport) {
+  if (!report) {
+    return "待生成";
+  }
+
+  if (report.needsSync) {
+    return "需同步";
+  }
+
+  if (report.isGenerated) {
+    return "查看报告";
+  }
+
+  const labels: Record<string, string> = {
+    draft: "草稿",
+    failed: "生成失败",
+    generating: "生成中",
+    pending: "待生成",
+  };
+
+  return labels[report.status] || "待生成";
+}
+
+function normalizePointTitle(value: unknown) {
+  return cleanText(value).replace(/^M\d{2}\s*[、.：:\-]?\s*/i, "");
+}
+
+function toDisplayLines(value: string) {
+  const normalized = value
+    .replace(/\s+/g, " ")
+    .split(/[。；;]\s*/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  const sourceLines = normalized.length ? normalized : [value.trim()];
+
+  return sourceLines.slice(0, 4).map((line) => {
+    if (line.length <= 22) {
+      return line;
+    }
+
+    return `${line.slice(0, 21)}...`;
+  });
+}
+
+function cleanText(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function resolveErrorMessage(err: unknown, fallback: string) {
+  return err instanceof Error && err.message ? err.message : fallback;
+}
+
+function handleBrandCardClick(card: BrandStrategyCard) {
+  if (card.type !== "document" || card.disabled || !card.reportType) {
+    return;
+  }
+
+  void openBoardReport(card.reportType);
+}
+
+async function openBoardReport(reportType: string) {
+  activeReportResponse.value = null;
+  isReportModalVisible.value = true;
+  reportModalLoading.value = true;
+
+  try {
+    const result = await strategyChatStore.openReport(reportType);
+    if (!result) {
+      isReportModalVisible.value = false;
+      return;
+    }
+
+    activeReportResponse.value = result;
+    await loadBrandDashboard();
+  } catch (err) {
+    isReportModalVisible.value = false;
+    uni.showToast({
+      title: resolveErrorMessage(err, "打开报告失败"),
+      icon: "none",
+    });
+  } finally {
+    reportModalLoading.value = false;
+  }
+}
+
+function closeReportModal() {
+  if (!reportModalLoading.value) {
+    isReportModalVisible.value = false;
+  }
+}
+
+async function handleReportModalAction(action: string) {
+  if (action === "open_dashboard") {
+    closeReportModal();
+    return;
+  }
+
+  if (action === "sync_reports") {
+    const reportType = activeReportResponse.value?.report.type;
+    if (reportType) {
+      await openBoardReport(reportType);
+    }
+    return;
+  }
+
+  if (action === "rediagnose") {
+    closeReportModal();
+    goHome();
+  }
+}
+
 onLoad((query) => {
+  authStore.restore();
   updateMobileLayout();
 
   const type = query?.type;
@@ -1135,6 +1550,10 @@ onLoad((query) => {
   uni.setNavigationBarTitle({
     title: boardTitles[activeType.value],
   });
+
+  if (activeType.value === "brand-strategy") {
+    void loadBrandDashboard();
+  }
 });
 
 onMounted(() => {
@@ -1356,6 +1775,263 @@ function goHome() {
   font-size: 34px;
   font-weight: 800;
   line-height: 1;
+}
+
+.brand-dashboard-hero {
+  max-width: 920px;
+  margin-right: auto;
+  margin-left: auto;
+}
+
+.brand-dashboard-hero .board-subtitle {
+  max-width: 760px;
+  line-height: 1.7;
+  text-align: center;
+}
+
+.brand-refresh-button {
+  height: 32px;
+  margin-top: 14px;
+  padding: 0 16px;
+  color: #1267ff;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 32px;
+  background: #eef5ff;
+  border: 1px solid #c8ddff;
+  border-radius: 999px;
+}
+
+.brand-refresh-button::after,
+.brand-dashboard-state-button::after {
+  border: 0;
+}
+
+.brand-dashboard-state {
+  display: flex;
+  max-width: 760px;
+  min-height: 240px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  margin: 48px auto 0;
+  padding: 32px;
+  text-align: center;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+}
+
+.brand-dashboard-state--loading {
+  gap: 14px;
+  color: #64748b;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.brand-dashboard-spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid #d7e6ff;
+  border-top-color: #1267ff;
+  border-radius: 999px;
+  animation: brand-dashboard-spin 0.86s linear infinite;
+}
+
+.brand-dashboard-state-title {
+  display: block;
+  color: #111827;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.brand-dashboard-state-message {
+  display: block;
+  max-width: 560px;
+  margin-top: 10px;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.brand-dashboard-state-button {
+  height: 34px;
+  margin-top: 18px;
+  padding: 0 18px;
+  color: #1267ff;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 34px;
+  background: #eef5ff;
+  border: 1px solid #c8ddff;
+  border-radius: 999px;
+}
+
+.brand-dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(180px, 1fr));
+  gap: 22px;
+  max-width: 1120px;
+  margin: 40px auto 0;
+}
+
+.brand-dashboard-card {
+  display: flex;
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 210px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 24px 16px 18px;
+  overflow: hidden;
+  background: #ffffff;
+  border: 1px solid #edf2f7;
+  border-radius: 18px;
+  box-shadow: 0 10px 28px rgb(80 80 80 / 12%);
+  transition: transform 0.16s ease, box-shadow 0.16s ease;
+}
+
+.brand-dashboard-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 34px rgb(80 80 80 / 16%);
+}
+
+.brand-dashboard-card--document {
+  justify-content: center;
+  gap: 14px;
+  cursor: pointer;
+  background: #f8fbff;
+  border-color: #dbeafe;
+}
+
+.brand-dashboard-card--disabled {
+  cursor: default;
+  opacity: 0.62;
+}
+
+.brand-dashboard-card--disabled:hover {
+  transform: none;
+  box-shadow: 0 10px 28px rgb(80 80 80 / 12%);
+}
+
+.brand-point-code {
+  display: block;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.brand-card-title {
+  display: block;
+  max-width: 100%;
+  margin-top: 8px;
+  overflow: hidden;
+  color: #303236;
+  font-size: 22px;
+  font-style: italic;
+  font-weight: 900;
+  line-height: 1.25;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.brand-star-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 28px;
+  margin-top: 10px;
+}
+
+.brand-star {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.brand-star:nth-child(2),
+.brand-star:nth-child(6) {
+  font-size: 16px;
+}
+
+.brand-star:nth-child(3),
+.brand-star:nth-child(5) {
+  font-size: 19px;
+}
+
+.brand-star:nth-child(4) {
+  font-size: 24px;
+}
+
+.brand-card-copy {
+  display: flex;
+  min-height: 82px;
+  flex-direction: column;
+  justify-content: center;
+  margin-top: 12px;
+}
+
+.brand-card-copy text {
+  display: block;
+  overflow: hidden;
+  color: #60636a;
+  font-size: 14px;
+  line-height: 1.7;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.brand-document-icon {
+  position: relative;
+  display: flex;
+  width: 54px;
+  height: 54px;
+  flex-direction: column;
+  justify-content: center;
+  box-sizing: border-box;
+  gap: 6px;
+  padding: 12px 10px;
+  background: #eef5ff;
+  border: 3px solid #1267ff;
+  border-radius: 12px;
+}
+
+.brand-document-icon text {
+  display: block;
+  width: 100%;
+  height: 3px;
+  background: #1267ff;
+  border-radius: 999px;
+}
+
+.brand-document-icon text:first-child {
+  width: 62%;
+}
+
+.brand-document-title {
+  display: block;
+  color: #303236;
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.brand-document-status {
+  display: block;
+  padding: 4px 10px;
+  color: #1267ff;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.4;
+  background: #eef5ff;
+  border-radius: 999px;
 }
 
 .time-filter,
@@ -2008,6 +2684,12 @@ function goHome() {
   text-align: center;
 }
 
+@keyframes brand-dashboard-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @media (max-width: 760px) {
   .board-page {
     padding: 18px 14px 28px;
@@ -2029,12 +2711,17 @@ function goHome() {
   }
 
   .metric-grid,
+  .brand-dashboard-grid,
   .top-grid,
   .bottom-grid,
   .calendar-layout,
   .partner-grid,
   .wide-content {
     grid-template-columns: 1fr;
+  }
+
+  .brand-dashboard-grid {
+    margin-top: 24px;
   }
 
   .time-filter,

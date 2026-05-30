@@ -110,7 +110,7 @@ function requestClose() {
 .report-modal-mask {
   position: fixed;
   inset: 0;
-  z-index: 120;
+  z-index: 2300;
   display: flex;
   align-items: center;
   justify-content: center;

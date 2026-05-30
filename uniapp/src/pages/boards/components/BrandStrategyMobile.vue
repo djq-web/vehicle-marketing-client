@@ -8,12 +8,36 @@
     </view>
 
     <scroll-view class="strategy-scroll" scroll-y>
-      <view class="strategy-content">
+      <view v-if="loading" class="strategy-state">
+        <view class="state-spinner"></view>
+        <text class="state-title">正在读取品牌战略看板</text>
+        <text class="state-description">请稍候，系统正在同步最新诊断结果。</text>
+      </view>
+
+      <view v-else-if="error" class="strategy-state">
+        <text class="state-title">看板暂时无法打开</text>
+        <text class="state-description">{{ error }}</text>
+        <button class="state-button" @click="emit('refresh')">重新加载</button>
+      </view>
+
+      <view v-else-if="!cards.length" class="strategy-state">
+        <text class="state-title">暂无品牌战略看板</text>
+        <text class="state-description">{{
+          message || "完成战略诊断后，这里会展示品牌战略看板。"
+        }}</text>
+        <button class="state-button" @click="emit('refresh')">刷新看板</button>
+      </view>
+
+      <view v-else class="strategy-content">
         <view
-          v-for="card in strategyCards"
-          :key="card.title"
+          v-for="card in cards"
+          :key="card.key"
           class="strategy-card"
-          :class="{ 'strategy-card--document': card.type === 'document' }"
+          :class="{
+            'strategy-card--document': card.type === 'document',
+            'strategy-card--disabled': card.type === 'document' && card.disabled,
+          }"
+          @click="handleCardClick(card)"
         >
           <template v-if="card.type === 'document'">
             <view class="document-icon" aria-hidden="true">
@@ -25,6 +49,9 @@
             <view class="document-title">
               <text v-for="line in card.titleLines" :key="line">{{ line }}</text>
             </view>
+            <text v-if="card.statusText" class="document-status">{{
+              card.statusText
+            }}</text>
           </template>
 
           <template v-else>
@@ -52,24 +79,27 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
+import type { BrandStrategyCard } from "@/types/strategy";
 
-type TextCard = {
-  type: "text";
-  title: string;
-  color: string;
-  lines: string[];
-};
-
-type DocumentCard = {
-  type: "document";
-  title: string;
-  titleLines: string[];
-};
-
-type StrategyCard = TextCard | DocumentCard;
+const props = withDefaults(
+  defineProps<{
+    cards?: BrandStrategyCard[];
+    loading?: boolean;
+    error?: string;
+    message?: string;
+  }>(),
+  {
+    cards: () => [],
+    loading: false,
+    error: "",
+    message: "",
+  },
+);
 
 const emit = defineEmits<{
   back: [];
+  refresh: [];
+  report: [reportType: string];
 }>();
 
 const starIndexes = [0, 1, 2, 3, 4, 5, 6];
@@ -77,136 +107,6 @@ const mobileStatusBarHeight = ref(0);
 const mobileNavHeight = ref(56);
 const mobileNavContentHeight = ref(44);
 const mobileRightSafeWidth = ref(58);
-
-const strategyCards: StrategyCard[] = [
-  {
-    type: "text",
-    title: "愿 景",
-    color: "#ff4343",
-    lines: ["每个身负使命的人", "都应在浩瀚星河中找到", "属于自己的坐标与家园"],
-  },
-  {
-    type: "text",
-    title: "使 命",
-    color: "#ff4343",
-    lines: ["每个人皆星辰下凡", "生而带使命"],
-  },
-  {
-    type: "text",
-    title: "核心价值观",
-    color: "#ff4343",
-    lines: ["守护者", "引路人", "共同体构建者"],
-  },
-  {
-    type: "document",
-    title: "北斗宣言",
-    titleLines: ["北斗宣言"],
-  },
-  {
-    type: "text",
-    title: "客户选择",
-    color: "#54d830",
-    lines: ["那些在使命路上", "孤独前行、身负压力", "却仰望星空的人"],
-  },
-  {
-    type: "text",
-    title: "价值主张",
-    color: "#54d830",
-    lines: ["有星可以", "有伴可依", "有礼可循"],
-  },
-  {
-    type: "text",
-    title: "竞争差异",
-    color: "#54d830",
-    lines: ["一整套从星宿理论", "到佩戴仪式", "再到职阶共治的星空生态"],
-  },
-  {
-    type: "document",
-    title: "战略定位与品牌承诺图",
-    titleLines: ["战略定位", "与品牌承诺图"],
-  },
-  {
-    type: "text",
-    title: "品牌定位",
-    color: "#ff8f1f",
-    lines: ["以东方星宿智慧", "连接个体使命与", "长期陪伴关系"],
-  },
-  {
-    type: "text",
-    title: "用户洞察",
-    color: "#ff8f1f",
-    lines: ["用户寻找的不只是饰品", "而是被理解、被指引", "和被陪伴的确定感"],
-  },
-  {
-    type: "text",
-    title: "核心优势",
-    color: "#ff8f1f",
-    lines: ["我们手握复原的古天文体系", "著书立说的理论深度", "以及“天文手串”开创..."],
-  },
-  {
-    type: "text",
-    title: "护城河",
-    color: "#ff8f1f",
-    lines: ["吉星理论是墙", "社群归属是河", "六步仪式是桥--外人", "难仿，内者深依"],
-  },
-  {
-    type: "text",
-    title: "品牌信任状",
-    color: "#ff8f1f",
-    lines: ["古天文专家的背书、媒体的", "见证、用户的康复故事，", "以及每一位志工的信用"],
-  },
-  {
-    type: "document",
-    title: "优势、壁垒与信任状体系",
-    titleLines: ["优势、壁垒", "与信任状体系"],
-  },
-  {
-    type: "text",
-    title: "产品组合",
-    color: "#d948ff",
-    lines: ["手串是入门的星钥，课程与", "白酒是交心的酒食，观星与", "中医是沉浸的道场..."],
-  },
-  {
-    type: "text",
-    title: "增长策略",
-    color: "#d948ff",
-    lines: ["以公域内容点燃星火", "以私域社群淬炼星链", "以海外弟子织就星网"],
-  },
-  {
-    type: "text",
-    title: "支撑体系",
-    color: "#d948ff",
-    lines: ["AI为经，职阶为纬，", "资本为梭。织出自我强化的", "共生星空"],
-  },
-  {
-    type: "document",
-    title: "商业模式与体验交付全景图",
-    titleLines: ["商业模式与", "体验交付全景图"],
-  },
-  {
-    type: "text",
-    title: "品牌承诺",
-    color: "#1267ff",
-    lines: ["“穿越光年，皆为守护”", "你负责使命，", "我们负责星河。"],
-  },
-  {
-    type: "text",
-    title: "体验设计",
-    color: "#1267ff",
-    lines: ["从初次佩戴的仪式震颤，到", "社群认同中的心跳共振，再", "到职阶晋升的泪光闪..."],
-  },
-  {
-    type: "text",
-    title: "品牌表达",
-    color: "#1267ff",
-    lines: ["“让星河守护每一个有使命", "的人”：深蓝、金、白，象体", "与星徽是我们与宇宙对话..."],
-  },
-  {
-    type: "document",
-    title: "品牌引力场与体验蓝图",
-    titleLines: ["品牌引力场", "与体验蓝图"],
-  },
-];
 
 const pageStyle = computed(
   () =>
@@ -221,6 +121,14 @@ const pageStyle = computed(
 onMounted(() => {
   initMobileChrome();
 });
+
+function handleCardClick(card: BrandStrategyCard) {
+  if (card.type !== "document" || card.disabled || !card.reportType) {
+    return;
+  }
+
+  emit("report", card.reportType);
+}
 
 function initMobileChrome() {
   const systemInfo = uni.getSystemInfoSync();
@@ -323,6 +231,60 @@ function initMobileChrome() {
   height: 100vh;
   height: 100dvh;
   padding-top: var(--mobile-nav-height);
+}
+
+.strategy-state {
+  display: flex;
+  box-sizing: border-box;
+  min-height: calc(100vh - var(--mobile-nav-height));
+  min-height: calc(100dvh - var(--mobile-nav-height));
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 56rpx;
+  text-align: center;
+}
+
+.state-spinner {
+  width: 44rpx;
+  height: 44rpx;
+  margin-bottom: 28rpx;
+  border: 5rpx solid #d7e6ff;
+  border-top-color: #1267ff;
+  border-radius: 999rpx;
+  animation: state-spin 0.86s linear infinite;
+}
+
+.state-title {
+  color: #111827;
+  font-size: 34rpx;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.state-description {
+  max-width: 560rpx;
+  margin-top: 16rpx;
+  color: #64748b;
+  font-size: 27rpx;
+  line-height: 1.7;
+}
+
+.state-button {
+  height: 76rpx;
+  margin-top: 28rpx;
+  padding: 0 34rpx;
+  color: #1267ff;
+  font-size: 27rpx;
+  font-weight: 800;
+  line-height: 76rpx;
+  background: #eef5ff;
+  border: 1px solid #c8ddff;
+  border-radius: 999rpx;
+}
+
+.state-button::after {
+  border: 0;
 }
 
 .strategy-content {
@@ -440,6 +402,10 @@ function initMobileChrome() {
   padding-top: 30rpx;
 }
 
+.strategy-card--disabled {
+  opacity: 0.58;
+}
+
 .document-icon {
   position: relative;
   width: 94rpx;
@@ -522,5 +488,26 @@ function initMobileChrome() {
   font-weight: 900;
   line-height: 1.5;
   text-align: center;
+}
+
+.document-status {
+  display: block;
+  max-width: 100%;
+  padding: 5rpx 14rpx;
+  overflow: hidden;
+  color: #1267ff;
+  font-size: 22rpx;
+  font-weight: 800;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: #eef5ff;
+  border-radius: 999rpx;
+}
+
+@keyframes state-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>
