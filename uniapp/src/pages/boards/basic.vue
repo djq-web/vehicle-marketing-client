@@ -1519,6 +1519,34 @@ function closeReportModal() {
 }
 
 async function handleReportModalAction(action: string) {
+  if (action === "export_report_pdf") {
+    const report = activeReportResponse.value?.report;
+    const reportType = typeof report?.type === "string" ? report.type : "";
+    const diagnosisId =
+      typeof report?.diagnosisId === "string" ? report.diagnosisId : null;
+
+    if (!reportType) {
+      return;
+    }
+
+    reportModalLoading.value = true;
+    try {
+      await strategyChatStore.exportReportPdf(reportType, { diagnosisId });
+      uni.showToast({
+        title: "报告已开始下载",
+        icon: "none",
+      });
+    } catch (err) {
+      uni.showToast({
+        title: resolveErrorMessage(err, "导出失败"),
+        icon: "none",
+      });
+    } finally {
+      reportModalLoading.value = false;
+    }
+    return;
+  }
+
   if (action === "open_dashboard") {
     closeReportModal();
     return;

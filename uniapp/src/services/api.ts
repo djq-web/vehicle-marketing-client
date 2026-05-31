@@ -23,6 +23,14 @@ type RequestOptions = {
   timeout?: number;
 };
 
+type DownloadOptions = {
+  query?: Record<string, QueryValue>;
+  headers?: Record<string, string>;
+  skipAuth?: boolean;
+  timeout?: number;
+  fileName?: string;
+};
+
 type UploadOptions = {
   filePath: string;
   name?: string;
@@ -58,6 +66,23 @@ function buildUrl(path: string, query?: Record<string, QueryValue>) {
     .join("&");
 
   return `${API_BASE_URL}${normalizedPath}${params ? `?${params}` : ""}`;
+}
+
+function resolveFilenameFromDisposition(value: string | null) {
+  if (!value) {
+    return "";
+  }
+
+  const encoded = /filename\*=UTF-8''([^;]+)/i.exec(value)?.[1];
+  if (encoded) {
+    try {
+      return decodeURIComponent(encoded);
+    } catch {
+      return encoded;
+    }
+  }
+
+  return /filename="?([^";]+)"?/i.exec(value)?.[1] ?? "";
 }
 
 function getAuthHeaders(skipAuth?: boolean, headers?: Record<string, string>) {
@@ -146,6 +171,70 @@ export function upload<T>(path: string, options: UploadOptions) {
       },
       fail: (err) => {
         reject(new ApiError(err.errMsg || "文件上传失败", 0, err));
+      },
+    });
+  });
+}
+
+export function download(path: string, options: DownloadOptions = {}) {
+  const url = buildUrl(path, options.query);
+  const headers = getAuthHeaders(options.skipAuth, options.headers);
+
+  if (typeof window !== "undefined" && typeof document !== "undefined") {
+    return fetch(url, {
+      method: "GET",
+      headers,
+    }).then(async (response) => {
+      if (!response.ok) {
+        const payload = normalizePayload(await response.text());
+        throw new ApiError(
+          resolveErrorMessage(payload, response.status),
+          response.status,
+          payload,
+        );
+      }
+
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+
+      link.href = objectUrl;
+      link.download =
+        options.fileName ||
+        resolveFilenameFromDisposition(
+          response.headers.get("content-disposition"),
+        ) ||
+        "download";
+      link.style.display = "none";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(objectUrl);
+    });
+  }
+
+  return new Promise<void>((resolve, reject) => {
+    uni.downloadFile({
+      url,
+      header: headers,
+      timeout: options.timeout ?? API_LONG_REQUEST_TIMEOUT_MS,
+      success: (response) => {
+        const status = response.statusCode;
+
+        if (status < 200 || status >= 300) {
+          reject(new ApiError(`下载失败：${status}`, status, response));
+          return;
+        }
+
+        uni.openDocument({
+          filePath: response.tempFilePath,
+          fileType: "pdf",
+          success: () => resolve(),
+          fail: (err) => reject(new ApiError(err.errMsg || "打开文件失败", 0, err)),
+        });
+      },
+      fail: (err) => {
+        reject(new ApiError(err.errMsg || "下载失败", 0, err));
       },
     });
   });

@@ -180,28 +180,28 @@ const fallbackSteps = computed<ProgressStep[]>(() => {
     {
       key: "form",
       index: 2,
-      title: "战略分析表单",
+      title: "当前15点战略",
       description:
         rank >= 3
-          ? "战略分析表单已确认。"
+          ? "当前15点战略已进入确认阶段。"
           : rank === 2
-            ? "表单草稿已生成，等待确认或补充资料。"
-            : "等待资料充足后生成表单。",
+            ? "当前15点战略等待继续补充或确认。"
+            : "等待资料充足后整理当前15点战略。",
       state: rank >= 3 ? "done" : rank === 2 ? "current" : "pending",
       statusText: rank >= 3 ? "已确认" : rank === 2 ? "待确认" : "待生成",
     },
     {
       key: "framework",
       index: 3,
-      title: "战略框架",
+      title: "战略确认",
       description:
         rank >= 5
-          ? "战略框架已确认。"
+          ? "15点战略已确认。"
           : rank === 4
             ? status.value === "framework_refining"
-              ? "正在根据补充信息完善框架。"
-              : "框架草稿已生成，等待确认。"
-            : "等待表单确认后生成框架。",
+              ? "正在根据补充信息完善当前15点战略。"
+              : "当前15点战略等待确认。"
+            : "等待当前15点战略补充完成后确认。",
       state: rank >= 5 ? "done" : rank === 4 ? "current" : "pending",
       statusText:
         rank >= 5
@@ -286,11 +286,11 @@ const currentStageLabel = computed(() => {
     not_started: "尚未开始诊断",
     collecting_info: "正在收集企业信息和资料",
     rediagnosing: "重新诊断已启动",
-    form_draft_generated: "表单草稿待确认",
-    form_confirmed: "表单已确认",
-    framework_draft_generated: "战略框架草稿待确认",
-    framework_refining: "战略框架完善中",
-    framework_confirmed: "战略框架已确认",
+    form_draft_generated: "15点战略待完善",
+    form_confirmed: "战略资料已确认",
+    framework_draft_generated: "15点战略待确认",
+    framework_refining: "15点战略完善中",
+    framework_confirmed: "15点战略已确认",
     reports_generating: "报告生成中",
     completed: "战略诊断已完成",
   };
@@ -310,13 +310,13 @@ const currentStageDescription = computed(() => {
   const descriptions: Record<string, string> = {
     not_started: "当前企业还没有开始战略诊断。",
     collecting_info:
-      "请继续补充企业信息或上传资料，资料充足后可生成战略分析表单。",
+      "请继续补充企业信息或上传资料，资料充足后可整理当前15点战略。",
     rediagnosing: "本轮诊断已重新开始，后续结果会以新诊断数据为准。",
     form_draft_generated:
-      "请核对当前战略分析表单，确认无误后进入战略框架生成。",
-    form_confirmed: "下一步可以生成战略框架。",
-    framework_draft_generated: "请确认框架，或继续补充证据和关键判断。",
-    framework_refining: "当前正在根据补充信息完善框架。",
+      "请继续核对和补充当前15点战略，确认关键问题后进入战略确认。",
+    form_confirmed: "下一步可以整理当前15点战略。",
+    framework_draft_generated: "请确认当前15点战略，或继续补充证据和关键判断。",
+    framework_refining: "当前正在根据补充信息完善15点战略。",
     framework_confirmed: "下一步可以生成7份战略报告。",
     reports_generating: "报告正在生成，请稍后查看结果。",
     completed: "可以查看品牌战略看板和已生成报告。",
@@ -355,7 +355,7 @@ const formStatusText = computed(() => {
   }
 
   if (formStatus === "draft" || diagnosis.value.hasAnalysisForm === true) {
-    return "草稿待确认";
+    return "待确认";
   }
 
   return "未生成";
@@ -380,7 +380,7 @@ const frameworkStatusText = computed(() => {
   }
 
   if (frameworkStatus === "draft" || diagnosis.value.hasFramework === true) {
-    return "草稿待确认";
+    return "待确认";
   }
 
   return "未生成";

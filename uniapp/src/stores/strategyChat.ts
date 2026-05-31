@@ -2,6 +2,7 @@ import { defineStore } from "pinia";
 import {
   API_LONG_REQUEST_TIMEOUT_MS,
   ApiError,
+  download,
   request,
   upload,
 } from "@/services/api";
@@ -753,6 +754,37 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
         return result;
       } catch (err) {
         this.error = err instanceof Error ? err.message : "读取报告失败";
+        throw err;
+      } finally {
+        this.loading = false;
+      }
+    },
+    async exportReportPdf(
+      type: string,
+      options: { diagnosisId?: string | null } = {},
+    ) {
+      this.ensureClientStrategyAvailable();
+
+      if (!type || this.loading || this.uploading) {
+        return;
+      }
+
+      this.error = "";
+      this.loading = true;
+
+      try {
+        await download(
+          `/strategy/reports/${encodeURIComponent(type)}/export/pdf`,
+          {
+            query: {
+              tenantId: this.getTenantId(),
+              diagnosisId: options.diagnosisId || undefined,
+            },
+            timeout: API_LONG_REQUEST_TIMEOUT_MS,
+          },
+        );
+      } catch (err) {
+        this.error = err instanceof Error ? err.message : "导出报告失败";
         throw err;
       } finally {
         this.loading = false;

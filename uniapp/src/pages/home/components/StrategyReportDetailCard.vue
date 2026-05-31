@@ -8,15 +8,8 @@
       <text v-if="needsSync" class="sync-badge">需要同步</text>
     </view>
 
-    <view v-if="contentBlocks.length" class="report-content">
-      <view
-        v-for="(block, index) in contentBlocks"
-        :key="index"
-        class="report-block"
-        :class="`type-${block.type}`"
-      >
-        <text>{{ block.text }}</text>
-      </view>
+    <view v-if="contentText" class="report-content">
+      <ReportMarkdown :content="contentText" />
     </view>
 
     <text v-else-if="structuredText" class="structured-content">
@@ -39,6 +32,7 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
+import ReportMarkdown from "./ReportMarkdown.vue";
 
 const props = defineProps<{
   report?: Record<string, unknown> | null;
@@ -49,11 +43,6 @@ const props = defineProps<{
 const emit = defineEmits<{
   action: [action: string];
 }>();
-
-type ContentBlock = {
-  type: "h1" | "h2" | "h3" | "quote" | "list" | "paragraph";
-  text: string;
-};
 
 const report = computed(() => props.report ?? {});
 const title = computed(() => stringValue(report.value.title));
@@ -87,17 +76,12 @@ const structuredText = computed(() => {
 
   return JSON.stringify(report.value.structuredContent, null, 2);
 });
-const contentBlocks = computed<ContentBlock[]>(() =>
-  contentText.value
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map(toContentBlock),
-);
 const reportActionTypes = new Set(["sync_reports"]);
-const actionItems = computed(() =>
-  (props.nextActions ?? []).filter((action) => reportActionTypes.has(action)),
-);
+const actionItems = computed(() => {
+  return (props.nextActions ?? []).filter((action) =>
+    reportActionTypes.has(action),
+  );
+});
 
 function stringValue(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
@@ -116,46 +100,6 @@ function formatDateTime(value: string) {
   const minutes = `${date.getMinutes()}`.padStart(2, "0");
 
   return `${month}/${day} ${hours}:${minutes}`;
-}
-
-function cleanInlineMarkdown(value: string) {
-  return value
-    .replace(/\*\*(.*?)\*\*/g, "$1")
-    .replace(/__(.*?)__/g, "$1")
-    .replace(/`([^`]+)`/g, "$1")
-    .trim();
-}
-
-function toContentBlock(line: string): ContentBlock {
-  if (line.startsWith("# ")) {
-    return { type: "h1", text: cleanInlineMarkdown(line.slice(2)) };
-  }
-
-  if (line.startsWith("## ")) {
-    return { type: "h2", text: cleanInlineMarkdown(line.slice(3)) };
-  }
-
-  if (line.startsWith("### ")) {
-    return { type: "h3", text: cleanInlineMarkdown(line.slice(4)) };
-  }
-
-  if (line.startsWith(">")) {
-    return {
-      type: "quote",
-      text: cleanInlineMarkdown(line.replace(/^>\s*/, "")),
-    };
-  }
-
-  if (/^[-*]\s+/.test(line) || /^\d+\.\s+/.test(line)) {
-    return {
-      type: "list",
-      text: cleanInlineMarkdown(
-        line.replace(/^[-*]\s+/, "").replace(/^\d+\.\s+/, ""),
-      ),
-    };
-  }
-
-  return { type: "paragraph", text: cleanInlineMarkdown(line) };
 }
 
 function statusLabel(value: string) {
@@ -230,69 +174,9 @@ function actionLabel(action: string) {
 }
 
 .report-content {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
   max-height: 520px;
   margin-top: 12px;
   overflow-y: auto;
-}
-
-.report-block {
-  color: #263142;
-  word-break: break-word;
-}
-
-.report-block text {
-  display: block;
-}
-
-.report-block.type-h1 {
-  font-size: 16px;
-  font-weight: 800;
-  line-height: 1.5;
-}
-
-.report-block.type-h2 {
-  margin-top: 4px;
-  font-size: 14px;
-  font-weight: 800;
-  line-height: 1.55;
-}
-
-.report-block.type-h3 {
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 1.55;
-}
-
-.report-block.type-quote {
-  padding: 8px 10px;
-  color: #475569;
-  font-size: 12px;
-  line-height: 1.8;
-  background: #ffffff;
-  border-left: 3px solid #1267ff;
-  border-radius: 4px;
-}
-
-.report-block.type-list {
-  position: relative;
-  padding-left: 14px;
-  font-size: 12px;
-  line-height: 1.8;
-}
-
-.report-block.type-list::before {
-  position: absolute;
-  top: 0;
-  left: 0;
-  content: "·";
-}
-
-.report-block.type-paragraph {
-  font-size: 12px;
-  line-height: 1.8;
 }
 
 .structured-content {

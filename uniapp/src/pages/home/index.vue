@@ -615,14 +615,14 @@ const quickActions: QuickAction[] = [
   { label: "/ 看板", type: "board" },
   { label: "/ 任务管理", type: "prompt", prompt: "创建任务管理计划", interactive: false },
   { label: "/ 战略诊断", type: "mode", mode: "strategy" },
-  { label: "/ 战略拆解", type: "prompt", prompt: "生成战略框架", strategy: true, interactive: false },
+  { label: "/ 战略拆解", type: "prompt", prompt: "查看当前15点战略", strategy: true, interactive: false },
   { label: "/ 上传素材", type: "upload", interactive: false },
   { label: "/ 图文营销", type: "prompt", prompt: "生成图文营销方案", interactive: false },
 ];
 
 const strategyModeActions: QuickAction[] = [
   { label: "/ 上传资料", type: "upload", interactive: false },
-  { label: "/ 战略拆解", type: "prompt", prompt: "生成战略框架", strategy: true, interactive: false },
+  { label: "/ 战略拆解", type: "prompt", prompt: "查看当前15点战略", strategy: true, interactive: false },
   { label: "/ 生成报告", type: "prompt", prompt: "生成全部7份战略报告", strategy: true },
   { label: "/ 打开看板", type: "prompt", prompt: "打开品牌战略看板", strategy: true },
 ];
@@ -717,11 +717,11 @@ const actionPrompts: Record<string, string> = {
   start_diagnosis: "开始战略诊断",
   provide_info: "我想补充企业信息",
   view_files: "查看当前资料",
-  view_form: "查看战略分析表单",
-  generate_form: "生成战略分析表单",
+  view_form: "查看当前15点战略进展",
+  generate_form: "整理当前15点战略",
   confirm_form: "确认",
-  generate_framework: "生成战略框架",
-  refine_framework: "请基于当前战略框架生成需要继续追问的问题",
+  generate_framework: "查看当前15点战略",
+  refine_framework: "请基于当前15点战略整理需要继续确认的问题",
   confirm_framework: "确认",
   generate_reports: "生成全部7份战略报告",
   wait_reports: "查看当前诊断进度",
@@ -734,13 +734,13 @@ const actionPrompts: Record<string, string> = {
   view_business_model_panorama: "查看商业模式全景图",
   view_brand_experience_blueprint: "查看品牌与体验蓝图",
   web_search_evidence: "联网搜索企业公开资料并整理战略诊断证据",
-  apply_search_to_form: "把最近一次联网搜索结果补充到战略分析表单",
+  apply_search_to_form: "把最近一次联网搜索结果补充到当前15点战略",
   apply_search_to_framework:
-    "把最近一次联网搜索结果整理成战略框架待确认修改",
+    "把最近一次联网搜索结果补充到当前15点战略",
   rediagnose: "重新诊断",
   confirm_framework_update: "确认修改",
   cancel_framework_update: "取消修改",
-  continue_refine_framework: "继续完善战略框架",
+  continue_refine_framework: "继续完善15点战略",
   answer_refinement_questions: "我来回答追问问题",
   update_framework: "提交框架修改",
   check_status: "查看当前诊断进度",
@@ -1297,6 +1297,31 @@ function closeReportModal() {
 }
 
 async function handleReportModalAction(action: string) {
+  if (action === "export_report_pdf") {
+    const report = activeReportResponse.value?.report;
+    const reportType = typeof report?.type === "string" ? report.type : "";
+    const diagnosisId =
+      typeof report?.diagnosisId === "string" ? report.diagnosisId : null;
+
+    if (!reportType) {
+      return;
+    }
+
+    reportModalLoading.value = true;
+    try {
+      await chatStore.exportReportPdf(reportType, { diagnosisId });
+      uni.showToast({
+        title: "报告已开始下载",
+        icon: "none",
+      });
+    } catch (err) {
+      showError(err, "导出失败");
+    } finally {
+      reportModalLoading.value = false;
+    }
+    return;
+  }
+
   if (action === "open_dashboard") {
     closeReportModal();
   }
@@ -1784,6 +1809,7 @@ page {
   min-height: 100vh;
   overflow: hidden;
   background: #ffffff;
+  user-select:text;
 }
 
 .mobile-nav,

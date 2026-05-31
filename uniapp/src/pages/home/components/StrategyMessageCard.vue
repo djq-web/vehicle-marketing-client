@@ -68,12 +68,7 @@ const asArray = (value: unknown): Record<string, unknown>[] =>
     ? value.map(asRecord).filter((item) => Object.keys(item).length > 0)
     : [];
 
-const reportCardTypes = new Set([
-  "strategy_reports_generated",
-  "strategy_reports_synced",
-  "strategy_reports_pending",
-  "strategy_report",
-]);
+const reportCardTypes = new Set<string>([]);
 
 const reportActionTypes = new Set(["sync_reports"]);
 

@@ -11,12 +11,22 @@
           <text class="report-modal-kicker">报告查看</text>
           <text class="report-modal-title">{{ modalTitle }}</text>
         </view>
-        <button class="report-modal-close" @click="requestClose">
-          <view class="report-close-icon">
-            <text></text>
-            <text></text>
-          </view>
-        </button>
+        <view class="report-modal-tools">
+          <button
+            v-if="canExportPdf"
+            class="report-modal-export"
+            :disabled="actionsDisabled || loading"
+            @click="emit('action', 'export_report_pdf')"
+          >
+            导出 PDF
+          </button>
+          <button class="report-modal-close" @click="requestClose">
+            <view class="report-close-icon">
+              <text></text>
+              <text></text>
+            </view>
+          </button>
+        </view>
       </view>
 
       <scroll-view class="report-modal-body" scroll-y>
@@ -63,6 +73,16 @@ let closeTimer: ReturnType<typeof setTimeout> | null = null;
 const modalTitle = computed(() => {
   const title = props.report?.title;
   return typeof title === "string" && title.trim() ? title.trim() : "战略报告";
+});
+const canExportPdf = computed(() => {
+  const report = props.report ?? {};
+  const status = typeof report.status === "string" ? report.status : "";
+  const content = typeof report.content === "string" ? report.content.trim() : "";
+
+  return (
+    content.length > 0 &&
+    (report.isGenerated === true || status.toLowerCase() === "generated")
+  );
 });
 
 watch(
@@ -151,6 +171,7 @@ function requestClose() {
 
 .report-modal-heading {
   min-width: 0;
+  flex: 1;
 }
 
 .report-modal-kicker {
@@ -170,6 +191,40 @@ function requestClose() {
   line-height: 1.35;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.report-modal-tools {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 18px;
+}
+
+.report-modal-export {
+  display: inline-flex;
+  width: auto;
+  min-width: 88px;
+  min-height: 34px;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0 14px;
+  color: #1267ff;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 32px;
+  background: #edf5ff;
+  border: 1px solid #cfe0f7;
+  border-radius: 999px;
+  box-shadow: none;
+}
+
+.report-modal-export::after {
+  border: 0;
+}
+
+.report-modal-export[disabled] {
+  opacity: 0.55;
 }
 
 .report-modal-close {
@@ -338,8 +393,20 @@ function requestClose() {
   }
 
   .report-modal-title {
-    max-width: calc(100vw - 156rpx);
+    max-width: calc(100vw - 282rpx);
     font-size: 34rpx;
+  }
+
+  .report-modal-tools {
+    gap: 28rpx;
+  }
+
+  .report-modal-export {
+    min-width: 150rpx;
+    min-height: 62rpx;
+    padding: 0 24rpx;
+    font-size: 24rpx;
+    line-height: 58rpx;
   }
 
   .report-modal-close {
