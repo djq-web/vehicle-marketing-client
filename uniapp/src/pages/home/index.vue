@@ -2,11 +2,7 @@
   <view class="home-page" :style="homePageStyle">
     <view class="mobile-nav">
       <view class="mobile-nav-content">
-        <button
-          class="mobile-menu-button"
-          :class="{ open: isMobileSidebarOpen }"
-          @click="toggleMobileSidebar"
-        >
+        <button class="mobile-menu-button" :class="{ open: isMobileSidebarOpen }" @click="toggleMobileSidebar">
           <text></text>
           <text></text>
           <text></text>
@@ -14,20 +10,13 @@
         <text class="mobile-nav-title">车肆</text>
       </view>
     </view>
-    <view
-      class="mobile-sidebar-mask"
-      :class="{ open: isMobileSidebarOpen }"
-      @click="closeMobileSidebar"
-    ></view>
-    <view class="top-strip"></view>
+    <view class="mobile-sidebar-mask" :class="{ open: isMobileSidebarOpen }" @click="closeMobileSidebar"></view>
     <view class="workspace">
-      <view
-        class="sidebar"
-        :class="{ collapsed: isSidebarCollapsed, 'mobile-open': isMobileSidebarOpen }"
-      >
+      <view class="sidebar"
+        :class="{ collapsed: isSidebarCollapsed, 'mobile-open': isMobileSidebarOpen, 'PC-layout': !isMobileLayout }">
         <view v-if="!isSidebarCollapsed" class="sidebar-content">
           <view class="brand-mark">
-            <view class="brand-circle">肆</view>
+            <image class="brand-logo" src="/static/svg/logoIcon.svg" mode="aspectFit" />
           </view>
 
           <button class="new-chat" :disabled="isBusy" @click="createSession">
@@ -35,23 +24,16 @@
             <text>创建新对话</text>
           </button>
 
-          <scroll-view class="chat-list" scroll-y>
+          <scroll-view class="chat-list">
             <template v-for="chat in sessionChats" :key="chat.id">
               <text v-if="chat.date" class="date-label">{{ chat.date }}</text>
-              <button
-                class="chat-item"
-                :class="{ active: chat.active }"
-                @click="selectSession(chat.id)"
-              >
+              <button class="chat-item" :class="{ active: chat.active }" @click="selectSession(chat.id)">
                 <text>{{ chat.title }}</text>
               </button>
             </template>
 
             <template v-if="!sessionChats.length">
-              <template
-                v-for="(item, index) in fallbackChats"
-                :key="`${item.title}-${index}`"
-              >
+              <template v-for="(item, index) in fallbackChats" :key="`${item.title}-${index}`">
                 <text v-if="item.date" class="date-label">{{ item.date }}</text>
                 <view class="chat-item" :class="{ active: item.active }">
                   <text>{{ item.title }}</text>
@@ -63,13 +45,8 @@
 
         <view v-if="!isSidebarCollapsed" class="company-menu-wrap">
           <view v-if="isCompanyMenuVisible" class="settings-card">
-            <button
-              v-for="item in settingItems"
-              :key="item.label"
-              class="setting-item"
-              :class="{ active: item.action === 'settings' }"
-              @click="handleSettingClick(item.action)"
-            >
+            <button v-for="item in settingItems" :key="item.label" class="setting-item"
+              :class="{ active: item.action === 'settings' }" @click="handleSettingClick(item.action)">
               <text class="setting-icon" :class="item.action"></text>
               <text>{{ item.label }}</text>
             </button>
@@ -86,52 +63,29 @@
       </view>
 
       <view class="main-panel">
-        <button
-          class="collapse-button"
-          :class="{ collapsed: isSidebarCollapsed }"
-          @click="toggleSidebar"
-        >
+        <button class="collapse-button" :class="{ collapsed: isSidebarCollapsed }" @click="toggleSidebar">
           <image class="collapse-icon" src="/static/svg/expandIcon.svg" mode="aspectFit" />
         </button>
 
-        <scroll-view
-          v-if="showMessages"
-          class="message-panel"
-          scroll-y
-          :scroll-top="messageScrollTop"
-        >
+        <scroll-view v-if="showMessages" class="message-panel" scroll-y :scroll-top="messageScrollTop">
           <view class="message-stream">
             <view v-if="chatStore.pendingFrameworkUpdate" class="pending-bar">
               框架修改待确认：请在会话中回复“确认”或“取消”。
             </view>
 
-            <view
-              v-for="message in chatStore.messages"
-              :key="message.id"
-              class="message-row"
-              :class="{ mine: message.role === 'USER' }"
-            >
+            <view v-for="message in chatStore.messages" :key="message.id" class="message-row"
+              :class="{ mine: message.role === 'USER' }">
               <view class="message-bubble">
                 <text v-if="message.role === 'USER'" class="message-content">
                   {{ message.content }}
                 </text>
-                <MessageMarkdown
-                  v-else
-                  class="message-content"
-                  :content="message.content"
-                  :animate="chatStore.shouldAnimateAssistantMessage(message)"
-                  @animation-finished="
+                <MessageMarkdown v-else class="message-content" :content="message.content"
+                  :animate="chatStore.shouldAnimateAssistantMessage(message)" @animation-finished="
                     chatStore.finishAssistantMessageAnimation(message.id)
-                  "
-                  @typing-progress="scrollToBottom"
-                />
-                <StrategyMessageCard
-                  v-if="message.metadata?.card"
-                  :metadata="message.metadata"
-                  :actions-disabled="isBusy"
-                  :show-next-actions="message.id === latestActionableMessageId"
-                  @action="handleCardAction"
-                />
+                    " @typing-progress="scrollToBottom" />
+                <StrategyMessageCard v-if="message.metadata?.card" :metadata="message.metadata"
+                  :actions-disabled="isBusy" :show-next-actions="message.id === latestActionableMessageId"
+                  @action="handleCardAction" />
                 <!-- <text class="message-time">{{ formatTime(message.createdAt) }}</text> -->
               </view>
             </view>
@@ -148,12 +102,8 @@
             <text>用好车肆，先赚一个小目标！</text>
           </view>
           <view class="feature-grid">
-            <button
-              v-for="feature in features"
-              :key="feature.title"
-              class="feature-card"
-              @click="handleFeatureSelect(feature)"
-            >
+            <button v-for="feature in features" :key="feature.title" class="feature-card"
+              @click="handleFeatureSelect(feature)">
               <view class="feature-visual">
                 <image class="feature-svg" :src="feature.icon" mode="aspectFit" />
               </view>
@@ -165,21 +115,10 @@
           </view>
         </view>
 
-        <text v-if="strategyNotice" class="error-text">{{ strategyNotice }}</text>
-
-        <view
-          v-if="isBoardMenuVisible"
-          class="board-mention-menu"
-          :style="boardMenuStyle"
-        >
+        <view v-if="isBoardMenuVisible" class="board-mention-menu" :style="boardMenuStyle">
           <text class="board-menu-title">选择看板</text>
           <scroll-view class="board-menu-list" scroll-y>
-            <button
-              v-for="board in filteredBoards"
-              :key="board.id"
-              class="board-option"
-              @click="selectBoard(board)"
-            >
+            <button v-for="board in filteredBoards" :key="board.id" class="board-option" @click="selectBoard(board)">
               <text class="board-icon">
                 <image :src="board.icon" mode="aspectFit" />
               </text>
@@ -195,23 +134,14 @@
         </view>
 
         <view class="composer">
+          <text v-if="strategyNotice" class="error-text">{{ strategyNotice }}</text>
           <view class="editor-wrap">
             <text v-if="!draft" class="message-placeholder">
               {{ composerPlaceholder }}
             </text>
-            <textarea
-              v-model="draft"
-              class="message-input"
-              auto-height
-              :disabled="isBusy"
-              :maxlength="-1"
-              @blur="handleEditorBlur"
-              @confirm="sendMessage"
-              @focus="handleEditorFocus"
-              @input="handleDraftInput"
-              @keydown="handleEditorKeydown"
-              @tap="handleEditorPointerEnd"
-            />
+            <textarea v-model="draft" class="message-input" auto-height :disabled="isBusy" :maxlength="-1"
+              @blur="handleEditorBlur" @confirm="sendMessage" @focus="handleEditorFocus" @input="handleDraftInput"
+              @keydown="handleEditorKeydown" @tap="handleEditorPointerEnd" />
           </view>
 
           <view class="composer-footer">
@@ -221,59 +151,33 @@
                   <uni-icons type="plusempty" size="18" color="#111827" />
                 </button>
                 <view class="tool-divider"></view>
-                <button
-                  v-if="activeComposerModeMeta"
-                  class="mode-chip"
-                  :disabled="isBusy"
-                  @click="cancelComposerMode"
-                >
+                <button v-if="activeComposerModeMeta" class="mode-chip" :disabled="isBusy" @click="cancelComposerMode">
                   <text>{{ activeComposerModeMeta.label }}</text>
                   <text class="chip-close">×</text>
                 </button>
-                <button
-                  v-for="action in visibleQuickActions"
-                  :key="action.label"
-                  class="quick-action"
-                  :class="{ inert: action.interactive === false }"
-                  :disabled="isBusy"
-                  @click="handleQuickAction(action)"
-                >
+                <button v-for="action in visibleQuickActions" :key="action.label" class="quick-action"
+                  :class="{ inert: action.interactive === false }" :disabled="isBusy"
+                  @click="handleQuickAction(action)">
                   <text>{{ action.label }}</text>
                 </button>
-                <button
-                  class="quick-action more"
-                  :class="{ active: isMoreMenuVisible }"
-                  :disabled="isBusy"
-                  @click="toggleMoreMenu"
-                >
+                <button class="quick-action more" :class="{ active: isMoreMenuVisible }" :disabled="isBusy"
+                  @click="toggleMoreMenu">
                   <text>更多</text>
                 </button>
               </view>
             </scroll-view>
-            <button
-              class="send-button"
-              :class="{ 'is-disabled': isBusy || !draft.trim() }"
-              :disabled="isBusy || !draft.trim()"
-              @click="sendMessage"
-            >
+            <button class="send-button" :class="{ 'is-disabled': isBusy || !draft.trim() }"
+              :disabled="isBusy || !draft.trim()" @click="sendMessage">
               <uni-icons type="arrow-up" size="17" color="#ffffff" />
             </button>
-            <button
-              class="mobile-attach-button"
-              :disabled="isBusy"
-              @click="chooseMaterial"
-            >
+            <button class="mobile-attach-button" :disabled="isBusy" @click="chooseMaterial">
               <uni-icons type="plusempty" size="20" color="#303030" />
             </button>
           </view>
 
           <view v-if="isMoreMenuVisible" class="composer-more-menu">
-            <button
-              v-for="item in moreActions"
-              :key="item.label"
-              class="more-menu-item"
-              @click="handleMoreAction(item)"
-            >
+            <button v-for="item in moreActions" :key="item.label" class="more-menu-item"
+              @click="handleMoreAction(item)">
               <view>
                 <text>{{ item.label }}</text>
                 <text>{{ item.description }}</text>
@@ -284,15 +188,9 @@
       </view>
     </view>
 
-    <StrategyReportModal
-      :visible="isReportModalVisible"
-      :loading="reportModalLoading"
-      :report="activeReportResponse?.report ?? null"
-      :next-actions="activeReportResponse?.nextActions ?? []"
-      :actions-disabled="isBusy"
-      @close="closeReportModal"
-      @action="handleReportModalAction"
-    />
+    <StrategyReportModal :visible="isReportModalVisible" :loading="reportModalLoading"
+      :report="activeReportResponse?.report ?? null" :next-actions="activeReportResponse?.nextActions ?? []"
+      :actions-disabled="isBusy" @close="closeReportModal" @action="handleReportModalAction" />
 
     <view v-if="isSettingsVisible" class="settings-overlay" @click="closeSettings">
       <view class="settings-panel" @click.stop>
@@ -315,11 +213,7 @@
 
             <view class="settings-section account-summary">
               <view class="avatar-preview">
-                <image
-                  v-if="settingsForm.avatarUrl"
-                  :src="settingsForm.avatarUrl"
-                  mode="aspectFill"
-                />
+                <image v-if="settingsForm.avatarUrl" :src="settingsForm.avatarUrl" mode="aspectFill" />
                 <text v-else>{{ avatarInitial }}</text>
               </view>
               <view class="summary-text">
@@ -336,11 +230,7 @@
               </view>
               <view class="form-row">
                 <text>手机号码</text>
-                <input
-                  v-model.trim="settingsForm.phone"
-                  placeholder="请输入手机号码"
-                  type="number"
-                />
+                <input v-model.trim="settingsForm.phone" placeholder="请输入手机号码" type="number" />
               </view>
             </view>
 
@@ -348,27 +238,15 @@
               <text class="section-title">修改密码</text>
               <view class="form-row">
                 <text>当前密码</text>
-                <input
-                  v-model="settingsForm.currentPassword"
-                  password
-                  placeholder="请输入当前密码"
-                />
+                <input v-model="settingsForm.currentPassword" password placeholder="请输入当前密码" />
               </view>
               <view class="form-row">
                 <text>新密码</text>
-                <input
-                  v-model="settingsForm.newPassword"
-                  password
-                  placeholder="至少 6 位"
-                />
+                <input v-model="settingsForm.newPassword" password placeholder="至少 6 位" />
               </view>
               <view class="form-row">
                 <text>确认新密码</text>
-                <input
-                  v-model="settingsForm.confirmPassword"
-                  password
-                  placeholder="再次输入新密码"
-                />
+                <input v-model="settingsForm.confirmPassword" password placeholder="再次输入新密码" />
               </view>
             </view>
 
@@ -449,10 +327,10 @@ type QuickAction =
   | (QuickActionBase & { type: "upload" })
   | (QuickActionBase & { type: "mode"; mode: ComposerModeId })
   | (QuickActionBase & {
-      type: "prompt";
-      prompt: string;
-      strategy?: boolean;
-    });
+    type: "prompt";
+    prompt: string;
+    strategy?: boolean;
+  });
 
 type ComposerModeId = "strategy";
 
@@ -552,6 +430,11 @@ const settingsForm = reactive({
   newPassword: "",
   confirmPassword: "",
 });
+const isMobileLayout = ref(false);
+
+function updateMobileLayout(width = uni.getSystemInfoSync().windowWidth) {
+  isMobileLayout.value = width <= 760;
+}
 
 const iconMap = {
   brandStrategy: "/static/svg/brand-strategy.svg",
@@ -875,6 +758,7 @@ onLoad(async () => {
   initMobileChrome();
   authStore.restore();
   applyLocalSettings();
+  updateMobileLayout();
 
   if (!authStore.isAuthenticated) {
     uni.reLaunch({
@@ -1028,8 +912,8 @@ function chooseAvatar() {
 function saveSettings() {
   const hasPasswordInput = Boolean(
     settingsForm.currentPassword ||
-      settingsForm.newPassword ||
-      settingsForm.confirmPassword,
+    settingsForm.newPassword ||
+    settingsForm.confirmPassword,
   );
 
   if (hasPasswordInput) {
@@ -1431,10 +1315,10 @@ async function updateBoardMenu(options: { force?: boolean } = {}) {
   const cursor = clampCursor(editorCursor.value);
   const trigger = options.force
     ? {
-        start: cursor,
-        end: cursor,
-        query: "",
-      }
+      start: cursor,
+      end: cursor,
+      query: "",
+    }
     : resolveBoardTriggerAtCursor();
 
   if (!trigger) {
@@ -1809,7 +1693,7 @@ page {
   min-height: 100vh;
   overflow: hidden;
   background: #ffffff;
-  user-select:text;
+  user-select: text;
 }
 
 .mobile-nav,
@@ -1818,17 +1702,13 @@ page {
   display: none;
 }
 
-.top-strip {
-  height: 36px;
-  background: #bfbfbf;
-}
-
 .workspace {
   display: flex;
-  height: calc(100vh - 36px);
-  min-height: calc(100vh - 36px);
+  height: 100vh;
+  min-height: 100vh;
   overflow: hidden;
 }
+
 
 .sidebar {
   position: relative;
@@ -1839,6 +1719,10 @@ page {
   background: linear-gradient(180deg, #f6f7f9 0%, #f2f4f7 100%);
   border-right: 1px solid #edf0f4;
   transition: width 0.22s ease, flex-basis 0.22s ease, padding 0.22s ease;
+}
+
+.PC-layout {
+  padding-top: 24px;
 }
 
 .sidebar.collapsed {
@@ -1856,37 +1740,16 @@ page {
 .brand-mark {
   display: flex;
   justify-content: center;
-  margin-bottom: 12px;
+  margin: 0 auto 12px;
+  width: 60px;
+  height: 60px;
+  border-radius: 60px;
+  border: 1px solid #121212;
 }
 
-.brand-circle {
-  position: relative;
-  display: grid;
-  width: 38px;
-  height: 38px;
-  place-items: center;
-  color: #111111;
-  font-weight: 800;
-  border: 1.5px solid #121212;
-  border-radius: 50%;
-  transform: rotate(-18deg);
-}
-
-.brand-circle::before,
-.brand-circle::after {
-  position: absolute;
-  width: 48px;
-  height: 1px;
-  content: "";
-  background: #111111;
-}
-
-.brand-circle::before {
-  transform: rotate(35deg);
-}
-
-.brand-circle::after {
-  transform: rotate(-52deg);
+.brand-logo {
+  width: 100%;
+  height: 100%;
 }
 
 .new-chat {
@@ -1954,7 +1817,8 @@ page {
 
 .chat-list {
   height: calc(100vh - 258px);
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   font-size: 11px;
 }
 
@@ -1980,6 +1844,7 @@ page {
   border: 0;
   border-radius: 7px;
   box-shadow: none;
+  cursor: pointer;
 }
 
 .chat-item text {
@@ -2030,7 +1895,7 @@ page {
   box-shadow: none;
 }
 
-.setting-item > text:last-child {
+.setting-item>text:last-child {
   display: block;
   flex: 1;
   min-width: 0;
@@ -2191,7 +2056,7 @@ page {
 
 .collapse-button {
   position: absolute;
-  top: 13px;
+  top: 24px;
   left: 15px;
   z-index: 5;
   display: grid;
@@ -2386,13 +2251,11 @@ page {
 }
 
 .error-text {
-  position: absolute;
-  right: 16%;
-  bottom: 110px;
-  left: 16%;
   margin: 0;
   color: #d93025;
   font-size: 12px;
+  position: absolute;
+  top: -22px;
 }
 
 .composer {
@@ -2997,7 +2860,7 @@ page {
   border-radius: 10px 10px 0 0;
 }
 
-.settings-nav-item > text:last-child {
+.settings-nav-item>text:last-child {
   overflow: hidden;
   min-width: 0;
   line-height: 44px;
@@ -3111,14 +2974,14 @@ page {
   gap: 20px;
 }
 
-.form-row > text,
-.readonly-row > text:first-child {
+.form-row>text,
+.readonly-row>text:first-child {
   color: #111111;
   font-size: 16px;
 }
 
 .form-row input,
-.readonly-row > text:last-child {
+.readonly-row>text:last-child {
   min-width: 0;
   max-width: 520px;
   justify-self: stretch;
@@ -3263,9 +3126,6 @@ button[disabled] {
     white-space: nowrap;
   }
 
-  .top-strip {
-    display: none;
-  }
 
   .workspace {
     height: 100vh;
@@ -3284,7 +3144,7 @@ button[disabled] {
     display: block;
     width: 246px;
     flex-basis: auto;
-    padding: calc(var(--mobile-nav-height) + 10px) 14px 84px;
+    padding: 36px 14px 84px;
     pointer-events: none;
     border-right: 1px solid #edf0f4;
     opacity: 0;
@@ -3374,10 +3234,11 @@ button[disabled] {
     gap: 18px;
     margin: 0 0 52px;
     color: #303236;
-    font-size: 24px;
+    font-size: 20px;
     line-height: 1.2;
     letter-spacing: 0;
     text-align: center;
+    font-weight: 600;
   }
 
   .hero-title text {
@@ -3422,15 +3283,15 @@ button[disabled] {
 
   .feature-visual {
     position: static;
-    width: 116rpx;
-    height: 88rpx;
-    flex: 0 0 116rpx;
+    width: 87rpx;
+    height: 66rpx;
+    flex: 0 0 87rpx;
     transform: none;
   }
 
   .feature-svg {
-    width: 116rpx;
-    height: 88rpx;
+    width: 87rpx;
+    height: 66rpx;
   }
 
   .feature-copy {
@@ -3442,9 +3303,9 @@ button[disabled] {
     overflow: hidden;
     margin: 0;
     color: #303236;
-    font-size: 36rpx;
+    font-size: 28rpx;
     font-style: italic;
-    font-weight: 900;
+    font-weight: 600;
     line-height: 1;
     text-align: left;
     text-overflow: ellipsis;
@@ -3631,7 +3492,7 @@ button[disabled] {
   }
 
   .form-row input,
-  .readonly-row > text:last-child {
+  .readonly-row>text:last-child {
     text-align: left;
   }
 }

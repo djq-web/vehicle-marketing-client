@@ -2,13 +2,8 @@
   <view class="key-metrics-desktop">
     <view class="metrics-filter">
       <text class="metrics-filter-label">时间：</text>
-      <button
-        v-for="item in timeOptions"
-        :key="item"
-        class="metrics-filter-button"
-        :class="{ 'metrics-filter-button--active': item === activeTime }"
-        @click="selectTime(item)"
-      >
+      <button v-for="item in timeOptions" :key="item" class="metrics-filter-button"
+        :class="{ 'metrics-filter-button--active': item === activeTime }" @click="selectTime(item)">
         {{ item }}
       </button>
     </view>
@@ -20,67 +15,30 @@
 
     <scroll-view class="metrics-board" scroll-x scroll-y>
       <view class="metrics-canvas-wrap">
-        <canvas
-          id="metrics-flow-canvas"
-          canvas-id="metrics-flow-canvas"
-          class="metrics-flow-canvas"
-        ></canvas>
+        <canvas id="metrics-flow-canvas" canvas-id="metrics-flow-canvas" class="metrics-flow-canvas"></canvas>
 
-        <svg
-          class="metrics-flow-svg"
-          :viewBox="`0 0 ${canvasWidth} ${canvasHeight}`"
-          preserveAspectRatio="none"
-        >
+        <svg class="metrics-flow-svg" :viewBox="`0 0 ${canvasWidth} ${canvasHeight}`" preserveAspectRatio="none">
           <defs>
-            <marker
-              id="metrics-svg-arrow-blue"
-              markerWidth="10"
-              markerHeight="10"
-              refX="8"
-              refY="5"
-              orient="auto"
-              markerUnits="strokeWidth"
-            >
+            <marker id="metrics-svg-arrow-blue" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"
+              markerUnits="strokeWidth">
               <path d="M0,0 L10,5 L0,10 Z" fill="#55cfff" />
             </marker>
-            <marker
-              id="metrics-svg-arrow-muted"
-              markerWidth="10"
-              markerHeight="10"
-              refX="8"
-              refY="5"
-              orient="auto"
-              markerUnits="strokeWidth"
-            >
+            <marker id="metrics-svg-arrow-muted" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"
+              markerUnits="strokeWidth">
               <path d="M0,0 L10,5 L0,10 Z" fill="#d8dce3" />
             </marker>
           </defs>
 
           <g v-for="edge in drawableEdges" :key="edge.id">
-            <path
-              class="metrics-svg-line"
-              :class="{ 'metrics-svg-line--muted': edge.muted }"
-              :d="svgPath(edge)"
-              fill="none"
-              :marker-end="edge.muted ? 'url(#metrics-svg-arrow-muted)' : 'url(#metrics-svg-arrow-blue)'"
-            />
-            <path
-              v-if="!edge.muted"
-              class="metrics-svg-flow"
-              :style="svgFlowStyle(edge)"
-              :d="svgPath(edge)"
-              fill="none"
-            />
+            <path class="metrics-svg-line" :class="{ 'metrics-svg-line--muted': edge.muted }" :d="svgPath(edge)"
+              fill="none" :marker-end="edge.muted ? 'url(#metrics-svg-arrow-muted)' : 'url(#metrics-svg-arrow-blue)'" />
+            <path v-if="!edge.muted" class="metrics-svg-flow" :style="svgFlowStyle(edge)" :d="svgPath(edge)"
+              fill="none" />
           </g>
         </svg>
 
-        <view
-          v-for="node in nodes"
-          :key="node.id"
-          class="metrics-node"
-          :class="nodeClass(node)"
-          :style="nodeStyle(node)"
-        >
+        <view v-for="node in nodes" :key="node.id" class="metrics-node" :class="nodeClass(node)"
+          :style="nodeStyle(node)">
           <text v-if="node.titleMode === 'vertical'" class="metrics-node-title-vertical">
             {{ node.title }}
           </text>
@@ -101,11 +59,7 @@
             </view>
             <text v-else-if="node.empty" class="metrics-empty">暂无数据</text>
             <view v-else class="metrics-rows">
-              <view
-                v-for="row in node.rows"
-                :key="`${row.label}-${row.value}`"
-                class="metrics-row"
-              >
+              <view v-for="row in node.rows" :key="`${row.label}-${row.value}`" class="metrics-row">
                 <text class="metrics-row-label">{{ row.label }}：</text>
                 <text class="metrics-strong">{{ row.value }}</text>
                 <text class="metrics-trend" :class="`metrics-trend--${row.trend}`">
@@ -584,7 +538,7 @@ watch(
   height: calc(100vh - 98px);
   min-height: 680px;
   margin-top: 20px;
-  overflow: hidden;
+  overflow: auto;
 }
 
 .metrics-canvas-wrap {
