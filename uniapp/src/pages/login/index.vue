@@ -9,29 +9,16 @@
             <view class="user-head"></view>
             <view class="user-body"></view>
           </view>
-          <input
-            v-model="form.username"
-            class="field-input"
-            type="text"
-            placeholder="请输入账号"
-            placeholder-class="input-placeholder"
-            confirm-type="next"
-          />
+          <input v-model="form.username" class="field-input" type="text" placeholder="请输入账号"
+            placeholder-class="input-placeholder" confirm-type="next" />
         </view>
         <view class="field">
           <view class="field-icon lock-icon">
             <view class="lock-shackle"></view>
             <view class="lock-body"></view>
           </view>
-          <input
-            v-model="form.password"
-            class="field-input"
-            password
-            placeholder="请输入密码"
-            placeholder-class="input-placeholder"
-            confirm-type="done"
-            @confirm="handleLogin"
-          />
+          <input v-model="form.password" class="field-input" password placeholder="请输入密码"
+            placeholder-class="input-placeholder" confirm-type="done" @confirm="handleLogin" />
         </view>
         <view class="login-options">
           <label class="remember">
@@ -128,9 +115,11 @@ async function handleLogin() {
 
 .login-logo {
   display: block;
-  width: 38px;
-  height: 38px;
+  width: 48px;
+  height: 48px;
   margin: 0 auto 16px;
+  border: 1px solid #666;
+  border-radius: 50%;
 }
 
 .card-title {
