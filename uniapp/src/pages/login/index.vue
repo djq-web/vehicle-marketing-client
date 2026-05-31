@@ -1,30 +1,8 @@
 <template>
   <view class="login-page">
-    <view class="hero-banner">
-      <view class="hero-copy">
-        <text class="eyebrow">车肆营销中台</text>
-        <text class="hero-title">把品牌增长线索，沉淀为可执行的营销策略</text>
-        <text class="subtitle">
-          连接洞察、策略、内容与运营，让每一次营销动作都有清晰方向。
-        </text>
-      </view>
-
-      <view class="hero-illustration" aria-hidden="true">
-        <view class="diamond diamond-left"></view>
-        <view class="diamond diamond-right"></view>
-        <view class="sun"><view class="sun-core"></view></view>
-        <view class="person-head"><view class="person-hair"></view></view>
-        <view class="person-body"><view class="person-arm"></view></view>
-        <view class="board">
-          <view class="board-line first"></view>
-          <view class="board-line second"></view>
-          <view class="board-line third"></view>
-        </view>
-      </view>
-    </view>
-
     <view class="login-area">
       <view class="login-card">
+        <image class="login-logo" src="/static/svg/logoIcon.svg" mode="aspectFit" />
         <text class="card-title">欢迎登录</text>
         <view class="field">
           <view class="field-icon user-icon">
@@ -36,6 +14,7 @@
             class="field-input"
             type="text"
             placeholder="请输入账号"
+            placeholder-class="input-placeholder"
             confirm-type="next"
           />
         </view>
@@ -49,16 +28,16 @@
             class="field-input"
             password
             placeholder="请输入密码"
+            placeholder-class="input-placeholder"
             confirm-type="done"
             @confirm="handleLogin"
           />
         </view>
         <view class="login-options">
           <label class="remember">
-            <checkbox :checked="form.remember" color="#1267ff" />
-            <text>记住登录状态</text>
+            <checkbox :checked="form.remember" color="#1d6df2" />
+            <text>记住密码</text>
           </label>
-          <button class="forgot-button">忘记密码？</button>
         </view>
         <text v-if="error" class="login-error">{{ error }}</text>
         <button class="login-button" :disabled="loading" @click="handleLogin">
@@ -122,237 +101,89 @@ async function handleLogin() {
 
 <style>
 .login-page {
-  min-height: 100vh;
-  background: #eef2f7;
-}
-
-.hero-banner {
-  position: relative;
-  height: 304px;
-  overflow: hidden;
-  background: linear-gradient(118deg, #ffffff 0 30%, #dcefff 30% 53%, #fffdf5 53% 100%);
-}
-
-.hero-copy {
-  position: relative;
-  z-index: 1;
-  width: 760px;
-  padding: 76px 0 0 136px;
-  color: #091a35;
-}
-
-.eyebrow {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  width: fit-content;
-  height: 24px;
-  margin: 0 0 12px;
-  padding: 0 10px;
-  color: #1267ff;
-  font-size: 14px;
-  font-weight: 700;
-  line-height: 24px;
-  background: #eaf3ff;
-  border: 1px solid #9fc7ff;
-  border-radius: 5px;
-}
-
-.hero-title {
-  display: block;
-  width: 650px;
-  color: #091a35;
-  font-size: 34px;
-  font-weight: 800;
-  line-height: 1.3;
-  letter-spacing: 1px;
-}
-
-.subtitle {
-  display: block;
-  margin: 18px 0 0;
-  color: #526172;
-  font-size: 16px;
-}
-
-.hero-illustration {
-  position: absolute;
-  top: 40px;
-  right: 130px;
-  width: 430px;
-  height: 230px;
-}
-
-.diamond {
-  position: absolute;
-  border-radius: 18px;
-  background: linear-gradient(145deg, #c8e8ff, #9dcbf4);
-  transform: rotate(45deg);
-}
-
-.diamond-left {
-  right: 210px;
-  bottom: 20px;
-  width: 138px;
-  height: 138px;
-}
-
-.diamond-right {
-  right: 0;
-  bottom: 10px;
-  width: 178px;
-  height: 178px;
-}
-
-.sun {
-  position: absolute;
-  top: 10px;
-  right: 126px;
-  width: 74px;
-  height: 74px;
-  background: #ffdc89;
-  border-radius: 50%;
-}
-
-.sun-core {
-  position: absolute;
-  inset: 18px;
-  background: #ffc75d;
-  border-radius: 50%;
-}
-
-.person-head {
-  position: absolute;
-  top: 74px;
-  right: 110px;
-  width: 58px;
-  height: 58px;
-  background: #efb07f;
-  border-radius: 50%;
-}
-
-.person-hair {
-  position: absolute;
-  top: -8px;
-  left: -8px;
-  width: 64px;
-  height: 32px;
-  background: #1d2b43;
-  border-radius: 20px 20px 10px 10px;
-}
-
-.person-body {
-  position: absolute;
-  right: 103px;
-  bottom: 22px;
-  width: 58px;
-  height: 88px;
-  background: #2f6dec;
-  border-radius: 0 0 18px 18px;
-}
-
-.person-arm {
-  position: absolute;
-  top: -28px;
-  right: -16px;
-  width: 48px;
-  height: 18px;
-  background: #ffc296;
-  border-radius: 18px;
-  transform: rotate(-28deg);
-}
-
-.board {
-  position: absolute;
-  top: 76px;
-  right: 178px;
-  width: 120px;
-  height: 88px;
-  padding: 16px;
-  background: #ffffff;
-  border-radius: 12px;
-  box-shadow: 0 14px 30px rgb(36 106 194 / 12%);
-}
-
-.board-line {
-  display: block;
-  height: 8px;
-  margin-bottom: 14px;
-  background: #d6e5f8;
-  border-radius: 999px;
-}
-
-.board-line.first {
-  width: 52px;
-  background: #2f6dec;
-}
-
-.board-line.second {
-  width: 84px;
-}
-
-.board-line.third {
-  width: 58px;
+  justify-content: flex-end;
+  box-sizing: border-box;
+  min-height: 100vh;
+  padding: 0 10.2vw 0 32px;
+  background: #dbeeff url("/static/login-bg.png") center / cover no-repeat;
 }
 
 .login-area {
   display: flex;
+  align-items: center;
   justify-content: center;
-  padding-top: 72px;
 }
 
 .login-card {
-  width: 400px;
-  padding: 28px 25px 24px;
+  box-sizing: border-box;
+  width: 300px;
+  min-height: 361px;
+  padding: 54px 41px 55px;
   background: #ffffff;
-  border-radius: 6px;
-  box-shadow: 0 16px 42px rgb(38 56 86 / 8%);
+  border-radius: 10px;
+  box-shadow: 0 18px 46px rgb(41 91 139 / 8%);
+}
+
+.login-logo {
+  display: block;
+  width: 38px;
+  height: 38px;
+  margin: 0 auto 16px;
 }
 
 .card-title {
   display: block;
-  margin: 0 0 28px;
-  color: #4a5565;
-  font-size: 20px;
-  font-weight: 500;
+  margin: 0 0 26px;
+  color: #0f0f0f;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 20px;
   text-align: center;
+  letter-spacing: 8px;
+  text-indent: 8px;
 }
 
 .field {
   display: flex;
   align-items: center;
-  height: 42px;
-  margin-bottom: 18px;
-  padding: 0 14px;
-  border: 1px solid #d8dee9;
-  border-radius: 4px;
+  box-sizing: border-box;
+  height: 29px;
+  margin-bottom: 14px;
+  padding: 0 12px;
+  background: #ffffff;
+  border: 1px solid #d9d9d9;
+  border-radius: 999px;
 }
 
 .field-icon {
   position: relative;
   display: block;
-  width: 16px;
-  height: 16px;
-  margin-right: 10px;
-  color: #aab2bf;
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  margin-right: 8px;
+  color: #bcbcbc;
 }
 
 .user-head {
   position: absolute;
   top: 1px;
-  left: 5px;
+  left: 4px;
   width: 6px;
   height: 6px;
-  background: #aab2bf;
+  border: 1px solid #bcbcbc;
   border-radius: 50%;
 }
 
 .user-body {
   position: absolute;
-  right: 2px;
-  bottom: 1px;
-  left: 2px;
+  right: 1px;
+  bottom: 0;
+  left: 1px;
   height: 7px;
-  border: 2px solid #aab2bf;
+  border: 1px solid #bcbcbc;
   border-top-left-radius: 8px;
   border-top-right-radius: 8px;
   border-bottom: 0;
@@ -362,104 +193,100 @@ async function handleLogin() {
   position: absolute;
   top: 0;
   left: 4px;
-  width: 8px;
-  height: 8px;
-  border: 2px solid #aab2bf;
+  width: 6px;
+  height: 7px;
+  border: 1px solid #bcbcbc;
   border-bottom: 0;
   border-radius: 8px 8px 0 0;
 }
 
 .lock-body {
   position: absolute;
-  right: 2px;
+  right: 1px;
   bottom: 1px;
-  left: 2px;
-  height: 9px;
-  background: #aab2bf;
+  left: 1px;
+  height: 8px;
+  border: 1px solid #bcbcbc;
   border-radius: 2px;
 }
 
 .field-input {
   flex: 1;
   min-width: 0;
-  height: 40px;
-  color: #303640;
-  font-size: 14px;
+  height: 27px;
+  color: #303030;
+  font-size: 10px;
+  line-height: 27px;
+}
+
+.input-placeholder {
+  color: #c8c8c8;
+  font-size: 10px;
 }
 
 .login-options {
   display: flex;
-  justify-content: space-between;
-  margin: 4px 0 28px;
-  color: #596579;
-  font-size: 13px;
+  align-items: center;
+  min-height: 14px;
+  margin: -4px 0 35px 8px;
+  color: #b8b8b8;
+  font-size: 9px;
+  line-height: 14px;
 }
 
 .remember {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 2px;
 }
 
-.forgot-button {
-  color: #1267ff;
-  font-size: 13px;
-  line-height: 20px;
+.remember checkbox {
+  transform: scale(0.58);
+  transform-origin: left center;
 }
 
 .login-button {
   width: 100%;
-  height: 42px;
+  height: 28px;
+  margin: 0;
+  padding: 0;
   color: #ffffff;
-  font-size: 15px;
-  font-weight: 700;
-  line-height: 42px;
-  background: #409eff;
-  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 28px;
+  background: #1d6df2;
+  border-radius: 999px;
 }
 
 .login-button[disabled] {
   opacity: 0.72;
 }
 
+.login-button::after {
+  border: 0;
+}
+
 .login-error {
   display: block;
-  margin: -14px 0 14px;
+  margin: -26px 0 12px;
   color: #d93025;
-  font-size: 12px;
+  font-size: 10px;
+  line-height: 14px;
 }
 
 @media (max-width: 760px) {
-  .hero-banner {
-    height: 420rpx;
-  }
-
-  .hero-copy {
-    width: auto;
-    padding: 70rpx 40rpx 0;
-  }
-
-  .hero-title {
-    width: auto;
-    font-size: 42rpx;
-  }
-
-  .subtitle {
-    font-size: 26rpx;
-  }
-
-  .hero-illustration {
-    top: 120rpx;
-    right: -120rpx;
-    transform: scale(0.62);
+  .login-page {
+    justify-content: center;
+    padding: 0 32rpx;
+    background-position: center;
   }
 
   .login-area {
-    padding: 48rpx 32rpx 0;
+    width: 100%;
   }
 
   .login-card {
-    width: 100%;
+    width: min(600rpx, 100%);
   }
 }
 </style>
