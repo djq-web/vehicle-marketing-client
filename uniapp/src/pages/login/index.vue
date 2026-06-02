@@ -1,24 +1,56 @@
 <template>
-  <view class="login-page">
+  <view class="login-page" :class="{ mobileLoginPage: isMobileLayout }">
+    <view class="left-desc" v-if="!isMobileLayout">
+      <view>
+        <text class="mainText">车肆营销智能系统</text>
+      </view>
+      <view>
+        <text class="subText"
+          >车肆是一个不领工资的AI首席营销官。战略、策略、内容、执行和监控，全部闭环搞定。不用懂技术，不用养团队，实打实把丢掉的市场抢回来。</text
+        >
+      </view>
+    </view>
+    <view class="top-banner" v-else>
+      <image src="/static/mobile-bg.png" mode="widthFix" class="imgBox" />
+    </view>
     <view class="login-area">
       <view class="login-card">
-        <image class="login-logo" src="/static/svg/logoIcon.svg" mode="aspectFit" />
-        <text class="card-title">欢迎登录</text>
+        <image
+          class="login-logo"
+          src="/static/svg/logoIcon.svg"
+          mode="aspectFit"
+        />
+        <text class="card-title">{{
+          isMobileLayout ? "车肆营销智能系统" : "迎登录"
+        }}</text>
         <view class="field">
           <view class="field-icon user-icon">
             <view class="user-head"></view>
             <view class="user-body"></view>
           </view>
-          <input v-model="form.username" class="field-input" type="text" placeholder="请输入账号"
-            placeholder-class="input-placeholder" confirm-type="next" />
+          <input
+            v-model="form.username"
+            class="field-input"
+            type="text"
+            placeholder="请输入账号"
+            placeholder-class="input-placeholder"
+            confirm-type="next"
+          />
         </view>
         <view class="field">
           <view class="field-icon lock-icon">
             <view class="lock-shackle"></view>
             <view class="lock-body"></view>
           </view>
-          <input v-model="form.password" class="field-input" password placeholder="请输入密码"
-            placeholder-class="input-placeholder" confirm-type="done" @confirm="handleLogin" />
+          <input
+            v-model="form.password"
+            class="field-input"
+            password
+            placeholder="请输入密码"
+            placeholder-class="input-placeholder"
+            confirm-type="done"
+            @confirm="handleLogin"
+          />
         </view>
         <view class="login-options">
           <label class="remember">
@@ -48,9 +80,15 @@ const form = reactive({
   password: "123456",
   remember: true,
 });
+const isMobileLayout = ref(false);
+
+function updateMobileLayout(width = uni.getSystemInfoSync().windowWidth) {
+  isMobileLayout.value = width <= 760;
+}
 
 onLoad(() => {
   authStore.restore();
+  updateMobileLayout();
 
   if (authStore.isAuthenticated) {
     uni.reLaunch({
@@ -89,18 +127,56 @@ async function handleLogin() {
 <style>
 .login-page {
   display: flex;
-  align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
   box-sizing: border-box;
   min-height: 100vh;
-  padding: 0 10.2vw 0 32px;
+  padding: 0 96px 0 123px;
   background: #dbeeff url("/static/login-bg.png") center / cover no-repeat;
+}
+.mobileLoginPage {
+  flex-direction: column;
+  background-color: #ffffff;
+  background-image: none;
+  padding: 0;
+  position: relative;
+}
+.left-desc {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 344px;
+  padding-top: 96px;
+}
+.mainText {
+  font-size: 24px;
+  line-height: 35px;
+  color: rgba(51, 51, 51, 1);
+  font-weight: 700;
+}
+.subText {
+  font-size: 9px;
+  line-height: 14px;
+  color: rgba(51, 51, 51, 1);
+  font-weight: 400;
+}
+.top-banner {
+  width: 100%;
+}
+.imgBox {
+  width: 100%;
 }
 
 .login-area {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+.mobileLoginPage .login-area {
+  position: absolute;
+  z-index: 100;
+  width: 100%;
+  left: 0;
+  bottom: 0;
 }
 
 .login-card {
@@ -111,6 +187,11 @@ async function handleLogin() {
   background: #ffffff;
   border-radius: 10px;
   box-shadow: 0 18px 46px rgb(41 91 139 / 8%);
+}
+.mobileLoginPage .login-area .login-card {
+  width: 100%;
+  border-radius: 20px;
+  padding-bottom: 90px;
 }
 
 .login-logo {
@@ -132,6 +213,9 @@ async function handleLogin() {
   text-align: center;
   letter-spacing: 8px;
   text-indent: 8px;
+}
+.mobileLoginPage .card-title {
+  letter-spacing: 1px;
 }
 
 .field {
@@ -261,21 +345,5 @@ async function handleLogin() {
   color: #d93025;
   font-size: 10px;
   line-height: 14px;
-}
-
-@media (max-width: 760px) {
-  .login-page {
-    justify-content: center;
-    padding: 0 32rpx;
-    background-position: center;
-  }
-
-  .login-area {
-    width: 100%;
-  }
-
-  .login-card {
-    width: min(600rpx, 100%);
-  }
 }
 </style>
