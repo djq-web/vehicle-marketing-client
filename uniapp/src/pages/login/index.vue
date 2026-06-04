@@ -62,6 +62,9 @@
         <button class="login-button" :disabled="loading" @click="handleLogin">
           {{ loading ? "登录中..." : "登 录" }}
         </button>
+        <button class="admin-login-button" @click="openAdminLogin">
+          管理后台登录
+        </button>
       </view>
     </view>
   </view>
@@ -71,8 +74,10 @@
 import { onLoad } from "@dcloudio/uni-app";
 import { reactive, ref } from "vue";
 import { useAuthStore } from "@/stores/auth";
+import { useStrategyChatStore } from "@/stores/strategyChat";
 
 const authStore = useAuthStore();
+const chatStore = useStrategyChatStore();
 const loading = ref(false);
 const error = ref("");
 const form = reactive({
@@ -81,6 +86,9 @@ const form = reactive({
   remember: true,
 });
 const isMobileLayout = ref(false);
+const configuredAdminLoginUrl = (
+  import.meta.env.VITE_ADMIN_LOGIN_URL || "http://47.116.182.109:51081/login"
+).trim();
 
 function updateMobileLayout(width = uni.getSystemInfoSync().windowWidth) {
   isMobileLayout.value = width <= 760;
@@ -112,6 +120,7 @@ async function handleLogin() {
   error.value = "";
 
   try {
+    chatStore.resetForAccountSwitch();
     await authStore.login(loginName, form.password);
     uni.reLaunch({
       url: "/pages/home/index",
@@ -121,6 +130,61 @@ async function handleLogin() {
   } finally {
     loading.value = false;
   }
+}
+
+function resolveDefaultAdminLoginUrl() {
+  if (typeof window === "undefined") {
+    return "/login";
+  }
+
+  const url = new URL(window.location.href);
+  const adminPortByClientPort: Record<string, string> = {
+    "3001": "3002",
+    "4173": "3002",
+    "5173": "3002",
+    "51080": "51081",
+  };
+  const mappedPort = adminPortByClientPort[url.port];
+
+  if (mappedPort) {
+    url.port = mappedPort;
+  }
+
+  url.pathname = "/login";
+  url.search = "";
+  url.hash = "";
+
+  return url.toString();
+}
+
+function resolveAdminLoginUrl() {
+  if (!configuredAdminLoginUrl) {
+    return resolveDefaultAdminLoginUrl();
+  }
+
+  if (/^https?:\/\//i.test(configuredAdminLoginUrl)) {
+    return configuredAdminLoginUrl;
+  }
+
+  if (typeof window !== "undefined") {
+    return new URL(configuredAdminLoginUrl, window.location.origin).toString();
+  }
+
+  return configuredAdminLoginUrl;
+}
+
+function openAdminLogin() {
+  const url = resolveAdminLoginUrl();
+
+  if (typeof window !== "undefined") {
+    window.location.href = url;
+    return;
+  }
+
+  uni.showToast({
+    title: "请在浏览器打开管理后台",
+    icon: "none",
+  });
 }
 </script>
 
@@ -335,7 +399,21 @@ async function handleLogin() {
   opacity: 0.72;
 }
 
-.login-button::after {
+.admin-login-button {
+  width: 100%;
+  height: 40px;
+  margin-top: 10px;
+  color: #1267ff;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 40px;
+  background: #f3f7ff;
+  border: 1px solid #c9ddff;
+  border-radius: 4px;
+}
+
+.login-button::after,
+.admin-login-button::after {
   border: 0;
 }
 

@@ -225,6 +225,7 @@ export type BrandStrategyCard =
       title: string;
       color: string;
       lines: string[];
+      highlighted?: boolean;
     }
   | {
       type: "document";
@@ -276,12 +277,13 @@ export type LoginResponse = {
   token: string;
   user: {
     sub: string;
+    loginName?: string;
     email?: string;
     phone?: string;
     name?: string;
     nickname?: string;
     avatarUrl?: string;
-    loginName?: string;
+    employeeNo?: string;
     departmentName?: string;
     organizationName?: string;
     roleNames?: string[];

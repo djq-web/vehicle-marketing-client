@@ -1,6 +1,7 @@
 <template>
   <view class="board-page" :class="`board-page--${activeType}`">
     <button
+      v-if="activeType !== 'brand-strategy'"
       class="back-button"
       :class="{ 'back-button--right': isFlowBoard }"
       @click="goHome"
@@ -20,93 +21,99 @@
         @report="openBoardReport"
       />
       <template v-else>
-        <section class="basic-hero brand-dashboard-hero">
-          <image
-            class="basic-hero-icon"
-            :src="brandDashboardView.icon"
-            mode="aspectFit"
-          />
-          <text class="board-title">{{ brandDashboardView.title }}</text>
-          <text class="title-underline"></text>
-          <text class="board-subtitle">{{ brandDashboardView.subtitle }}</text>
-          <button class="brand-refresh-button" @click="loadBrandDashboard">
-            刷新看板
-          </button>
-        </section>
-
-        <section
-          v-if="brandDashboardLoading"
-          class="brand-dashboard-state brand-dashboard-state--loading"
-        >
-          <view class="brand-dashboard-spinner"></view>
-          <text>正在读取品牌战略看板</text>
-        </section>
-
-        <section v-else-if="brandDashboardError" class="brand-dashboard-state">
-          <text class="brand-dashboard-state-title">看板暂时无法打开</text>
-          <text class="brand-dashboard-state-message">{{
-            brandDashboardError
-          }}</text>
-          <button class="brand-dashboard-state-button" @click="loadBrandDashboard">
-            重新加载
-          </button>
-        </section>
-
-        <section
-          v-else-if="!brandStrategyCards.length"
-          class="brand-dashboard-state"
-        >
-          <text class="brand-dashboard-state-title">暂无品牌战略看板</text>
-          <text class="brand-dashboard-state-message">{{
-            brandDashboardMessage || "完成战略诊断后，这里会展示品牌战略看板。"
-          }}</text>
-          <button class="brand-dashboard-state-button" @click="goHome">
-            返回会话
-          </button>
-        </section>
-
-        <section v-else class="brand-dashboard-grid">
-          <view
-            v-for="card in brandStrategyCards"
-            :key="card.key"
-            class="brand-dashboard-card"
-            :class="{
-              'brand-dashboard-card--document': card.type === 'document',
-              'brand-dashboard-card--disabled':
-                card.type === 'document' && card.disabled,
-            }"
-            @click="handleBrandCardClick(card)"
+        <view class="brand-board-stage">
+          <button
+            class="brand-board-close"
+            aria-label="关闭品牌战略看板"
+            @click="goHome"
           >
-            <template v-if="card.type === 'document'">
-              <view class="brand-document-icon" aria-hidden="true">
-                <text></text>
-                <text></text>
-                <text></text>
-              </view>
-              <text class="brand-document-title">{{ card.title }}</text>
-              <text v-if="card.statusText" class="brand-document-status">{{
-                card.statusText
-              }}</text>
-            </template>
-            <template v-else>
-              <text class="brand-point-code">{{ card.key }}</text>
-              <text class="brand-card-title">{{ card.title }}</text>
-              <view class="brand-star-row">
-                <text
-                  v-for="index in starIndexes"
-                  :key="`${card.key}-${index}`"
-                  class="brand-star"
-                  :style="`color:${card.color}`"
-                >
-                  ★
-                </text>
-              </view>
-              <view class="brand-card-copy">
-                <text v-for="line in card.lines" :key="line">{{ line }}</text>
-              </view>
-            </template>
+            ×
+          </button>
+
+          <view class="brand-board-header">
+            <text class="brand-board-title">品牌战略看板</text>
+            <text class="brand-board-underline"></text>
           </view>
-        </section>
+
+          <section
+            v-if="brandDashboardLoading"
+            class="brand-dashboard-state brand-dashboard-state--loading"
+          >
+            <view class="brand-dashboard-spinner"></view>
+            <text>正在读取品牌战略看板</text>
+          </section>
+
+          <section v-else-if="brandDashboardError" class="brand-dashboard-state">
+            <text class="brand-dashboard-state-title">看板暂时无法打开</text>
+            <text class="brand-dashboard-state-message">{{
+              brandDashboardError
+            }}</text>
+            <button
+              class="brand-dashboard-state-button"
+              @click="loadBrandDashboard"
+            >
+              重新加载
+            </button>
+          </section>
+
+          <section
+            v-else-if="!brandPointCards.length"
+            class="brand-dashboard-state"
+          >
+            <text class="brand-dashboard-state-title">暂无品牌战略看板</text>
+            <text class="brand-dashboard-state-message">{{
+              brandDashboardMessage || "完成战略诊断后，这里会展示品牌战略看板。"
+            }}</text>
+            <button class="brand-dashboard-state-button" @click="goHome">
+              返回会话
+            </button>
+          </section>
+
+          <view v-else class="brand-board-content">
+            <section class="brand-strategy-grid">
+              <view
+                v-for="card in brandPointCards"
+                :key="card.key"
+                class="brand-strategy-point"
+                :class="{
+                  'brand-strategy-point--highlighted': card.highlighted,
+                }"
+                :style="`--brand-card-color:${card.color}`"
+              >
+                <text class="brand-strategy-title">{{ card.title }}</text>
+                <view class="brand-star-row" aria-hidden="true">
+                  <text
+                    v-for="index in starIndexes"
+                    :key="`${card.key}-${index}`"
+                    class="brand-star"
+                  >
+                    ★
+                  </text>
+                </view>
+                <view class="brand-strategy-copy">
+                  <text v-for="line in card.lines" :key="line">{{ line }}</text>
+                </view>
+              </view>
+            </section>
+
+            <section class="brand-report-row">
+              <button
+                v-for="card in brandReportCards"
+                :key="card.key"
+                class="brand-report-button"
+                :class="{ 'brand-report-button--disabled': card.disabled }"
+                @click="handleBrandCardClick(card)"
+              >
+                <view class="brand-report-icon" aria-hidden="true">
+                  <text></text>
+                  <text></text>
+                  <text></text>
+                </view>
+                <text class="brand-report-title">《{{ card.title }}》</text>
+              </button>
+            </section>
+          </view>
+        </view>
       </template>
     </template>
 
@@ -484,6 +491,20 @@ type FlowEdge = {
   muted?: boolean;
 };
 
+type BrandPointPlan = {
+  code: string;
+  aliases: string[];
+  title: string;
+  color: string;
+  highlighted?: boolean;
+};
+
+type BrandReportPlan = {
+  reportType: string;
+  title: string;
+  titleLines: string[];
+};
+
 type CalendarDay = {
   key: string;
   date: number;
@@ -523,77 +544,128 @@ const boardTitles: Record<BoardType, string> = {
   "ecological-partner": "生态伙伴看板",
 };
 
-const brandDashboardView = computed(() => ({
-  title: "品牌战略看板",
-  subtitle: brandDashboardSubtitle.value,
-  icon: "/static/svg/brand-strategy.svg",
-}));
-
 const brandDashboardMessage = computed(
   () => brandDashboardResponse.value?.message ?? "",
 );
 
-const brandDashboardSubtitle = computed(() => {
-  const dashboard = brandDashboardResponse.value?.dashboard;
-  const summary = cleanText(dashboard?.summary);
-
-  if (summary) {
-    return summary;
-  }
-
-  if (brandDashboardResponse.value?.completed === false) {
-    return brandDashboardResponse.value.message;
-  }
-
-  return "锚定方向，塑造品牌心智";
-});
-
 const starIndexes = [0, 1, 2, 3, 4, 5, 6];
 
-const pointDisplayPlan: Array<{ code: string; color: string }> = [
-  { code: "M01", color: "#ff4343" },
-  { code: "M02", color: "#ff4343" },
-  { code: "M03", color: "#ff4343" },
-  { code: "M04", color: "#54d830" },
-  { code: "M05", color: "#54d830" },
-  { code: "M06", color: "#54d830" },
-  { code: "M07", color: "#ff8f1f" },
-  { code: "M08", color: "#ff8f1f" },
-  { code: "M09", color: "#ff8f1f" },
-  { code: "M10", color: "#d948ff" },
-  { code: "M11", color: "#d948ff" },
-  { code: "M15", color: "#1267ff" },
-  { code: "M16", color: "#1267ff" },
-  { code: "M17", color: "#1267ff" },
+const pointDisplayPlan: BrandPointPlan[] = [
+  {
+    code: "S01",
+    aliases: ["S01", "M01"],
+    title: "愿景",
+    color: "#ff464b",
+  },
+  {
+    code: "S04",
+    aliases: ["S04", "M04"],
+    title: "客户选择",
+    color: "#55d42d",
+  },
+  {
+    code: "S07",
+    aliases: ["S07", "M07"],
+    title: "核心优势",
+    color: "#ff9825",
+  },
+  {
+    code: "S10",
+    aliases: ["S10", "M10"],
+    title: "产品组合",
+    color: "#d84dff",
+  },
+  {
+    code: "S13",
+    aliases: ["S13", "M15"],
+    title: "品牌承诺",
+    color: "#1267ff",
+  },
+  {
+    code: "S02",
+    aliases: ["S02", "M02"],
+    title: "使命",
+    color: "#ff464b",
+  },
+  {
+    code: "S05",
+    aliases: ["S05", "M05"],
+    title: "价值主张",
+    color: "#55d42d",
+  },
+  {
+    code: "S08",
+    aliases: ["S08", "M08"],
+    title: "护城河",
+    color: "#ff9825",
+  },
+  {
+    code: "S11",
+    aliases: ["S11", "M11"],
+    title: "增长策略",
+    color: "#d84dff",
+  },
+  {
+    code: "S14",
+    aliases: ["S14", "M16"],
+    title: "体验设计",
+    color: "#1267ff",
+  },
+  {
+    code: "S03",
+    aliases: ["S03", "M03"],
+    title: "核心价值观",
+    color: "#ff464b",
+  },
+  {
+    code: "S06",
+    aliases: ["S06", "M06"],
+    title: "竞争差异",
+    color: "#55d42d",
+    highlighted: true,
+  },
+  {
+    code: "S09",
+    aliases: ["S09", "M09"],
+    title: "品牌信任状",
+    color: "#ff9825",
+  },
+  {
+    code: "S12",
+    aliases: ["S12", "M12", "M13", "M14", "M12-M14"],
+    title: "支撑体系",
+    color: "#d84dff",
+  },
+  {
+    code: "S15",
+    aliases: ["S15", "M17"],
+    title: "品牌表达",
+    color: "#1267ff",
+  },
 ];
 
-const reportDisplayPlan = [
+const reportDisplayPlan: BrandReportPlan[] = [
   {
-    after: "M03",
     reportType: "beidou_declaration",
     title: "北斗宣言",
     titleLines: ["北斗宣言"],
   },
   {
-    after: "M06",
     reportType: "strategy_positioning",
     title: "战略定位与品牌承诺图",
     titleLines: ["战略定位", "与品牌承诺图"],
   },
   {
-    after: "M09",
     reportType: "advantages_barriers",
     title: "优势、壁垒与信任状体系",
     titleLines: ["优势、壁垒", "与信任状体系"],
   },
   {
-    after: "M11",
     reportType: "business_model_panorama",
     title: "商业模式与体验交付全景图",
     titleLines: ["商业模式与", "体验交付全景图"],
   },
   {
-    after: "M17",
     reportType: "brand_experience_blueprint",
     title: "品牌引力场与体验蓝图",
     titleLines: ["品牌引力场", "与体验蓝图"],
@@ -609,6 +681,20 @@ const brandStrategyCards = computed<BrandStrategyCard[]>(() => {
 
   return buildBrandStrategyCards(dashboard);
 });
+
+const brandPointCards = computed(() =>
+  brandStrategyCards.value.filter(
+    (card): card is Extract<BrandStrategyCard, { type: "text" }> =>
+      card.type === "text",
+  ),
+);
+
+const brandReportCards = computed(() =>
+  brandStrategyCards.value.filter(
+    (card): card is Extract<BrandStrategyCard, { type: "document" }> =>
+      card.type === "document",
+  ),
+);
 
 const statusLegend: Array<{ label: string; type: Status }> = [
   { label: "已完成", type: "done" },
@@ -1332,84 +1418,66 @@ async function loadBrandDashboard() {
 function buildBrandStrategyCards(
   dashboard: BrandStrategyDashboard,
 ): BrandStrategyCard[] {
-  const points = dashboard.sections?.strategicPoints ?? [];
+  const points = [
+    ...(dashboard.sections?.strategicPoints ?? []),
+    ...(dashboard.sections?.supportSystem?.points ?? []),
+  ];
   const pointByCode = new Map(
-    points.map((point) => [point.code.toUpperCase(), point]),
+    points.map((point) => [normalizeBoardCode(point.code), point]),
   );
   const reportByType = new Map(
-    (dashboard.reports ?? []).map((report) => [report.type, report]),
+    (dashboard.reports ?? []).map((report) => [
+      cleanText(report.type).toLowerCase(),
+      report,
+    ]),
   );
   const cards: BrandStrategyCard[] = [];
 
   for (const pointPlan of pointDisplayPlan) {
-    const point = pointByCode.get(pointPlan.code);
-    if (point) {
-      cards.push(toPointCard(point, pointPlan.color));
-    }
+    const point = findDashboardPoint(pointByCode, pointPlan.aliases);
+    const fallbackText =
+      pointPlan.code === "S12"
+        ? cleanText(dashboard.sections?.supportSystem?.summary)
+        : "";
 
-    if (pointPlan.code === "M11") {
-      const supportCard = toSupportSystemCard(dashboard);
-      if (supportCard) {
-        cards.push(supportCard);
-      }
-    }
+    cards.push(toPointCard(pointPlan, point, fallbackText));
+  }
 
-    const reportPlan = reportDisplayPlan.find(
-      (item) => item.after === pointPlan.code,
+  for (const reportPlan of reportDisplayPlan) {
+    cards.push(
+      toReportCard(
+        reportPlan,
+        reportByType.get(cleanText(reportPlan.reportType).toLowerCase()),
+      ),
     );
-    if (reportPlan) {
-      cards.push(
-        toReportCard(reportPlan, reportByType.get(reportPlan.reportType)),
-      );
-    }
   }
 
   return cards;
 }
 
 function toPointCard(
-  point: StrategyDashboardPoint,
-  color: string,
+  plan: BrandPointPlan,
+  point?: StrategyDashboardPoint,
+  fallbackText = "",
 ): BrandStrategyCard {
-  return {
-    type: "text",
-    key: point.code,
-    title: normalizePointTitle(point.title),
-    color,
-    lines: toDisplayLines(
-      cleanText(point.summary) ||
-        cleanText(point.recommendation) ||
-        "该战略点已生成，等待进一步完善。",
-    ),
-  };
-}
-
-function toSupportSystemCard(
-  dashboard: BrandStrategyDashboard,
-): BrandStrategyCard | null {
-  const supportSystem = dashboard.sections?.supportSystem;
-  if (!supportSystem) {
-    return null;
-  }
-
-  const summary =
-    cleanText(supportSystem.summary) ||
-    (supportSystem.points ?? [])
-      .map((point) => cleanText(point.summary) || cleanText(point.recommendation))
-      .filter(Boolean)
-      .join("；");
+  const text =
+    cleanText(point?.summary) ||
+    cleanText(point?.recommendation) ||
+    fallbackText ||
+    "该战略点等待进一步补充。";
 
   return {
     type: "text",
-    key: "M12-M14",
-    title: cleanText(supportSystem.title) || "支撑体系",
-    color: "#d948ff",
-    lines: toDisplayLines(summary || "支撑体系已生成，等待进一步完善。"),
+    key: plan.code,
+    title: plan.title || normalizePointTitle(point?.title),
+    color: plan.color,
+    lines: toDisplayLines(text),
+    highlighted: plan.highlighted,
   };
 }
 
 function toReportCard(
-  plan: (typeof reportDisplayPlan)[number],
+  plan: BrandReportPlan,
   report?: StrategyDashboardReport,
 ): BrandStrategyCard {
   const isGenerated = report?.isGenerated === true;
@@ -1417,7 +1485,7 @@ function toReportCard(
   return {
     type: "document",
     key: plan.reportType,
-    title: cleanText(report?.title) || plan.title,
+    title: plan.title,
     titleLines: plan.titleLines,
     reportType: plan.reportType,
     statusText: reportStatusText(report),
@@ -1461,18 +1529,60 @@ function toDisplayLines(value: string) {
     .filter(Boolean);
 
   const sourceLines = normalized.length ? normalized : [value.trim()];
+  const lines: string[] = [];
 
-  return sourceLines.slice(0, 4).map((line) => {
-    if (line.length <= 22) {
-      return line;
+  for (const line of sourceLines) {
+    if (lines.length >= 3) {
+      break;
     }
 
-    return `${line.slice(0, 21)}...`;
-  });
+    if (line.length <= 16) {
+      lines.push(line);
+      continue;
+    }
+
+    for (let index = 0; index < line.length; index += 16) {
+      if (lines.length >= 3) {
+        break;
+      }
+
+      lines.push(line.slice(index, index + 16));
+    }
+  }
+
+  if (!lines.length) {
+    return ["等待进一步补充。"];
+  }
+
+  const hasMoreContent = sourceLines.join("").length > lines.join("").length;
+  if (hasMoreContent) {
+    lines[lines.length - 1] = `${lines[lines.length - 1].slice(0, 15)}...`;
+  }
+
+  return lines;
 }
 
 function cleanText(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
+}
+
+function normalizeBoardCode(value: unknown) {
+  return cleanText(value).toUpperCase();
+}
+
+function findDashboardPoint(
+  pointByCode: Map<string, StrategyDashboardPoint>,
+  aliases: string[],
+) {
+  for (const alias of aliases) {
+    const point = pointByCode.get(normalizeBoardCode(alias));
+
+    if (point) {
+      return point;
+    }
+  }
+
+  return undefined;
 }
 
 function resolveErrorMessage(err: unknown, fallback: string) {
@@ -1805,34 +1915,68 @@ function goHome() {
   line-height: 1;
 }
 
-.brand-dashboard-hero {
-  max-width: 920px;
-  margin-right: auto;
-  margin-left: auto;
+.board-page--brand-strategy {
+  padding: 0;
 }
 
-.brand-dashboard-hero .board-subtitle {
-  max-width: 760px;
-  line-height: 1.7;
+.brand-board-stage {
+  position: relative;
+  box-sizing: border-box;
+  min-height: 100vh;
+  padding: 24px 26px 28px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.brand-board-close {
+  position: absolute;
+  top: 10px;
+  right: 16px;
+  z-index: 2;
+  width: 42px;
+  height: 42px;
+  margin: 0;
+  padding: 0;
+  color: #7a7d82;
+  font-size: 34px;
+  font-weight: 300;
+  line-height: 38px;
+  text-align: center;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+
+.brand-board-close::after,
+.brand-dashboard-state-button::after,
+.brand-report-button::after {
+  border: 0;
+}
+
+.brand-board-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.brand-board-title {
+  display: block;
+  color: #303236;
+  font-size: 36px;
+  font-weight: 900;
+  letter-spacing: 11px;
+  line-height: 1.25;
   text-align: center;
 }
 
-.brand-refresh-button {
-  height: 32px;
-  margin-top: 14px;
-  padding: 0 16px;
-  color: #1267ff;
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 32px;
-  background: #eef5ff;
-  border: 1px solid #c8ddff;
+.brand-board-underline {
+  display: block;
+  width: 278px;
+  height: 4px;
+  margin-top: 4px;
+  background: #1267ff;
   border-radius: 999px;
-}
-
-.brand-refresh-button::after,
-.brand-dashboard-state-button::after {
-  border: 0;
 }
 
 .brand-dashboard-state {
@@ -1897,72 +2041,48 @@ function goHome() {
   border-radius: 999px;
 }
 
-.brand-dashboard-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(180px, 1fr));
-  gap: 22px;
-  max-width: 1120px;
-  margin: 40px auto 0;
+.brand-board-content {
+  max-width: 1804px;
+  margin: 34px auto 0;
 }
 
-.brand-dashboard-card {
+.brand-strategy-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(160px, 1fr));
+  gap: 30px 46px;
+}
+
+.brand-strategy-point {
   display: flex;
   box-sizing: border-box;
   min-width: 0;
-  min-height: 210px;
+  height: 204px;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
-  padding: 24px 16px 18px;
+  justify-content: center;
+  padding: 24px 18px 18px;
   overflow: hidden;
   background: #ffffff;
-  border: 1px solid #edf2f7;
-  border-radius: 18px;
-  box-shadow: 0 10px 28px rgb(80 80 80 / 12%);
-  transition: transform 0.16s ease, box-shadow 0.16s ease;
+  border: 1px solid #eef2f6;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgb(15 23 42 / 10%);
 }
 
-.brand-dashboard-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 16px 34px rgb(80 80 80 / 16%);
+.brand-strategy-point--highlighted {
+  border: 4px solid #2f70ff;
+  box-shadow: 0 10px 24px rgb(18 103 255 / 14%);
 }
 
-.brand-dashboard-card--document {
-  justify-content: center;
-  gap: 14px;
-  cursor: pointer;
-  background: #f8fbff;
-  border-color: #dbeafe;
-}
-
-.brand-dashboard-card--disabled {
-  cursor: default;
-  opacity: 0.62;
-}
-
-.brand-dashboard-card--disabled:hover {
-  transform: none;
-  box-shadow: 0 10px 28px rgb(80 80 80 / 12%);
-}
-
-.brand-point-code {
-  display: block;
-  color: #94a3b8;
-  font-size: 12px;
-  font-weight: 900;
-  line-height: 1.2;
-}
-
-.brand-card-title {
+.brand-strategy-title {
   display: block;
   max-width: 100%;
-  margin-top: 8px;
   overflow: hidden;
   color: #303236;
-  font-size: 22px;
+  font-size: 26px;
   font-style: italic;
   font-weight: 900;
-  line-height: 1.25;
+  letter-spacing: 4px;
+  line-height: 1.2;
   text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1974,10 +2094,12 @@ function goHome() {
   justify-content: center;
   gap: 4px;
   height: 28px;
-  margin-top: 10px;
+  margin-top: 8px;
+  color: var(--brand-card-color);
 }
 
 .brand-star {
+  display: block;
   font-size: 14px;
   line-height: 1;
 }
@@ -1996,70 +2118,126 @@ function goHome() {
   font-size: 24px;
 }
 
-.brand-card-copy {
+.brand-strategy-copy {
   display: flex;
   min-height: 82px;
   flex-direction: column;
   justify-content: center;
-  margin-top: 12px;
+  margin-top: 8px;
 }
 
-.brand-card-copy text {
+.brand-strategy-copy text {
   display: block;
   overflow: hidden;
-  color: #60636a;
+  color: #62666d;
   font-size: 14px;
-  line-height: 1.7;
+  line-height: 1.5;
   text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.brand-document-icon {
-  position: relative;
-  display: flex;
-  width: 54px;
-  height: 54px;
-  flex-direction: column;
-  justify-content: center;
-  box-sizing: border-box;
-  gap: 6px;
-  padding: 12px 10px;
-  background: #eef5ff;
-  border: 3px solid #1267ff;
-  border-radius: 12px;
+.brand-report-row {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(160px, 1fr));
+  gap: 0 46px;
+  margin-top: 30px;
 }
 
-.brand-document-icon text {
+.brand-report-button {
+  display: flex;
+  box-sizing: border-box;
+  height: 74px;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0;
+  padding: 0 16px;
+  color: #303236;
+  background: #ffffff;
+  border: 1px solid #d5d8df;
+  border-radius: 16px;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.brand-report-button--disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.brand-report-icon {
+  position: relative;
+  display: flex;
+  width: 18px;
+  height: 20px;
+  flex-shrink: 0;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  box-sizing: border-box;
+  padding: 4px 3px 3px;
+  border: 2px solid #1267ff;
+  border-radius: 3px;
+}
+
+.brand-report-icon::before {
+  position: absolute;
+  top: -5px;
+  left: 4px;
+  width: 8px;
+  height: 8px;
+  content: "";
+  background: #ffffff;
+  border: 2px solid #1267ff;
+  border-radius: 3px;
+}
+
+.brand-report-icon text {
   display: block;
   width: 100%;
-  height: 3px;
+  height: 2px;
   background: #1267ff;
   border-radius: 999px;
 }
 
-.brand-document-icon text:first-child {
+.brand-report-icon text:first-child {
   width: 62%;
 }
 
-.brand-document-title {
+.brand-report-title {
   display: block;
+  overflow: hidden;
   color: #303236;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 900;
-  line-height: 1.45;
+  line-height: 1.35;
   text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.brand-document-status {
-  display: block;
-  padding: 4px 10px;
-  color: #1267ff;
-  font-size: 12px;
-  font-weight: 800;
-  line-height: 1.4;
-  background: #eef5ff;
-  border-radius: 999px;
+@media (max-width: 1440px) {
+  .brand-strategy-grid,
+  .brand-report-row {
+    gap: 24px;
+  }
+
+  .brand-strategy-point {
+    height: 190px;
+  }
+
+  .brand-strategy-title {
+    font-size: 22px;
+  }
+}
+
+@media (max-width: 1080px) {
+  .brand-strategy-grid,
+  .brand-report-row {
+    grid-template-columns: repeat(3, minmax(160px, 1fr));
+  }
 }
 
 .time-filter,
@@ -2723,6 +2901,10 @@ function goHome() {
     padding: 18px 14px 28px;
   }
 
+  .board-page--brand-strategy {
+    padding: 0;
+  }
+
   .back-button,
   .back-button--right {
     position: relative;
@@ -2739,7 +2921,6 @@ function goHome() {
   }
 
   .metric-grid,
-  .brand-dashboard-grid,
   .top-grid,
   .bottom-grid,
   .calendar-layout,
@@ -2748,8 +2929,14 @@ function goHome() {
     grid-template-columns: 1fr;
   }
 
-  .brand-dashboard-grid {
-    margin-top: 24px;
+  .brand-board-stage {
+    padding: 18px 14px 28px;
+  }
+
+  .brand-strategy-grid,
+  .brand-report-row {
+    grid-template-columns: 1fr;
+    gap: 18px;
   }
 
   .time-filter,

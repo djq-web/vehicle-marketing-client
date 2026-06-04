@@ -53,10 +53,10 @@
           </view>
 
           <button class="company" @click="toggleCompanyMenu">
-            <text class="avatar">
+            <view class="avatar">
               <image v-if="settingsForm.avatarUrl" :src="settingsForm.avatarUrl" mode="aspectFill" />
               <text v-else>{{ avatarInitial }}</text>
-            </text>
+            </view>
             <text class="company-name">{{ companyName }}</text>
           </button>
         </view>
@@ -102,8 +102,12 @@
             <text>用好车肆，先赚一个小目标！</text>
           </view>
           <view class="feature-grid">
-            <button v-for="feature in features" :key="feature.title" class="feature-card"
-              @click="handleFeatureSelect(feature)">
+            <button
+              v-for="feature in visibleFeatures"
+              :key="feature.title"
+              class="feature-card"
+              @click="handleFeatureSelect(feature)"
+            >
               <view class="feature-visual">
                 <image class="feature-svg" :src="feature.icon" mode="aspectFit" />
               </view>
@@ -118,18 +122,27 @@
         <view v-if="isBoardMenuVisible" class="board-mention-menu" :style="boardMenuStyle">
           <text class="board-menu-title">选择看板</text>
           <scroll-view class="board-menu-list" scroll-y>
-            <button v-for="board in filteredBoards" :key="board.id" class="board-option" @click="selectBoard(board)">
-              <text class="board-icon">
+            <view
+              v-for="board in filteredBoards"
+              :key="board.id"
+              class="board-option"
+              role="button"
+              tabindex="0"
+              @click="selectBoard(board)"
+              @keydown.enter="selectBoard(board)"
+              @keydown.space.prevent="selectBoard(board)"
+            >
+              <text class="board-icon" @click.stop="selectBoard(board)">
                 <image :src="board.icon" mode="aspectFit" />
               </text>
-              <view class="board-copy">
+              <view class="board-copy" @click.stop="selectBoard(board)">
                 <view class="board-name-row">
                   <text class="board-name">{{ board.name }}</text>
                   <text class="board-alias">@{{ board.mention }}</text>
                 </view>
                 <text class="board-description">{{ board.description }}</text>
               </view>
-            </button>
+            </view>
           </scroll-view>
         </view>
 
@@ -147,11 +160,21 @@
           <view class="composer-footer">
             <scroll-view class="quick-actions" scroll-x>
               <view class="quick-action-row">
-                <button class="plus" :disabled="isBusy" @click="chooseMaterial">
+                <button
+                  v-if="canUploadMaterial"
+                  class="plus"
+                  :disabled="isBusy"
+                  @click="chooseMaterial"
+                >
                   <uni-icons type="plusempty" size="18" color="#111827" />
                 </button>
-                <view class="tool-divider"></view>
-                <button v-if="activeComposerModeMeta" class="mode-chip" :disabled="isBusy" @click="cancelComposerMode">
+                <view v-if="canUploadMaterial" class="tool-divider"></view>
+                <button
+                  v-if="activeComposerModeMeta"
+                  class="mode-chip"
+                  :disabled="isBusy"
+                  @click="cancelComposerMode"
+                >
                   <text>{{ activeComposerModeMeta.label }}</text>
                   <text class="chip-close">×</text>
                 </button>
@@ -160,28 +183,19 @@
                   @click="handleQuickAction(action)">
                   <text>{{ action.label }}</text>
                 </button>
-                <button class="quick-action more" :class="{ active: isMoreMenuVisible }" :disabled="isBusy"
-                  @click="toggleMoreMenu">
-                  <text>更多</text>
-                </button>
               </view>
             </scroll-view>
             <button class="send-button" :class="{ 'is-disabled': isBusy || !draft.trim() }"
               :disabled="isBusy || !draft.trim()" @click="sendMessage">
               <uni-icons type="arrow-up" size="17" color="#ffffff" />
             </button>
-            <button class="mobile-attach-button" :disabled="isBusy" @click="chooseMaterial">
+            <button
+              v-if="canUploadMaterial"
+              class="mobile-attach-button"
+              :disabled="isBusy"
+              @click="chooseMaterial"
+            >
               <uni-icons type="plusempty" size="20" color="#303030" />
-            </button>
-          </view>
-
-          <view v-if="isMoreMenuVisible" class="composer-more-menu">
-            <button v-for="item in moreActions" :key="item.label" class="more-menu-item"
-              @click="handleMoreAction(item)">
-              <view>
-                <text>{{ item.label }}</text>
-                <text>{{ item.description }}</text>
-              </view>
             </button>
           </view>
         </view>
@@ -198,82 +212,127 @@
           <button class="settings-close" @click="closeSettings">
             <text class="close-icon"></text>
           </button>
-          <button class="settings-nav-item active">
-            <text class="settings-nav-icon"></text>
-            <text>账号设置</text>
+          <button
+            v-for="item in settingsMenuItems"
+            :key="item.id"
+            class="settings-nav-item"
+            :class="{ active: activeSettingsMenu === item.id }"
+            @click="setActiveSettingsMenu(item.id)"
+          >
+            <text class="settings-nav-icon" :class="item.id"></text>
+            <text>{{ item.label }}</text>
           </button>
         </view>
 
         <scroll-view class="settings-content" scroll-y>
           <view class="settings-content-inner">
             <view class="settings-header">
-              <text class="settings-title">账户</text>
+              <text class="settings-title">{{ settingsPanelTitle }}</text>
               <text v-if="settingsLoading" class="settings-status">正在同步账号信息</text>
             </view>
+            <text v-if="settingsError" class="settings-error">{{ settingsError }}</text>
 
-            <view class="settings-section account-summary">
-              <view class="avatar-preview">
-                <image v-if="settingsForm.avatarUrl" :src="settingsForm.avatarUrl" mode="aspectFill" />
-                <text v-else>{{ avatarInitial }}</text>
+            <template v-if="activeSettingsMenu === 'account'">
+              <view class="settings-section account-summary">
+                <view class="avatar-preview">
+                  <image v-if="settingsForm.avatarUrl" :src="settingsForm.avatarUrl" mode="aspectFill" />
+                  <text v-else>{{ avatarInitial }}</text>
+                </view>
+                <view class="summary-text">
+                  <text class="summary-name">{{ settingsForm.nickname || displayName }}</text>
+                  <text class="summary-id">{{ userAccountId || "暂无账号ID" }}</text>
+                </view>
+                <button
+                  class="secondary-button"
+                  :disabled="avatarUploading"
+                  @click="chooseAvatar"
+                >
+                  {{ avatarUploading ? "上传中" : "更换头像" }}
+                </button>
               </view>
-              <view class="summary-text">
-                <text class="summary-name">{{ settingsForm.nickname || displayName }}</text>
-                <text class="summary-email">{{ userEmail || "未绑定邮箱" }}</text>
-              </view>
-              <button class="secondary-button" @click="chooseAvatar">更换头像</button>
-            </view>
 
-            <view class="settings-section">
-              <view class="form-row">
-                <text>昵称</text>
-                <input v-model.trim="settingsForm.nickname" placeholder="请输入昵称" />
+              <view class="settings-section">
+                <view class="form-row">
+                  <text>昵称</text>
+                  <input v-model.trim="settingsForm.nickname" placeholder="请输入昵称" />
+                </view>
+                <view class="form-row">
+                  <text>手机号码</text>
+                  <input v-model.trim="settingsForm.phone" placeholder="请输入手机号码" type="number" />
+                </view>
               </view>
-              <view class="form-row">
-                <text>手机号码</text>
-                <input v-model.trim="settingsForm.phone" placeholder="请输入手机号码" type="number" />
-              </view>
-            </view>
 
-            <view class="settings-section">
-              <text class="section-title">修改密码</text>
-              <view class="form-row">
-                <text>当前密码</text>
-                <input v-model="settingsForm.currentPassword" password placeholder="请输入当前密码" />
+              <view class="settings-section">
+                <text class="section-title">企业信息</text>
+                <view class="readonly-row">
+                  <text>企业名称</text>
+                  <text>{{ tenantName }}</text>
+                </view>
+                <view class="readonly-row">
+                  <text>姓名</text>
+                  <text>{{ displayName }}</text>
+                </view>
+                <view class="readonly-row">
+                  <text>角色</text>
+                  <text>{{ roleText }}</text>
+                </view>
+                <view class="readonly-row">
+                  <text>所属组织</text>
+                  <text>{{ organizationText }}</text>
+                </view>
               </view>
-              <view class="form-row">
-                <text>新密码</text>
-                <input v-model="settingsForm.newPassword" password placeholder="至少 6 位" />
-              </view>
-              <view class="form-row">
-                <text>确认新密码</text>
-                <input v-model="settingsForm.confirmPassword" password placeholder="再次输入新密码" />
-              </view>
-            </view>
 
-            <view class="settings-section">
-              <text class="section-title">企业信息</text>
-              <view class="readonly-row">
-                <text>企业名称</text>
-                <text>{{ tenantName }}</text>
+              <view class="settings-actions">
+                <button class="ghost-button" @click="resetSettingsForm">重置</button>
+                <button
+                  class="primary-button"
+                  :disabled="settingsSaving"
+                  @click="saveSettings"
+                >
+                  {{ settingsSaving ? "保存中" : "保存设置" }}
+                </button>
               </view>
-              <view class="readonly-row">
-                <text>姓名</text>
-                <text>{{ displayName }}</text>
-              </view>
-              <view class="readonly-row">
-                <text>角色</text>
-                <text>{{ roleText }}</text>
-              </view>
-              <view class="readonly-row">
-                <text>所属组织</text>
-                <text>{{ organizationText }}</text>
-              </view>
-            </view>
+            </template>
 
-            <view class="settings-actions">
-              <button class="ghost-button" @click="resetSettingsForm">重置</button>
-              <button class="primary-button" @click="saveSettings">保存设置</button>
-            </view>
+            <template v-else>
+              <view class="settings-section password-settings-section">
+                <view class="form-row">
+                  <text>当前密码</text>
+                  <input
+                    v-model="settingsForm.currentPassword"
+                    password
+                    placeholder="请输入当前密码"
+                  />
+                </view>
+                <view class="form-row">
+                  <text>新密码</text>
+                  <input
+                    v-model="settingsForm.newPassword"
+                    password
+                    placeholder="至少 6 位"
+                  />
+                </view>
+                <view class="form-row">
+                  <text>确认新密码</text>
+                  <input
+                    v-model="settingsForm.confirmPassword"
+                    password
+                    placeholder="再次输入新密码"
+                  />
+                </view>
+              </view>
+
+              <view class="settings-actions">
+                <button class="ghost-button" @click="resetPasswordForm">重置</button>
+                <button
+                  class="primary-button"
+                  :disabled="settingsSaving"
+                  @click="savePasswordSettings"
+                >
+                  {{ settingsSaving ? "保存中" : "修改密码" }}
+                </button>
+              </view>
+            </template>
           </view>
         </scroll-view>
       </view>
@@ -284,7 +343,7 @@
 <script setup lang="ts">
 import { onLoad, onUnload } from "@dcloudio/uni-app";
 import { computed, nextTick, reactive, ref, watch } from "vue";
-import { request } from "@/services/api";
+import { request, upload, uploadBrowserFile } from "@/services/api";
 import { useAuthStore } from "@/stores/auth";
 import { useStrategyChatStore } from "@/stores/strategyChat";
 import type { LoginResponse, StrategyReportResponse } from "@/types/strategy";
@@ -314,12 +373,15 @@ type BoardOption = {
   mention: string;
   description: string;
   icon: string;
+  requiredAll: string[];
   searchText: string;
 };
 
 type QuickActionBase = {
   label: string;
   interactive?: boolean;
+  requiredAll?: string[];
+  requiredAny?: string[];
 };
 
 type QuickAction =
@@ -338,11 +400,6 @@ type ComposerMode = {
   id: ComposerModeId;
   label: string;
   placeholder: string;
-};
-
-type MoreAction = {
-  label: string;
-  description: string;
 };
 
 type PickedFile = {
@@ -367,12 +424,9 @@ type RectLike = {
 };
 
 type AuthUser = LoginResponse["user"];
+type SettingsMenuId = "account" | "password";
 type MeContext = {
-  user?: AuthUser & {
-    loginName?: string;
-    departmentName?: string;
-    organizationName?: string;
-  };
+  user?: AuthUser;
   tenant?: {
     id?: string;
     name?: string;
@@ -381,12 +435,20 @@ type MeContext = {
     id?: string;
     name?: string;
   }>;
+  permissions?: string[];
 };
 
 type LocalSettings = {
   avatarUrl: string;
   nickname: string;
   phone: string;
+};
+
+type MeAvatarUploadResponse = {
+  avatarUrl: string;
+  context?: MeContext;
+  storageProvider?: string;
+  storageKey?: string;
 };
 
 const LOCAL_SETTINGS_KEY = "vehicle_marketing_client_account_settings";
@@ -400,7 +462,6 @@ const isSidebarCollapsed = ref(false);
 const isCompanyMenuVisible = ref(false);
 const isSettingsVisible = ref(false);
 const isBoardMenuVisible = ref(false);
-const isMoreMenuVisible = ref(false);
 const isMobileSidebarOpen = ref(false);
 const isReportModalVisible = ref(false);
 const reportModalLoading = ref(false);
@@ -417,11 +478,21 @@ const editorCursor = ref(0);
 const boardMenuCloseTimer = ref<ReturnType<typeof setTimeout> | null>(null);
 const draft = ref("");
 const messageScrollTop = ref(0);
+const activeSettingsMenu = ref<SettingsMenuId>("account");
 const settingsLoading = ref(false);
+const settingsSaving = ref(false);
+const settingsError = ref("");
+const avatarUploading = ref(false);
+const pendingAvatarFilePath = ref("");
+const pendingAvatarFileName = ref("");
+const pendingAvatarBrowserFile = ref<Blob | null>(null);
 const busyStartedAt = ref<number | null>(null);
 const busyElapsedSeconds = ref(0);
 const meContext = ref<MeContext | null>(null);
 let busyTimer: ReturnType<typeof setInterval> | null = null;
+let avatarUploadPromise: Promise<string> | null = null;
+let meFetchVersion = 0;
+let avatarEditVersion = 0;
 const settingsForm = reactive({
   avatarUrl: "",
   nickname: "",
@@ -443,6 +514,32 @@ const iconMap = {
   marketingCalendar: "/static/svg/marketing-calendar.svg",
   marketFeedback: "/static/svg/market-feedback.svg",
   ecologicalPartner: "/static/svg/ecological-partner.svg",
+};
+
+const STRATEGY_DIAGNOSIS_SKILL_PERMISSIONS = [
+  "agent.strategy.use",
+  "skill.strategy.diagnosis.use",
+] as const;
+const STRATEGY_UPLOAD_MATERIAL_SKILL_PERMISSIONS = [
+  "agent.strategy.use",
+  "skill.strategy.upload_material.use",
+] as const;
+const STRATEGY_DECOMPOSE_SKILL_PERMISSIONS = [
+  "agent.strategy.use",
+  "skill.strategy.decompose.use",
+] as const;
+const STRATEGY_REPORT_GENERATE_SKILL_PERMISSIONS = [
+  "agent.strategy.use",
+  "skill.strategy.report_generate.use",
+] as const;
+
+const DASHBOARD_PERMISSION_BY_BOARD: Record<BoardType, string> = {
+  "brand-strategy": "dashboard.brand_strategy.view",
+  "key-metrics": "dashboard.core_metrics.view",
+  "marketing-operations": "dashboard.marketing_operation.view",
+  "marketing-calendar": "dashboard.marketing_calendar.view",
+  "market-feedback": "dashboard.market_feedback.view",
+  "ecological-partner": "dashboard.ecosystem_partners.view",
 };
 
 const features: Feature[] = [
@@ -484,31 +581,60 @@ const features: Feature[] = [
   },
 ];
 
-const fallbackChats = [
-  { date: "最近会话", title: "新的聊天", active: true },
-  { date: "", title: "新的聊天" },
-  { date: "", title: "新的聊天" },
-  { date: "", title: "新的聊天" },
-  { date: "", title: "新的聊天" },
-  { date: "", title: "新的聊天" },
-  { date: "", title: "新的聊天" },
+const fallbackChats: Array<{
+  date?: string;
+  title: string;
+  active?: boolean;
+}> = [
+  // { date: "最近会话", title: "新的聊天", active: true },
 ];
 
 const quickActions: QuickAction[] = [
-  { label: "/ 看板", type: "board" },
-  { label: "/ 任务管理", type: "prompt", prompt: "创建任务管理计划", interactive: false },
-  { label: "/ 战略诊断", type: "mode", mode: "strategy" },
-  { label: "/ 战略拆解", type: "prompt", prompt: "查看当前15点战略", strategy: true, interactive: false },
-  { label: "/ 上传素材", type: "upload", interactive: false },
-  { label: "/ 图文营销", type: "prompt", prompt: "生成图文营销方案", interactive: false },
+  {
+    label: "@ 看板",
+    type: "board",
+    requiredAny: Object.values(DASHBOARD_PERMISSION_BY_BOARD),
+  },
+  {
+    label: "/ 战略诊断",
+    type: "mode",
+    mode: "strategy",
+    requiredAll: [...STRATEGY_DIAGNOSIS_SKILL_PERMISSIONS],
+  },
+  {
+    label: "/ 上传资料",
+    type: "upload",
+    requiredAll: [...STRATEGY_UPLOAD_MATERIAL_SKILL_PERMISSIONS],
+  },
+  {
+    label: "/ 战略拆解",
+    type: "prompt",
+    prompt: "查看当前15点战略",
+    strategy: true,
+    requiredAll: [...STRATEGY_DECOMPOSE_SKILL_PERMISSIONS],
+  },
+  {
+    label: "/ 生成报告",
+    type: "prompt",
+    prompt: "生成全部7份战略报告",
+    strategy: true,
+    requiredAll: [...STRATEGY_REPORT_GENERATE_SKILL_PERMISSIONS],
+  },
+  // {
+  //   label: "/ 打开看板",
+  //   type: "prompt",
+  //   prompt: "打开品牌战略看板",
+  //   strategy: true,
+  //   requiredAll: [
+  //     "agent.strategy.use",
+  //     DASHBOARD_PERMISSION_BY_BOARD["brand-strategy"],
+  //   ],
+  // },
 ];
 
-const strategyModeActions: QuickAction[] = [
-  { label: "/ 上传资料", type: "upload", interactive: false },
-  { label: "/ 战略拆解", type: "prompt", prompt: "查看当前15点战略", strategy: true, interactive: false },
-  { label: "/ 生成报告", type: "prompt", prompt: "生成全部7份战略报告", strategy: true },
-  { label: "/ 打开看板", type: "prompt", prompt: "打开品牌战略看板", strategy: true },
-];
+const strategyModeActions: QuickAction[] = quickActions.filter(
+  (action) => action.type !== "mode",
+);
 
 const composerModes: Record<ComposerModeId, ComposerMode> = {
   strategy: {
@@ -518,25 +644,6 @@ const composerModes: Record<ComposerModeId, ComposerMode> = {
   },
 };
 
-const moreActions: MoreAction[] = [
-  {
-    label: "PPT 生成",
-    description: "把当前方案整理为演示稿",
-  },
-  {
-    label: "AI 表格",
-    description: "生成结构化计划和指标表",
-  },
-  {
-    label: "图像生成",
-    description: "生成营销图片和视觉素材",
-  },
-  {
-    label: "超能模式",
-    description: "更深度的策略推理模式",
-  },
-];
-
 const boardOptions: BoardOption[] = ([
   {
     id: "brand-strategy",
@@ -544,6 +651,10 @@ const boardOptions: BoardOption[] = ([
     mention: "品牌战略",
     description: "锚定方向，塑造品牌心智",
     icon: iconMap.brandStrategy,
+    requiredAll: [
+      "agent.strategy.use",
+      DASHBOARD_PERMISSION_BY_BOARD["brand-strategy"],
+    ],
   },
   {
     id: "key-metrics",
@@ -551,6 +662,7 @@ const boardOptions: BoardOption[] = ([
     mention: "核心指标",
     description: "数据驱动业务增长",
     icon: iconMap.keyMetrics,
+    requiredAll: [DASHBOARD_PERMISSION_BY_BOARD["key-metrics"]],
   },
   {
     id: "marketing-operations",
@@ -558,6 +670,7 @@ const boardOptions: BoardOption[] = ([
     mention: "营销运营",
     description: "全链路营销提效增长",
     icon: iconMap.marketingOperations,
+    requiredAll: [DASHBOARD_PERMISSION_BY_BOARD["marketing-operations"]],
   },
   {
     id: "marketing-calendar",
@@ -565,6 +678,7 @@ const boardOptions: BoardOption[] = ([
     mention: "营销日历",
     description: "精准把控营销节点",
     icon: iconMap.marketingCalendar,
+    requiredAll: [DASHBOARD_PERMISSION_BY_BOARD["marketing-calendar"]],
   },
   {
     id: "market-feedback",
@@ -572,6 +686,7 @@ const boardOptions: BoardOption[] = ([
     mention: "市场反馈",
     description: "倾听用户优化策略",
     icon: iconMap.marketFeedback,
+    requiredAll: [DASHBOARD_PERMISSION_BY_BOARD["market-feedback"]],
   },
   {
     id: "ecological-partner",
@@ -579,6 +694,7 @@ const boardOptions: BoardOption[] = ([
     mention: "生态伙伴",
     description: "携手同行共建生态",
     icon: iconMap.ecologicalPartner,
+    requiredAll: [DASHBOARD_PERMISSION_BY_BOARD["ecological-partner"]],
   },
 ] satisfies Array<Omit<BoardOption, "searchText">>).map((board) => ({
   ...board,
@@ -590,11 +706,15 @@ const boardOptions: BoardOption[] = ([
 
 const settingItems = [
   { label: "设置", action: "settings" },
-  { label: "管理后台", action: "admin" },
-  { label: "车肆官网", action: "site" },
-  { label: "问题反馈", action: "feedback" },
   { label: "退出登录", action: "logout" },
 ] as const;
+const settingsMenuItems: Array<{
+  id: SettingsMenuId;
+  label: string;
+}> = [
+  { id: "account", label: "账号设置" },
+  { id: "password", label: "修改密码" },
+];
 
 const actionPrompts: Record<string, string> = {
   start_diagnosis: "开始战略诊断",
@@ -672,10 +792,23 @@ const latestActionableMessageId = computed(() => {
 const strategyNotice = computed(
   () => chatStore.error || chatStore.unavailableReason,
 );
-const companyName = computed(
-  () => settingsForm.nickname || authStore.user?.nickname || authStore.user?.tenantId || "车肆企业空间",
+const settingsPanelTitle = computed(() =>
+  activeSettingsMenu.value === "password" ? "修改密码" : "账户",
 );
 const settingsUser = computed(() => meContext.value?.user ?? authStore.user);
+const companyName = computed(() => {
+  const user = settingsUser.value;
+
+  return (
+    user?.nickname ||
+    user?.name ||
+    user?.loginName ||
+    user?.email ||
+    user?.phone ||
+    user?.tenantId ||
+    "车肆企业空间"
+  );
+});
 const displayName = computed(
   () =>
     settingsUser.value?.name ||
@@ -683,7 +816,7 @@ const displayName = computed(
     settingsUser.value?.email ||
     "未命名用户",
 );
-const userEmail = computed(() => settingsUser.value?.email || "");
+const userAccountId = computed(() => settingsUser.value?.sub || authStore.user?.sub || "");
 const avatarInitial = computed(() => {
   const source = settingsForm.nickname || displayName.value || "车";
   return source.slice(0, 1).toUpperCase();
@@ -696,12 +829,14 @@ const roleText = computed(() => {
     .map((role) => role.name)
     .filter((name): name is string => Boolean(name));
 
-  if (roleNames.length > 0) {
-    return roleNames.join("、");
-  }
-
   if (settingsUser.value?.isTenantSuperAdmin) {
     return "企业超级管理员";
+  }
+
+  const visibleRoleNames = roleNames.filter((name) => name !== "企业超级管理员");
+
+  if (visibleRoleNames.length > 0) {
+    return Array.from(new Set(visibleRoleNames)).join("、");
   }
 
   if (settingsUser.value?.role === "ADMIN") {
@@ -712,6 +847,48 @@ const roleText = computed(() => {
 });
 const organizationText = computed(
   () => settingsUser.value?.organizationName || settingsUser.value?.departmentName || "暂未设置",
+);
+const currentPermissionCodes = computed(() => {
+  const permissions = meContext.value?.permissions ?? authStore.user?.permissions ?? [];
+
+  return new Set(permissions);
+});
+function hasPermission(code: string) {
+  return (
+    Boolean(authStore.user?.isBootstrap) ||
+    Boolean(settingsUser.value?.isTenantSuperAdmin) ||
+    settingsUser.value?.role === "ADMIN" ||
+    currentPermissionCodes.value.has("*") ||
+    currentPermissionCodes.value.has(code)
+  );
+}
+function hasAllPermissions(codes: readonly string[] = []) {
+  return codes.every((code) => hasPermission(code));
+}
+function hasAnyPermission(codes: readonly string[] = []) {
+  return codes.length === 0 || codes.some((code) => hasPermission(code));
+}
+function canUseQuickAction(action: QuickAction) {
+  return (
+    hasAllPermissions(action.requiredAll ?? []) &&
+    hasAnyPermission(action.requiredAny ?? [])
+  );
+}
+function canAccessBoard(type: BoardType) {
+  const board = boardOptions.find((item) => item.id === type);
+
+  return board ? hasAllPermissions(board.requiredAll) : false;
+}
+const accessibleBoardOptions = computed(() =>
+  boardOptions.filter((board) => hasAllPermissions(board.requiredAll)),
+);
+const visibleFeatures = computed(() =>
+  features.filter((feature) =>
+    feature.boardType ? canAccessBoard(feature.boardType) : true,
+  ),
+);
+const canUploadMaterial = computed(() =>
+  hasAllPermissions(STRATEGY_UPLOAD_MATERIAL_SKILL_PERMISSIONS),
 );
 const sessionChats = computed(() =>
   chatStore.sessions.map((session, index) => ({
@@ -727,10 +904,12 @@ const sessionChats = computed(() =>
 const filteredBoards = computed(() => {
   const query = boardMenuQuery.value.trim().toLowerCase().replace(/[\s-]+/g, "");
   if (!query) {
-    return boardOptions;
+    return accessibleBoardOptions.value;
   }
 
-  return boardOptions.filter((board) => board.searchText.includes(query));
+  return accessibleBoardOptions.value.filter((board) =>
+    board.searchText.includes(query),
+  );
 });
 const homePageStyle = computed(
   () =>
@@ -748,7 +927,9 @@ const composerPlaceholder = computed(
   () => activeComposerModeMeta.value?.placeholder || "发消息...",
 );
 const visibleQuickActions = computed(() =>
-  activeComposerMode.value === "strategy" ? strategyModeActions : quickActions,
+  (activeComposerMode.value === "strategy" ? strategyModeActions : quickActions).filter(
+    canUseQuickAction,
+  ),
 );
 const isStrategyComposerMode = computed(
   () => activeComposerMode.value === "strategy",
@@ -828,29 +1009,37 @@ function handleSettingClick(action: (typeof settingItems)[number]["action"]) {
   }
 
   if (action === "logout") {
+    chatStore.resetForAccountSwitch();
     authStore.logout();
-    return;
   }
+}
 
-  uni.showToast({
-    title: "暂未开放",
-    icon: "none",
-  });
-  isCompanyMenuVisible.value = false;
+function getLocalSettingsKey() {
+  const accountKey =
+    authStore.user?.sub ||
+    authStore.user?.loginName ||
+    authStore.user?.email ||
+    "anonymous";
+
+  return `${LOCAL_SETTINGS_KEY}:${accountKey}`;
 }
 
 function readLocalSettings(): LocalSettings {
   try {
-    const raw = uni.getStorageSync(LOCAL_SETTINGS_KEY);
+    const raw = uni.getStorageSync(getLocalSettingsKey());
     const parsed =
       typeof raw === "string" && raw
         ? (JSON.parse(raw) as Partial<LocalSettings>)
         : (raw as Partial<LocalSettings> | undefined) ?? {};
 
     return {
-      avatarUrl: parsed.avatarUrl || authStore.user?.avatarUrl || "",
-      nickname: parsed.nickname || authStore.user?.nickname || authStore.user?.name || "",
-      phone: parsed.phone || authStore.user?.phone || "",
+      avatarUrl: authStore.user?.avatarUrl || parsed.avatarUrl || "",
+      nickname:
+        authStore.user?.nickname ||
+        authStore.user?.name ||
+        parsed.nickname ||
+        "",
+      phone: authStore.user?.phone || parsed.phone || "",
     };
   } catch {
     return {
@@ -861,21 +1050,66 @@ function readLocalSettings(): LocalSettings {
   }
 }
 
+function persistLocalSettings(settings: LocalSettings) {
+  uni.setStorageSync(getLocalSettingsKey(), JSON.stringify(settings));
+}
+
 function applyLocalSettings() {
   const settings = readLocalSettings();
   settingsForm.avatarUrl = settings.avatarUrl;
   settingsForm.nickname = settings.nickname;
   settingsForm.phone = settings.phone;
+  clearPasswordFields();
+}
+
+function clearPasswordFields() {
   settingsForm.currentPassword = "";
   settingsForm.newPassword = "";
   settingsForm.confirmPassword = "";
 }
 
+function clearPendingAvatarSelection() {
+  pendingAvatarFilePath.value = "";
+  pendingAvatarFileName.value = "";
+  pendingAvatarBrowserFile.value = null;
+  avatarUploadPromise = null;
+  avatarUploading.value = false;
+}
+
+function applyUserSettings(user: AuthUser) {
+  settingsForm.avatarUrl = user.avatarUrl || "";
+  settingsForm.nickname = user.nickname || user.name || "";
+  settingsForm.phone = user.phone || "";
+}
+
+function applyMeContext(context: MeContext) {
+  meContext.value = context;
+
+  if (!context.user) {
+    return;
+  }
+
+  authStore.patchLocalUser(context.user);
+  applyUserSettings(context.user);
+  persistLocalSettings({
+    avatarUrl: settingsForm.avatarUrl,
+    nickname: settingsForm.nickname,
+    phone: settingsForm.phone,
+  });
+}
+
 async function fetchMe() {
   settingsLoading.value = true;
+  const fetchVersion = ++meFetchVersion;
+  const avatarVersionAtStart = avatarEditVersion;
 
   try {
-    meContext.value = await request<MeContext>("/me");
+    const context = await request<MeContext>("/me");
+    if (fetchVersion !== meFetchVersion || avatarVersionAtStart !== avatarEditVersion) {
+      return;
+    }
+
+    applyMeContext(context);
   } catch {
     meContext.value = null;
   } finally {
@@ -886,16 +1120,157 @@ async function fetchMe() {
 function openSettings() {
   isCompanyMenuVisible.value = false;
   isSettingsVisible.value = true;
+  activeSettingsMenu.value = "account";
+  settingsError.value = "";
+  clearPendingAvatarSelection();
   applyLocalSettings();
-  fetchMe();
+  void fetchMe();
 }
 
 function closeSettings() {
   isSettingsVisible.value = false;
 }
 
+function setActiveSettingsMenu(menuId: SettingsMenuId) {
+  activeSettingsMenu.value = menuId;
+  settingsError.value = "";
+}
+
 function resetSettingsForm() {
+  settingsError.value = "";
+  clearPendingAvatarSelection();
+  clearPasswordFields();
+  avatarEditVersion += 1;
+  meFetchVersion += 1;
+
+  if (settingsUser.value) {
+    applyUserSettings(settingsUser.value);
+    return;
+  }
+
   applyLocalSettings();
+}
+
+function resetPasswordForm() {
+  settingsError.value = "";
+  clearPasswordFields();
+}
+
+function isBrowserBlob(value: unknown): value is Blob {
+  return typeof Blob !== "undefined" && value instanceof Blob;
+}
+
+function normalizeTempFileList(files: unknown) {
+  return Array.isArray(files) ? files : files ? [files] : [];
+}
+
+function resolvePickedAvatarName(
+  file: unknown,
+  fallbackPath: string,
+) {
+  if (file && typeof file === "object") {
+    const record = file as Record<string, unknown>;
+    if (typeof record.name === "string" && record.name) {
+      return record.name;
+    }
+    if (typeof record.path === "string" && record.path) {
+      return record.path.split(/[\\/]/).pop() || "avatar.png";
+    }
+  }
+
+  return fallbackPath.split(/[\\/]/).pop() || "avatar.png";
+}
+
+async function uploadPendingAvatar() {
+  if (pendingAvatarBrowserFile.value) {
+    return await uploadBrowserFile<MeAvatarUploadResponse>("/me/avatar", {
+      file: pendingAvatarBrowserFile.value,
+      fileName: pendingAvatarFileName.value || undefined,
+    });
+  }
+
+  if (
+    pendingAvatarFilePath.value.startsWith("blob:") &&
+    typeof fetch !== "undefined"
+  ) {
+    const response = await fetch(pendingAvatarFilePath.value);
+    const blob = await response.blob();
+
+    return await uploadBrowserFile<MeAvatarUploadResponse>("/me/avatar", {
+      file: blob,
+      fileName: pendingAvatarFileName.value || undefined,
+    });
+  }
+
+  return await upload<MeAvatarUploadResponse>("/me/avatar", {
+    filePath: pendingAvatarFilePath.value,
+    fileName: pendingAvatarFileName.value || undefined,
+  });
+}
+
+async function uploadAndPersistAvatar() {
+  if (avatarUploadPromise) {
+    return await avatarUploadPromise;
+  }
+
+  avatarUploading.value = true;
+  const uploadVersion = avatarEditVersion;
+
+  let promise!: Promise<string>;
+  promise = (async () => {
+    const draftSettings = {
+      nickname: settingsForm.nickname,
+      phone: settingsForm.phone,
+      currentPassword: settingsForm.currentPassword,
+      newPassword: settingsForm.newPassword,
+      confirmPassword: settingsForm.confirmPassword,
+    };
+    const uploadedAvatar = await uploadPendingAvatar();
+    if (uploadVersion !== avatarEditVersion || avatarUploadPromise !== promise) {
+      return uploadedAvatar.avatarUrl;
+    }
+
+    if (uploadedAvatar.context) {
+      applyMeContext(uploadedAvatar.context);
+    } else {
+      authStore.patchLocalUser({ avatarUrl: uploadedAvatar.avatarUrl });
+    }
+
+    settingsForm.nickname = draftSettings.nickname;
+    settingsForm.phone = draftSettings.phone;
+    settingsForm.currentPassword = draftSettings.currentPassword;
+    settingsForm.newPassword = draftSettings.newPassword;
+    settingsForm.confirmPassword = draftSettings.confirmPassword;
+    settingsForm.avatarUrl =
+      uploadedAvatar.context?.user?.avatarUrl || uploadedAvatar.avatarUrl;
+    settingsError.value = "";
+    pendingAvatarFilePath.value = "";
+    pendingAvatarFileName.value = "";
+    pendingAvatarBrowserFile.value = null;
+
+    uni.showToast({
+      title: "头像已更新",
+      icon: "success",
+    });
+
+    return uploadedAvatar.avatarUrl;
+  })();
+
+  avatarUploadPromise = promise;
+
+  try {
+    return await promise;
+  } catch (err) {
+    if (uploadVersion === avatarEditVersion && avatarUploadPromise === promise) {
+      showSettingsError(err, "头像上传失败");
+    }
+    throw err;
+  } finally {
+    if (avatarUploadPromise === promise) {
+      avatarUploading.value = false;
+      avatarUploadPromise = null;
+    }
+  }
 }
 
 function chooseAvatar() {
@@ -904,69 +1279,143 @@ function chooseAvatar() {
     sizeType: ["compressed"],
     sourceType: ["album", "camera"],
     success: (res) => {
-      settingsForm.avatarUrl = res.tempFilePaths[0] || "";
+      const filePath = res.tempFilePaths[0] || "";
+      const tempFiles = normalizeTempFileList(res.tempFiles);
+      const browserFile = tempFiles.find(isBrowserBlob) ?? null;
+
+      settingsError.value = "";
+      avatarEditVersion += 1;
+      meFetchVersion += 1;
+      settingsForm.avatarUrl = filePath;
+      pendingAvatarFilePath.value = filePath;
+      pendingAvatarBrowserFile.value = browserFile;
+      pendingAvatarFileName.value = resolvePickedAvatarName(
+        browserFile ?? tempFiles[0],
+        filePath,
+      );
+      void uploadAndPersistAvatar().catch(() => undefined);
     },
   });
 }
 
-function saveSettings() {
-  const hasPasswordInput = Boolean(
-    settingsForm.currentPassword ||
-    settingsForm.newPassword ||
-    settingsForm.confirmPassword,
-  );
-
-  if (hasPasswordInput) {
-    if (
-      !settingsForm.currentPassword ||
-      !settingsForm.newPassword ||
-      !settingsForm.confirmPassword
-    ) {
-      uni.showToast({
-        title: "请完整填写密码修改信息",
-        icon: "none",
-      });
-      return;
-    }
-
-    if (settingsForm.newPassword.length < 6) {
-      uni.showToast({
-        title: "新密码至少需要 6 位",
-        icon: "none",
-      });
-      return;
-    }
-
-    if (settingsForm.newPassword !== settingsForm.confirmPassword) {
-      uni.showToast({
-        title: "两次输入的新密码不一致",
-        icon: "none",
-      });
-      return;
-    }
+async function saveSettings() {
+  if (settingsSaving.value) {
+    return;
   }
 
-  const settings: LocalSettings = {
-    avatarUrl: settingsForm.avatarUrl,
-    nickname: settingsForm.nickname,
-    phone: settingsForm.phone,
-  };
-  uni.setStorageSync(LOCAL_SETTINGS_KEY, JSON.stringify(settings));
-  authStore.patchLocalUser(settings);
-  settingsForm.currentPassword = "";
-  settingsForm.newPassword = "";
-  settingsForm.confirmPassword = "";
-  uni.showToast({
-    title: "账号设置已保存",
-    icon: "success",
-  });
-  closeSettings();
+  settingsError.value = "";
+  settingsSaving.value = true;
+
+  try {
+    let avatarUrl = settingsForm.avatarUrl;
+
+    if (avatarUploadPromise) {
+      avatarUrl = await avatarUploadPromise;
+      settingsForm.avatarUrl = avatarUrl;
+    } else if (pendingAvatarFilePath.value) {
+      const uploadedAvatar = await uploadPendingAvatar();
+      avatarUrl = uploadedAvatar.avatarUrl;
+      settingsForm.avatarUrl = avatarUrl;
+    }
+
+    const data: Record<string, unknown> = {
+      nickname: settingsForm.nickname,
+      phone: settingsForm.phone,
+    };
+
+    const context = await request<MeContext>("/me/profile", {
+      method: "PUT",
+      data,
+    });
+
+    applyMeContext(context);
+    settingsError.value = "";
+    pendingAvatarFilePath.value = "";
+    pendingAvatarFileName.value = "";
+    pendingAvatarBrowserFile.value = null;
+    avatarUploadPromise = null;
+    uni.showToast({
+      title: "账号设置已保存",
+      icon: "success",
+    });
+    closeSettings();
+  } catch (err) {
+    showSettingsError(err, "账号设置保存失败");
+  } finally {
+    settingsSaving.value = false;
+  }
+}
+
+function validatePasswordSettings() {
+  if (
+    !settingsForm.currentPassword ||
+    !settingsForm.newPassword ||
+    !settingsForm.confirmPassword
+  ) {
+    settingsError.value = "请完整填写密码修改信息";
+    uni.showToast({
+      title: settingsError.value,
+      icon: "none",
+    });
+    return false;
+  }
+
+  if (settingsForm.newPassword.length < 6) {
+    settingsError.value = "新密码至少需要 6 位";
+    uni.showToast({
+      title: settingsError.value,
+      icon: "none",
+    });
+    return false;
+  }
+
+  if (settingsForm.newPassword !== settingsForm.confirmPassword) {
+    settingsError.value = "两次输入的新密码不一致";
+    uni.showToast({
+      title: settingsError.value,
+      icon: "none",
+    });
+    return false;
+  }
+
+  return true;
+}
+
+async function savePasswordSettings() {
+  if (settingsSaving.value || !validatePasswordSettings()) {
+    return;
+  }
+
+  settingsError.value = "";
+  settingsSaving.value = true;
+
+  try {
+    await request<MeContext>("/me/profile", {
+      method: "PUT",
+      data: {
+        currentPassword: settingsForm.currentPassword,
+        newPassword: settingsForm.newPassword,
+      },
+    });
+
+    clearPasswordFields();
+    uni.showToast({
+      title: "密码已修改",
+      icon: "success",
+    });
+    closeSettings();
+  } catch (err) {
+    showSettingsError(err, "密码修改失败");
+  } finally {
+    settingsSaving.value = false;
+  }
 }
 
 async function refresh() {
   pageLoading.value = true;
 
   try {
+    await fetchMe();
     await chatStore.initialize();
     syncComposerModeWithCurrentSession();
     await scrollToBottom();
@@ -978,6 +1427,14 @@ async function refresh() {
 }
 
 async function createSession() {
+  if (isBusy.value) {
+    return;
+  }
+
+  draft.value = "";
+  closeBoardMenu();
+  closeMoreMenu();
+
   try {
     await chatStore.createSession();
     syncComposerModeWithCurrentSession();
@@ -1056,25 +1513,13 @@ function enterComposerMode(mode: ComposerModeId) {
 
 function syncComposerModeWithCurrentSession() {
   activeComposerMode.value =
-    chatStore.activeAgentCode === STRATEGY_AGENT_CODE ? "strategy" : null;
-}
-
-function toggleMoreMenu() {
-  clearBoardMenuCloseTimer();
-  closeBoardMenu();
-  isMoreMenuVisible.value = !isMoreMenuVisible.value;
+    chatStore.sessionId && chatStore.activeAgentCode === STRATEGY_AGENT_CODE
+      ? "strategy"
+      : null;
 }
 
 function closeMoreMenu() {
-  isMoreMenuVisible.value = false;
-}
-
-function handleMoreAction(item: MoreAction) {
-  closeMoreMenu();
-  uni.showToast({
-    title: `${item.label} 暂未接入`,
-    icon: "none",
-  });
+  // Reserved for the old More menu close path. The More entry is currently removed.
 }
 
 async function handleCardAction(
@@ -1517,6 +1962,14 @@ function selectBoard(board: BoardOption) {
 }
 
 function navigateBoard(type: BoardType) {
+  if (!canAccessBoard(type)) {
+    uni.showToast({
+      title: "当前账号暂无该看板权限",
+      icon: "none",
+    });
+    return;
+  }
+
   closeMobileSidebar();
   uni.navigateTo({
     url: `/pages/boards/basic?type=${encodeURIComponent(type)}`,
@@ -1546,6 +1999,14 @@ function initMobileChrome() {
 
 function chooseMaterial() {
   if (isBusy.value) {
+    return;
+  }
+
+  if (!canUploadMaterial.value) {
+    uni.showToast({
+      title: "当前账号暂无上传资料权限",
+      icon: "none",
+    });
     return;
   }
 
@@ -1595,12 +2056,56 @@ function chooseMaterial() {
     });
     return;
   }
+
+  if (typeof document !== "undefined") {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = supportedExtensions.map((extension) => `.${extension}`).join(",");
+    input.style.display = "none";
+    input.addEventListener(
+      "change",
+      () => {
+        const file = input.files?.[0];
+        input.remove();
+        uploadPickedBrowserFile(file);
+      },
+      { once: true },
+    );
+    document.body.appendChild(input);
+    input.click();
+    return;
+  }
   // #endif
 
   uni.showToast({
     title: "当前端暂不支持文件选择",
     icon: "none",
   });
+}
+
+async function uploadPickedBrowserFile(file?: File) {
+  if (!file) {
+    uni.showToast({
+      title: "未选择有效文件",
+      icon: "none",
+    });
+    return;
+  }
+
+  try {
+    await chatStore.uploadMaterial({
+      browserFile: file,
+      fileName: file.name,
+    });
+    syncComposerModeWithCurrentSession();
+    await scrollToBottom();
+    uni.showToast({
+      title: "资料已上传",
+      icon: "success",
+    });
+  } catch (err) {
+    showError(err, "上传失败");
+  }
 }
 
 async function uploadPickedFile(file?: PickedFile) {
@@ -1676,6 +2181,15 @@ function formatTime(value: string) {
 function showError(err: unknown, fallback: string) {
   uni.showToast({
     title: err instanceof Error ? err.message : fallback,
+    icon: "none",
+  });
+}
+
+function showSettingsError(err: unknown, fallback: string) {
+  const message = err instanceof Error ? err.message : fallback;
+  settingsError.value = message;
+  uni.showToast({
+    title: message,
     icon: "none",
   });
 }
@@ -1780,8 +2294,7 @@ page {
 .feature-card::after,
 .quick-action::after,
 .plus::after,
-.send-button::after,
-.board-option::after {
+.send-button::after {
   border: 0;
 }
 
@@ -1935,47 +2448,6 @@ page {
   left: 5px;
   width: 3px;
   height: 3px;
-  border-radius: 50%;
-}
-
-.setting-icon.admin::before,
-.setting-icon.site::before {
-  inset: 2px;
-  border: 1px solid #596579;
-  background: transparent;
-  border-radius: 2px;
-}
-
-.setting-icon.admin::after {
-  right: 3px;
-  bottom: 3px;
-  left: 3px;
-  height: 2px;
-}
-
-.setting-icon.site::after {
-  top: 6px;
-  right: 2px;
-  left: 2px;
-  height: 1px;
-}
-
-.setting-icon.feedback::before {
-  top: 1px;
-  left: 4px;
-  width: 5px;
-  height: 7px;
-  border: 1px solid #596579;
-  border-bottom: 0;
-  background: transparent;
-  border-radius: 6px 6px 0 0;
-}
-
-.setting-icon.feedback::after {
-  bottom: 1px;
-  left: 6px;
-  width: 2px;
-  height: 2px;
   border-radius: 50%;
 }
 
@@ -2568,66 +3040,6 @@ page {
   box-shadow: none;
 }
 
-.composer-more-menu {
-  position: absolute;
-  right: 48px;
-  bottom: 48px;
-  z-index: 30;
-  width: 222px;
-  padding: 8px;
-  background: #ffffff;
-  border: 1px solid #e6ecf5;
-  border-radius: 14px;
-  box-shadow: 0 18px 45px rgb(31 45 61 / 18%);
-}
-
-.more-menu-item {
-  display: flex;
-  width: 100%;
-  height: 52px;
-  align-items: center;
-  gap: 10px;
-  margin: 0;
-  padding: 0 10px;
-  color: #182030;
-  text-align: left;
-  background: transparent;
-  border: 0;
-  border-radius: 10px;
-  box-shadow: none;
-}
-
-.more-menu-item::after {
-  border: 0;
-}
-
-.more-menu-item:active {
-  background: #f3f6fb;
-}
-
-.more-menu-item view {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.more-menu-item view text:first-child {
-  color: #182030;
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 1.3;
-}
-
-.more-menu-item view text:last-child {
-  overflow: hidden;
-  color: #8792a3;
-  font-size: 11px;
-  line-height: 1.3;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .board-mention-menu {
   position: absolute;
   right: auto;
@@ -2660,6 +3072,7 @@ page {
 
 .board-option {
   display: flex;
+  box-sizing: border-box;
   width: 100%;
   min-height: 58px;
   align-items: center;
@@ -2671,10 +3084,16 @@ page {
   border: 0;
   border-radius: 9px;
   box-shadow: none;
+  cursor: pointer;
 }
 
-.board-option:active {
+.board-option:active,
+.board-option:focus {
   background: #f2f7ff;
+}
+
+.board-option:focus {
+  outline: 0;
 }
 
 .board-icon {
@@ -2822,7 +3241,6 @@ page {
   white-space: nowrap;
   background: transparent;
   border: 0;
-  border-radius: 12px;
   box-shadow: none;
 }
 
@@ -2837,7 +3255,7 @@ page {
   flex: 0 0 21px;
 }
 
-.settings-nav-icon::before {
+.settings-nav-icon.account::before {
   position: absolute;
   top: 3px;
   left: 6px;
@@ -2848,7 +3266,7 @@ page {
   border-radius: 50%;
 }
 
-.settings-nav-icon::after {
+.settings-nav-icon.account::after {
   position: absolute;
   right: 2px;
   bottom: 2px;
@@ -2858,6 +3276,29 @@ page {
   border: 2px solid #181818;
   border-top: 0;
   border-radius: 10px 10px 0 0;
+}
+
+.settings-nav-icon.password::before {
+  position: absolute;
+  top: 8px;
+  right: 2px;
+  bottom: 2px;
+  left: 2px;
+  content: "";
+  border: 2px solid #181818;
+  border-radius: 4px;
+}
+
+.settings-nav-icon.password::after {
+  position: absolute;
+  top: 2px;
+  left: 6px;
+  width: 9px;
+  height: 9px;
+  content: "";
+  border: 2px solid #181818;
+  border-bottom: 0;
+  border-radius: 9px 9px 0 0;
 }
 
 .settings-nav-item>text:last-child {
@@ -2899,6 +3340,14 @@ page {
 .settings-status {
   color: #8b8b8b;
   font-size: 13px;
+}
+
+.settings-error {
+  display: block;
+  margin-top: 12px;
+  color: #c2410c;
+  font-size: 13px;
+  line-height: 20px;
 }
 
 .settings-section {
@@ -2947,7 +3396,7 @@ page {
   white-space: nowrap;
 }
 
-.summary-email {
+.summary-id {
   display: block;
   overflow: hidden;
   margin-top: 5px;
@@ -3449,11 +3898,6 @@ button[disabled] {
 
   .mobile-attach-button::after {
     border: 0;
-  }
-
-  .composer-more-menu {
-    right: 22px;
-    bottom: calc(104px + env(safe-area-inset-bottom));
   }
 
   .error-text {

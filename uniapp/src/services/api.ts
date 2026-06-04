@@ -41,6 +41,16 @@ type UploadOptions = {
   timeout?: number;
 };
 
+type BrowserUploadOptions = {
+  file: Blob;
+  name?: string;
+  fileName?: string;
+  formData?: Record<string, string>;
+  headers?: Record<string, string>;
+  skipAuth?: boolean;
+  timeout?: number;
+};
+
 export class ApiError extends Error {
   status: number;
   detail: unknown;
@@ -112,7 +122,17 @@ function normalizePayload(data: unknown) {
 
 function resolveErrorMessage(payload: unknown, status: number) {
   if (payload && typeof payload === "object" && "message" in payload) {
-    return String((payload as { message: unknown }).message);
+    const message = String((payload as { message: unknown }).message);
+
+    if (/file too large|too large/i.test(message)) {
+      return "文件大小超过限制";
+    }
+
+    return message;
+  }
+
+  if (status === 413) {
+    return "文件大小超过限制";
   }
 
   return `请求失败：${status}`;
@@ -174,6 +194,66 @@ export function upload<T>(path: string, options: UploadOptions) {
       },
     });
   });
+}
+
+export async function uploadBrowserFile<T>(
+  path: string,
+  options: BrowserUploadOptions,
+) {
+  const body = new FormData();
+
+  Object.entries(options.formData ?? {}).forEach(([key, value]) => {
+    body.append(key, value);
+  });
+  if (options.fileName) {
+    body.append(options.name ?? "file", options.file, options.fileName);
+  } else {
+    body.append(options.name ?? "file", options.file);
+  }
+
+  const controller =
+    typeof AbortController !== "undefined" ? new AbortController() : null;
+  const timeoutMs = options.timeout ?? API_LONG_REQUEST_TIMEOUT_MS;
+  const timeoutId = controller
+    ? setTimeout(() => controller.abort(), timeoutMs)
+    : null;
+
+  try {
+    const response = await fetch(buildUrl(path), {
+      method: "POST",
+      body,
+      headers: getAuthHeaders(options.skipAuth, options.headers),
+      signal: controller?.signal,
+    });
+    const responseText = await response.text();
+    const payload = normalizePayload(responseText);
+
+    if (!response.ok) {
+      throw new ApiError(
+        resolveErrorMessage(payload, response.status),
+        response.status,
+        payload,
+      );
+    }
+
+    return payload as T;
+  } catch (err) {
+    if (err instanceof ApiError) {
+      throw err;
+    }
+
+    const message =
+      err instanceof DOMException && err.name === "AbortError"
+        ? "文件上传超时"
+        : err instanceof Error
+          ? err.message
+          : "文件上传失败";
+    throw new ApiError(message, 0, err);
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+  }
 }
 
 export function download(path: string, options: DownloadOptions = {}) {

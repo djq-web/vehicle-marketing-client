@@ -29,32 +29,18 @@
       </view>
 
       <view v-else class="strategy-content">
-        <view
-          v-for="card in cards"
-          :key="card.key"
-          class="strategy-card"
-          :class="{
-            'strategy-card--document': card.type === 'document',
-            'strategy-card--disabled': card.type === 'document' && card.disabled,
-          }"
-          @click="handleCardClick(card)"
-        >
-          <template v-if="card.type === 'document'">
-            <view class="document-icon" aria-hidden="true">
-              <view class="document-sheet"></view>
-              <view class="document-line document-line--short"></view>
-              <view class="document-line"></view>
-              <view class="document-line document-line--long"></view>
-            </view>
-            <view class="document-title">
-              <text v-for="line in card.titleLines" :key="line">{{ line }}</text>
-            </view>
-            <text v-if="card.statusText" class="document-status">{{
-              card.statusText
-            }}</text>
-          </template>
+        <view class="mobile-board-heading">
+          <text class="mobile-board-title">品牌战略看板</text>
+          <text class="mobile-board-underline"></text>
+        </view>
 
-          <template v-else>
+        <view class="strategy-point-grid">
+          <view
+            v-for="card in pointCards"
+            :key="card.key"
+            class="strategy-card"
+            :class="{ 'strategy-card--highlighted': card.highlighted }"
+          >
             <text class="strategy-card-title">{{ card.title }}</text>
             <view class="star-row">
               <text
@@ -70,7 +56,25 @@
             <view class="strategy-copy">
               <text v-for="line in card.lines" :key="line">{{ line }}</text>
             </view>
-          </template>
+          </view>
+        </view>
+
+        <view class="mobile-report-list">
+          <button
+            v-for="card in reportCards"
+            :key="card.key"
+            class="mobile-report-button"
+            :class="{ 'mobile-report-button--disabled': card.disabled }"
+            @click="handleCardClick(card)"
+          >
+            <view class="document-icon" aria-hidden="true">
+              <view class="document-sheet"></view>
+              <view class="document-line document-line--short"></view>
+              <view class="document-line"></view>
+              <view class="document-line document-line--long"></view>
+            </view>
+            <text class="document-title">《{{ card.title }}》</text>
+          </button>
         </view>
       </view>
     </scroll-view>
@@ -107,6 +111,20 @@ const mobileStatusBarHeight = ref(0);
 const mobileNavHeight = ref(56);
 const mobileNavContentHeight = ref(44);
 const mobileRightSafeWidth = ref(58);
+
+const pointCards = computed(() =>
+  props.cards.filter(
+    (card): card is Extract<BrandStrategyCard, { type: "text" }> =>
+      card.type === "text",
+  ),
+);
+
+const reportCards = computed(() =>
+  props.cards.filter(
+    (card): card is Extract<BrandStrategyCard, { type: "document" }> =>
+      card.type === "document",
+  ),
+);
 
 const pageStyle = computed(
   () =>
@@ -288,12 +306,39 @@ function initMobileChrome() {
 }
 
 .strategy-content {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 28rpx 28rpx;
   box-sizing: border-box;
   min-height: 100%;
   padding: 36rpx 52rpx 42rpx;
+}
+
+.mobile-board-heading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 34rpx;
+}
+
+.mobile-board-title {
+  color: #303236;
+  font-size: 42rpx;
+  font-weight: 900;
+  letter-spacing: 8rpx;
+  line-height: 1.25;
+}
+
+.mobile-board-underline {
+  display: block;
+  width: 320rpx;
+  height: 6rpx;
+  margin-top: 8rpx;
+  background: #1267ff;
+  border-radius: 999rpx;
+}
+
+.strategy-point-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 28rpx;
 }
 
 .strategy-card {
@@ -308,6 +353,10 @@ function initMobileChrome() {
   background: #ffffff;
   border-radius: 28rpx;
   box-shadow: 0 10rpx 28rpx rgb(80 80 80 / 14%);
+}
+
+.strategy-card--highlighted {
+  border: 6rpx solid #2f70ff;
 }
 
 .strategy-card-title {
@@ -396,51 +445,42 @@ function initMobileChrome() {
   white-space: nowrap;
 }
 
-.strategy-card--document {
-  justify-content: center;
-  gap: 28rpx;
-  padding-top: 30rpx;
-}
-
-.strategy-card--disabled {
-  opacity: 0.58;
-}
-
 .document-icon {
   position: relative;
-  width: 94rpx;
-  height: 94rpx;
+  width: 38rpx;
+  height: 38rpx;
+  flex-shrink: 0;
 }
 
 .document-sheet {
   position: absolute;
-  right: 7rpx;
-  bottom: 4rpx;
+  right: 3rpx;
+  bottom: 2rpx;
   box-sizing: border-box;
-  width: 68rpx;
-  height: 76rpx;
+  width: 28rpx;
+  height: 32rpx;
   background: #eef5ff;
-  border: 6rpx solid #1267ff;
-  border-radius: 13rpx;
+  border: 4rpx solid #1267ff;
+  border-radius: 6rpx;
 }
 
 .document-sheet::before {
   position: absolute;
-  top: 10rpx;
-  left: 18rpx;
-  width: 24rpx;
-  height: 16rpx;
+  top: 4rpx;
+  left: 6rpx;
+  width: 10rpx;
+  height: 7rpx;
   content: "";
-  border: 5rpx solid #1267ff;
-  border-radius: 7rpx;
+  border: 3rpx solid #1267ff;
+  border-radius: 4rpx;
 }
 
 .document-sheet::after {
   position: absolute;
-  top: 31rpx;
-  left: 18rpx;
-  width: 26rpx;
-  height: 5rpx;
+  top: 15rpx;
+  left: 6rpx;
+  width: 12rpx;
+  height: 3rpx;
   content: "";
   background: #1267ff;
   border-radius: 999rpx;
@@ -448,61 +488,76 @@ function initMobileChrome() {
 
 .document-line {
   position: absolute;
-  right: 18rpx;
-  bottom: 23rpx;
-  width: 34rpx;
-  height: 5rpx;
+  right: 7rpx;
+  bottom: 10rpx;
+  width: 15rpx;
+  height: 3rpx;
   background: #1267ff;
   border-radius: 999rpx;
 }
 
 .document-line--short {
-  bottom: 35rpx;
-  width: 23rpx;
+  bottom: 15rpx;
+  width: 10rpx;
 }
 
 .document-line--long {
-  bottom: 11rpx;
-  width: 42rpx;
+  bottom: 5rpx;
+  width: 18rpx;
 }
 
 .document-icon::before {
   position: absolute;
-  top: 42rpx;
-  left: 4rpx;
+  top: 17rpx;
+  left: 2rpx;
   box-sizing: border-box;
-  width: 42rpx;
-  height: 38rpx;
+  width: 18rpx;
+  height: 16rpx;
   content: "";
-  border: 6rpx solid #1267ff;
+  border: 4rpx solid #1267ff;
   border-right: 0;
-  border-radius: 14rpx 0 0 14rpx;
+  border-radius: 7rpx 0 0 7rpx;
 }
 
 .document-title {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  color: #303236;
-  font-size: 30rpx;
-  font-weight: 900;
-  line-height: 1.5;
-  text-align: center;
-}
-
-.document-status {
   display: block;
-  max-width: 100%;
-  padding: 5rpx 14rpx;
   overflow: hidden;
-  color: #1267ff;
-  font-size: 22rpx;
-  font-weight: 800;
-  line-height: 1.4;
+  color: #303236;
+  font-size: 28rpx;
+  font-weight: 900;
+  line-height: 1.35;
+  text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;
-  background: #eef5ff;
-  border-radius: 999rpx;
+}
+
+.mobile-report-list {
+  display: flex;
+  flex-direction: column;
+  gap: 22rpx;
+  margin-top: 34rpx;
+}
+
+.mobile-report-button {
+  display: flex;
+  box-sizing: border-box;
+  height: 86rpx;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  margin: 0;
+  padding: 0 24rpx;
+  background: #ffffff;
+  border: 1px solid #d5d8df;
+  border-radius: 18rpx;
+}
+
+.mobile-report-button::after {
+  border: 0;
+}
+
+.mobile-report-button--disabled {
+  opacity: 0.55;
 }
 
 @keyframes state-spin {

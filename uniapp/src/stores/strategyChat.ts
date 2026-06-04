@@ -5,6 +5,7 @@ import {
   download,
   request,
   upload,
+  uploadBrowserFile,
 } from "@/services/api";
 import { useAuthStore } from "@/stores/auth";
 import type {
@@ -22,6 +23,7 @@ import type {
 } from "@/types/strategy";
 
 const STRATEGY_AGENT_CODE = "strategy_agent";
+const BASE_CHAT_AGENT_CODE = "base_chat_agent";
 const PROCESSING_POLL_INTERVAL_MS = 2500;
 const PROCESSING_POLL_MAX_ATTEMPTS = 160;
 const TITLE_REFRESH_POLL_INTERVAL_MS = 2500;
@@ -35,12 +37,13 @@ function delay(ms: number) {
 }
 
 function resolveAgentCode(agentCode?: string | null) {
-  return agentCode || STRATEGY_AGENT_CODE;
+  return agentCode || BASE_CHAT_AGENT_CODE;
 }
 
 type UploadCandidate = {
-  filePath: string;
+  filePath?: string;
   fileName?: string;
+  browserFile?: Blob;
 };
 
 type OptimisticExchange = {
@@ -52,7 +55,7 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
   state: () => ({
     diagnosisId: null as string | null,
     sessionId: null as string | null,
-    activeAgentCode: STRATEGY_AGENT_CODE,
+    activeAgentCode: BASE_CHAT_AGENT_CODE,
     sessions: [] as StrategyChatSessionSummary[],
     messages: [] as AgentMessage[],
     animatedAssistantMessageIds: {} as Record<string, true>,
@@ -60,6 +63,7 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
     loading: false,
     uploading: false,
     initialized: false,
+    authScopeKey: "",
     error: "",
     unavailableReason: "",
   }),
@@ -70,6 +74,16 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
   actions: {
     getTenantId() {
       return useAuthStore().tenantId;
+    },
+    getAuthScopeKey() {
+      const authStore = useAuthStore();
+      const user = authStore.user;
+
+      if (!user?.sub) {
+        return "";
+      }
+
+      return [user.sub, user.tenantId ?? "", user.accountType ?? ""].join(":");
     },
     isClientAccount() {
       const authStore = useAuthStore();
@@ -90,7 +104,35 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
       this.pendingFrameworkUpdate = null;
       this.diagnosisId = null;
       this.sessionId = null;
-      this.activeAgentCode = STRATEGY_AGENT_CODE;
+      this.activeAgentCode = BASE_CHAT_AGENT_CODE;
+    },
+    resetForAccountSwitch() {
+      this.diagnosisId = null;
+      this.sessionId = null;
+      this.activeAgentCode = BASE_CHAT_AGENT_CODE;
+      this.sessions = [];
+      this.messages = [];
+      this.animatedAssistantMessageIds = {};
+      this.pendingFrameworkUpdate = null;
+      this.loading = false;
+      this.uploading = false;
+      this.initialized = false;
+      this.authScopeKey = "";
+      this.error = "";
+      this.unavailableReason = "";
+    },
+    startNewConversation() {
+      this.error = "";
+      this.diagnosisId = null;
+      this.sessionId = null;
+      this.activeAgentCode = BASE_CHAT_AGENT_CODE;
+      this.messages = [];
+      this.animatedAssistantMessageIds = {};
+      this.pendingFrameworkUpdate = null;
+      this.sessions = this.sessions.map((session) => ({
+        ...session,
+        isActive: false,
+      }));
     },
     isStrategyEntitlementDenied(err: unknown) {
       return (
@@ -111,11 +153,18 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
       }
     },
     async initialize() {
-      if (this.initialized) {
+      const authScopeKey = this.getAuthScopeKey();
+
+      if (this.initialized && this.authScopeKey === authScopeKey) {
         return;
       }
 
+      if (this.authScopeKey !== authScopeKey) {
+        this.resetForAccountSwitch();
+      }
+
       this.initialized = true;
+      this.authScopeKey = authScopeKey;
 
       if (!this.isClientAccount()) {
         this.resetUnavailableState(
@@ -140,14 +189,23 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
         },
       );
 
-      this.sessions = result.sessions.map((session) => ({
+      this.sessions = result.sessions;
+
+      const currentSessionExists = this.sessions.some(
+        (session) => session.id === this.sessionId,
+      );
+
+      if (!currentSessionExists) {
+        this.sessionId = null;
+        this.messages = [];
+        this.pendingFrameworkUpdate = null;
+        this.activeAgentCode = BASE_CHAT_AGENT_CODE;
+      }
+
+      this.sessions = this.sessions.map((session) => ({
         ...session,
         isActive: session.id === this.sessionId,
       }));
-
-      if (!this.sessionId && result.sessions.length) {
-        this.sessionId = result.sessions[0].id;
-      }
     },
     async loadSession(
       targetSessionId?: string | null,
@@ -162,7 +220,7 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
         this.sessionId = null;
         this.messages = [];
         this.pendingFrameworkUpdate = null;
-        this.activeAgentCode = STRATEGY_AGENT_CODE;
+        this.activeAgentCode = BASE_CHAT_AGENT_CODE;
         return;
       }
 
@@ -326,7 +384,7 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
               method: "POST",
               data: {
                 tenantId: this.getTenantId(),
-                agentCode: STRATEGY_AGENT_CODE,
+                agentCode: BASE_CHAT_AGENT_CODE,
               },
             },
           );
@@ -667,15 +725,29 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
           formData.originalName = encodeURIComponent(file.fileName);
         }
 
-        const result = await upload<StrategyFileUploadResponse>(
-          "/strategy/files/upload",
-          {
-            filePath: file.filePath,
-            fileName: file.fileName,
-            formData,
-            timeout: API_LONG_REQUEST_TIMEOUT_MS,
-          },
-        );
+        const uploadOptions = {
+          fileName: file.fileName,
+          formData,
+          timeout: API_LONG_REQUEST_TIMEOUT_MS,
+        };
+        if (!file.browserFile && !file.filePath) {
+          throw new Error("未选择有效文件");
+        }
+        const result = file.browserFile
+          ? await uploadBrowserFile<StrategyFileUploadResponse>(
+              "/strategy/files/upload",
+              {
+                ...uploadOptions,
+                file: file.browserFile,
+              },
+            )
+          : await upload<StrategyFileUploadResponse>(
+              "/strategy/files/upload",
+              {
+                ...uploadOptions,
+                filePath: file.filePath ?? "",
+              },
+            );
 
         this.diagnosisId = result.diagnosisId;
         this.sessionId = result.sessionId;
