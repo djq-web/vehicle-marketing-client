@@ -16,7 +16,7 @@
         :class="{ collapsed: isSidebarCollapsed, 'mobile-open': isMobileSidebarOpen, 'PC-layout': !isMobileLayout }">
         <view v-if="!isSidebarCollapsed" class="sidebar-content">
           <view class="brand-mark">
-            <image class="brand-logo" src="/static/svg/logoIcon.svg" mode="aspectFit" />
+            <image class="brand-logo" :src="brandLogoUrl" mode="aspectFit" />
           </view>
 
           <button class="new-chat" :disabled="isBusy" @click="createSession">
@@ -152,9 +152,19 @@
             <text v-if="!draft" class="message-placeholder">
               {{ composerPlaceholder }}
             </text>
-            <textarea v-model="draft" class="message-input" auto-height :disabled="isBusy" :maxlength="-1"
-              @blur="handleEditorBlur" @confirm="sendMessage" @focus="handleEditorFocus" @input="handleDraftInput"
-              @keydown="handleEditorKeydown" @tap="handleEditorPointerEnd" />
+            <textarea
+              v-model="draft"
+              class="message-input"
+              :style="{ height: messageInputHeight }"
+              :disabled="isBusy"
+              :maxlength="-1"
+              @blur="handleEditorBlur"
+              @confirm="sendMessage"
+              @focus="handleEditorFocus"
+              @input="handleDraftInput"
+              @keydown="handleEditorKeydown"
+              @tap="handleEditorPointerEnd"
+            />
           </view>
 
           <view class="composer-footer">
@@ -283,7 +293,13 @@
               </view>
 
               <view class="settings-actions">
-                <button class="ghost-button" @click="resetSettingsForm">重置</button>
+                <button
+                  class="ghost-button"
+                  :disabled="settingsSaving || avatarUploading || avatarResetting"
+                  @click="resetSettingsForm"
+                >
+                  {{ avatarResetting ? "重置中" : "重置" }}
+                </button>
                 <button
                   class="primary-button"
                   :disabled="settingsSaving"
@@ -337,13 +353,92 @@
         </scroll-view>
       </view>
     </view>
+
+    <view v-if="isFeedbackVisible" class="settings-overlay feedback-overlay" @click="closeFeedback">
+      <view class="feedback-panel" @click.stop>
+        <view class="feedback-header">
+          <view class="feedback-title-copy">
+            <text class="feedback-title">问题反馈</text>
+            <text class="feedback-subtitle">提交后将生成调度中心工单</text>
+          </view>
+          <button class="settings-close feedback-close" :disabled="feedbackSubmitting" @click="closeFeedback">
+            <text class="close-icon"></text>
+          </button>
+        </view>
+
+        <view class="feedback-body">
+          <textarea
+            v-model="feedbackForm.description"
+            class="feedback-textarea"
+            :disabled="feedbackSubmitting"
+            :maxlength="2000"
+            placeholder="请描述你遇到的问题、期望结果或复现步骤"
+          />
+          <text class="feedback-counter">
+            {{ feedbackForm.description.length }}/2000
+          </text>
+
+          <view class="feedback-image-section">
+            <view class="feedback-image-header">
+              <text>图片附件</text>
+              <text>{{ feedbackImages.length }}/{{ FEEDBACK_MAX_IMAGE_COUNT }}</text>
+            </view>
+            <view class="feedback-image-list">
+              <view
+                v-for="image in feedbackImages"
+                :key="image.id"
+                class="feedback-image-item"
+              >
+                <image :src="image.url" mode="aspectFill" />
+                <button
+                  class="feedback-image-remove"
+                  :disabled="feedbackSubmitting"
+                  @click="removeFeedbackImage(image.id)"
+                >
+                  ×
+                </button>
+              </view>
+              <button
+                v-if="feedbackImages.length < FEEDBACK_MAX_IMAGE_COUNT"
+                class="feedback-image-add"
+                :disabled="feedbackSubmitting"
+                @click="chooseFeedbackImages"
+              >
+                <text class="feedback-image-add-icon">+</text>
+                <text>上传图片</text>
+              </button>
+            </view>
+          </view>
+          <text v-if="feedbackError" class="settings-error">{{ feedbackError }}</text>
+        </view>
+
+        <view class="settings-actions feedback-actions">
+          <button class="ghost-button" :disabled="feedbackSubmitting" @click="closeFeedback">
+            取消
+          </button>
+          <button
+            class="primary-button"
+            :disabled="feedbackSubmitting || !feedbackForm.description.trim()"
+            @click="submitFeedback"
+          >
+            {{ feedbackSubmitting ? "提交中" : "提交反馈" }}
+          </button>
+        </view>
+      </view>
+    </view>
   </view>
 </template>
 
 <script setup lang="ts">
 import { onLoad, onUnload } from "@dcloudio/uni-app";
 import { computed, nextTick, reactive, ref, watch } from "vue";
-import { request, upload, uploadBrowserFile } from "@/services/api";
+import {
+  request,
+  upload,
+  uploadBrowserFile,
+  uploadBrowserFiles,
+  uploadFiles,
+} from "@/services/api";
 import { useAuthStore } from "@/stores/auth";
 import { useStrategyChatStore } from "@/stores/strategyChat";
 import type { LoginResponse, StrategyReportResponse } from "@/types/strategy";
@@ -430,6 +525,7 @@ type MeContext = {
   tenant?: {
     id?: string;
     name?: string;
+    logoUrl?: string | null;
   } | null;
   roles?: Array<{
     id?: string;
@@ -451,9 +547,35 @@ type MeAvatarUploadResponse = {
   storageKey?: string;
 };
 
+type MeAvatarClearResponse = {
+  avatarUrl: null;
+  context?: MeContext;
+};
+
+type FeedbackTicketResponse = {
+  id: string;
+  ticketNo?: string;
+  status?: string;
+};
+
+type FeedbackImage = {
+  id: string;
+  url: string;
+  filePath: string;
+  fileName: string;
+  browserFile: Blob | null;
+};
+
 const LOCAL_SETTINGS_KEY = "vehicle_marketing_client_account_settings";
+const DEFAULT_BRAND_LOGO = "/static/svg/logoIcon.svg";
 const STRATEGY_AGENT_CODE = "strategy_agent";
 const BUSY_ELAPSED_VISIBLE_THRESHOLD_SECONDS = 10;
+const COMPOSER_INPUT_MIN_HEIGHT = 32;
+const COMPOSER_INPUT_DESKTOP_MAX_HEIGHT = 132;
+const COMPOSER_INPUT_MOBILE_MAX_HEIGHT = 112;
+const COMPOSER_INPUT_DESKTOP_LINE_HEIGHT = 22;
+const COMPOSER_INPUT_MOBILE_LINE_HEIGHT = 24;
+const FEEDBACK_MAX_IMAGE_COUNT = 6;
 
 const authStore = useAuthStore();
 const chatStore = useStrategyChatStore();
@@ -461,6 +583,7 @@ const pageLoading = ref(false);
 const isSidebarCollapsed = ref(false);
 const isCompanyMenuVisible = ref(false);
 const isSettingsVisible = ref(false);
+const isFeedbackVisible = ref(false);
 const isBoardMenuVisible = ref(false);
 const isMobileSidebarOpen = ref(false);
 const isReportModalVisible = ref(false);
@@ -477,12 +600,16 @@ const boardMenuStyle = ref("left:16px;top:96px;width:320px;");
 const editorCursor = ref(0);
 const boardMenuCloseTimer = ref<ReturnType<typeof setTimeout> | null>(null);
 const draft = ref("");
+const messageInputHeight = ref(`${COMPOSER_INPUT_MIN_HEIGHT}px`);
 const messageScrollTop = ref(0);
 const activeSettingsMenu = ref<SettingsMenuId>("account");
 const settingsLoading = ref(false);
 const settingsSaving = ref(false);
 const settingsError = ref("");
+const feedbackSubmitting = ref(false);
+const feedbackError = ref("");
 const avatarUploading = ref(false);
+const avatarResetting = ref(false);
 const pendingAvatarFilePath = ref("");
 const pendingAvatarFileName = ref("");
 const pendingAvatarBrowserFile = ref<Blob | null>(null);
@@ -501,10 +628,78 @@ const settingsForm = reactive({
   newPassword: "",
   confirmPassword: "",
 });
+const feedbackForm = reactive({
+  description: "",
+});
+const feedbackImages = ref<FeedbackImage[]>([]);
 const isMobileLayout = ref(false);
 
 function updateMobileLayout(width = uni.getSystemInfoSync().windowWidth) {
   isMobileLayout.value = width <= 760;
+}
+
+function getComposerInputMaxHeight() {
+  return isMobileLayout.value
+    ? COMPOSER_INPUT_MOBILE_MAX_HEIGHT
+    : COMPOSER_INPUT_DESKTOP_MAX_HEIGHT;
+}
+
+function countComposerColumns(text: string) {
+  return Array.from(text).reduce((total, char) => {
+    if (char === "\t") {
+      return total + 4;
+    }
+
+    if (char === " ") {
+      return total + 0.5;
+    }
+
+    return total + (/[\u2E80-\u9FFF\uF900-\uFAFF]/.test(char) ? 2 : 1);
+  }, 0);
+}
+
+function estimateComposerInputHeight(value: string) {
+  const maxHeight = getComposerInputMaxHeight();
+  const lineHeight = isMobileLayout.value
+    ? COMPOSER_INPUT_MOBILE_LINE_HEIGHT
+    : COMPOSER_INPUT_DESKTOP_LINE_HEIGHT;
+  const wrapColumns = isMobileLayout.value ? 24 : 76;
+  const lines = (value ? value.split(/\r\n|\r|\n/) : [""]).reduce((total, line) => {
+    return total + Math.max(1, Math.ceil(countComposerColumns(line) / wrapColumns));
+  }, 0);
+
+  return Math.min(
+    maxHeight,
+    Math.max(COMPOSER_INPUT_MIN_HEIGHT, lines * lineHeight + 2),
+  );
+}
+
+function updateComposerInputHeight() {
+  const estimatedHeight = estimateComposerInputHeight(draft.value);
+  messageInputHeight.value = `${estimatedHeight}px`;
+
+  // #ifdef H5
+  nextTick(() => {
+    const textarea = document.querySelector<HTMLTextAreaElement>(
+      "textarea.message-input, .message-input textarea",
+    );
+    if (!textarea) {
+      return;
+    }
+
+    const maxHeight = getComposerInputMaxHeight();
+    textarea.style.height = `${COMPOSER_INPUT_MIN_HEIGHT}px`;
+    const scrollHeight = textarea.scrollHeight || estimatedHeight;
+    const height = Math.min(
+      maxHeight,
+      Math.max(COMPOSER_INPUT_MIN_HEIGHT, scrollHeight),
+    );
+
+    messageInputHeight.value = `${height}px`;
+    textarea.style.height = `${height}px`;
+    textarea.style.overflowY = scrollHeight > maxHeight ? "auto" : "hidden";
+  });
+  // #endif
 }
 
 const iconMap = {
@@ -597,29 +792,30 @@ const quickActions: QuickAction[] = [
   },
   {
     label: "/ 战略诊断",
-    type: "mode",
-    mode: "strategy",
+    type: "prompt",
+    prompt: "开始战略诊断",
+    strategy: true,
     requiredAll: [...STRATEGY_DIAGNOSIS_SKILL_PERMISSIONS],
   },
-  {
-    label: "/ 上传资料",
-    type: "upload",
-    requiredAll: [...STRATEGY_UPLOAD_MATERIAL_SKILL_PERMISSIONS],
-  },
-  {
-    label: "/ 战略拆解",
-    type: "prompt",
-    prompt: "查看当前15点战略",
-    strategy: true,
-    requiredAll: [...STRATEGY_DECOMPOSE_SKILL_PERMISSIONS],
-  },
-  {
-    label: "/ 生成报告",
-    type: "prompt",
-    prompt: "生成全部7份战略报告",
-    strategy: true,
-    requiredAll: [...STRATEGY_REPORT_GENERATE_SKILL_PERMISSIONS],
-  },
+  // {
+  //   label: "/ 上传资料",
+  //   type: "upload",
+  //   requiredAll: [...STRATEGY_UPLOAD_MATERIAL_SKILL_PERMISSIONS],
+  // },
+  // {
+  //   label: "/ 战略拆解",
+  //   type: "prompt",
+  //   prompt: "查看当前19点战略",
+  //   strategy: true,
+  //   requiredAll: [...STRATEGY_DECOMPOSE_SKILL_PERMISSIONS],
+  // },
+  // {
+  //   label: "/ 生成报告",
+  //   type: "prompt",
+  //   prompt: "生成全部7份战略报告",
+  //   strategy: true,
+  //   requiredAll: [...STRATEGY_REPORT_GENERATE_SKILL_PERMISSIONS],
+  // },
   // {
   //   label: "/ 打开看板",
   //   type: "prompt",
@@ -633,7 +829,7 @@ const quickActions: QuickAction[] = [
 ];
 
 const strategyModeActions: QuickAction[] = quickActions.filter(
-  (action) => action.type !== "mode",
+  (action) => action.label !== "/ 战略诊断",
 );
 
 const composerModes: Record<ComposerModeId, ComposerMode> = {
@@ -706,6 +902,7 @@ const boardOptions: BoardOption[] = ([
 
 const settingItems = [
   { label: "设置", action: "settings" },
+  { label: "问题反馈", action: "feedback" },
   { label: "退出登录", action: "logout" },
 ] as const;
 const settingsMenuItems: Array<{
@@ -720,11 +917,11 @@ const actionPrompts: Record<string, string> = {
   start_diagnosis: "开始战略诊断",
   provide_info: "我想补充企业信息",
   view_files: "查看当前资料",
-  view_form: "查看当前15点战略进展",
-  generate_form: "整理当前15点战略",
+  view_form: "查看当前19点战略进展",
+  generate_form: "整理当前19点战略",
   confirm_form: "确认",
-  generate_framework: "查看当前15点战略",
-  refine_framework: "请基于当前15点战略整理需要继续确认的问题",
+  generate_framework: "查看当前19点战略",
+  refine_framework: "请基于当前19点战略整理需要继续确认的问题",
   confirm_framework: "确认",
   generate_reports: "生成全部7份战略报告",
   wait_reports: "查看当前诊断进度",
@@ -737,13 +934,13 @@ const actionPrompts: Record<string, string> = {
   view_business_model_panorama: "查看商业模式全景图",
   view_brand_experience_blueprint: "查看品牌与体验蓝图",
   web_search_evidence: "联网搜索企业公开资料并整理战略诊断证据",
-  apply_search_to_form: "把最近一次联网搜索结果补充到当前15点战略",
+  apply_search_to_form: "把最近一次联网搜索结果补充到当前19点战略",
   apply_search_to_framework:
-    "把最近一次联网搜索结果补充到当前15点战略",
+    "把最近一次联网搜索结果补充到当前19点战略",
   rediagnose: "重新诊断",
   confirm_framework_update: "确认修改",
   cancel_framework_update: "取消修改",
-  continue_refine_framework: "继续完善15点战略",
+  continue_refine_framework: "继续完善19点战略",
   answer_refinement_questions: "我来回答追问问题",
   update_framework: "提交框架修改",
   check_status: "查看当前诊断进度",
@@ -808,6 +1005,11 @@ const companyName = computed(() => {
     user?.tenantId ||
     "车肆企业空间"
   );
+});
+const brandLogoUrl = computed(() => {
+  const logoUrl = meContext.value?.tenant?.logoUrl?.trim();
+
+  return logoUrl || DEFAULT_BRAND_LOGO;
 });
 const displayName = computed(
   () =>
@@ -957,7 +1159,12 @@ onUnload(() => {
 
 watch(draft, () => {
   editorCursor.value = clampCursor(editorCursor.value);
+  updateComposerInputHeight();
   updateBoardMenu();
+});
+
+watch(isMobileLayout, () => {
+  updateComposerInputHeight();
 });
 
 watch(
@@ -1008,9 +1215,197 @@ function handleSettingClick(action: (typeof settingItems)[number]["action"]) {
     return;
   }
 
+  if (action === "feedback") {
+    openFeedback();
+    return;
+  }
+
   if (action === "logout") {
     chatStore.resetForAccountSwitch();
     authStore.logout();
+  }
+}
+
+function openFeedback() {
+  isCompanyMenuVisible.value = false;
+  feedbackError.value = "";
+  resetFeedbackForm();
+  isFeedbackVisible.value = true;
+}
+
+function closeFeedback() {
+  if (feedbackSubmitting.value) {
+    return;
+  }
+
+  isFeedbackVisible.value = false;
+  resetFeedbackForm();
+}
+
+function resetFeedbackForm() {
+  feedbackForm.description = "";
+  feedbackImages.value = [];
+  feedbackError.value = "";
+}
+
+function chooseFeedbackImages() {
+  if (feedbackSubmitting.value) {
+    return;
+  }
+
+  const remainingCount = FEEDBACK_MAX_IMAGE_COUNT - feedbackImages.value.length;
+  if (remainingCount <= 0) {
+    uni.showToast({
+      title: `最多上传 ${FEEDBACK_MAX_IMAGE_COUNT} 张图片`,
+      icon: "none",
+    });
+    return;
+  }
+
+  uni.chooseImage({
+    count: remainingCount,
+    sizeType: ["compressed"],
+    sourceType: ["album", "camera"],
+    success: (res) => {
+      const filePaths = Array.isArray(res.tempFilePaths) ? res.tempFilePaths : [];
+      const tempFiles = normalizeTempFileList(res.tempFiles);
+      const pickedImages = Array.from({
+        length: Math.max(filePaths.length, tempFiles.length),
+      })
+        .map((_, index) => {
+          const tempFile = tempFiles[index];
+          const filePath =
+            filePaths[index] || resolvePickedFilePath(tempFile, "");
+          const browserFile = isBrowserBlob(tempFile) ? tempFile : null;
+
+          if (!filePath) {
+            return null;
+          }
+
+          return {
+            id: `${Date.now()}-${index}-${Math.random().toString(36).slice(2)}`,
+            url: filePath,
+            filePath,
+            fileName: resolvePickedFileName(
+              browserFile ?? tempFile,
+              filePath,
+              `feedback-${index + 1}.png`,
+            ),
+            browserFile,
+          } satisfies FeedbackImage;
+        })
+        .filter((image): image is FeedbackImage => Boolean(image));
+
+      feedbackError.value = "";
+      feedbackImages.value = [...feedbackImages.value, ...pickedImages].slice(
+        0,
+        FEEDBACK_MAX_IMAGE_COUNT,
+      );
+    },
+  });
+}
+
+function removeFeedbackImage(id: string) {
+  if (feedbackSubmitting.value) {
+    return;
+  }
+
+  feedbackImages.value = feedbackImages.value.filter((image) => image.id !== id);
+}
+
+async function resolveFeedbackBrowserFiles() {
+  const browserImages: Array<{
+    file: Blob;
+    fileName: string;
+    name: string;
+  }> = [];
+
+  for (const image of feedbackImages.value) {
+    if (image.browserFile) {
+      browserImages.push({
+        file: image.browserFile,
+        fileName: image.fileName,
+        name: "images",
+      });
+      continue;
+    }
+
+    if (!image.filePath.startsWith("blob:") || typeof fetch === "undefined") {
+      return null;
+    }
+
+    const response = await fetch(image.filePath);
+    const blob = await response.blob();
+    browserImages.push({
+      file: blob,
+      fileName: image.fileName,
+      name: "images",
+    });
+  }
+
+  return browserImages;
+}
+
+async function createFeedbackTicket(description: string) {
+  if (!feedbackImages.value.length) {
+    return await request<FeedbackTicketResponse>("/feedback/tickets", {
+      method: "POST",
+      data: {
+        description,
+      },
+    });
+  }
+
+  const browserFiles = await resolveFeedbackBrowserFiles();
+  if (browserFiles) {
+    return await uploadBrowserFiles<FeedbackTicketResponse>("/feedback/tickets", {
+      files: browserFiles,
+      formData: {
+        description,
+      },
+    });
+  }
+
+  return await uploadFiles<FeedbackTicketResponse>("/feedback/tickets", {
+    files: feedbackImages.value.map((image) => ({
+      filePath: image.filePath,
+      fileName: image.fileName,
+      name: "images",
+    })),
+    formData: {
+      description,
+    },
+  });
+}
+
+async function submitFeedback() {
+  const description = feedbackForm.description.trim();
+  if (!description) {
+    feedbackError.value = "请输入问题描述";
+    return;
+  }
+
+  feedbackSubmitting.value = true;
+  feedbackError.value = "";
+
+  try {
+    await createFeedbackTicket(description);
+
+    resetFeedbackForm();
+    isFeedbackVisible.value = false;
+    uni.showToast({
+      title: "反馈已提交",
+      icon: "success",
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "反馈提交失败";
+    feedbackError.value = message;
+    uni.showToast({
+      title: message,
+      icon: "none",
+    });
+  } finally {
+    feedbackSubmitting.value = false;
   }
 }
 
@@ -1136,19 +1531,49 @@ function setActiveSettingsMenu(menuId: SettingsMenuId) {
   settingsError.value = "";
 }
 
-function resetSettingsForm() {
+async function resetSettingsForm() {
+  if (settingsSaving.value || avatarUploading.value || avatarResetting.value) {
+    return;
+  }
+
   settingsError.value = "";
   clearPendingAvatarSelection();
   clearPasswordFields();
   avatarEditVersion += 1;
   meFetchVersion += 1;
+  avatarResetting.value = true;
 
-  if (settingsUser.value) {
-    applyUserSettings(settingsUser.value);
-    return;
+  try {
+    const result = await request<MeAvatarClearResponse>("/me/avatar", {
+      method: "DELETE",
+    });
+
+    if (result.context) {
+      applyMeContext(result.context);
+    } else {
+      authStore.patchLocalUser({ avatarUrl: undefined });
+    }
+
+    settingsForm.avatarUrl = "";
+    persistLocalSettings({
+      avatarUrl: "",
+      nickname: settingsForm.nickname,
+      phone: settingsForm.phone,
+    });
+    uni.showToast({
+      title: "头像已重置",
+      icon: "success",
+    });
+  } catch (err) {
+    showSettingsError(err, "头像重置失败");
+    if (settingsUser.value) {
+      applyUserSettings(settingsUser.value);
+    } else {
+      applyLocalSettings();
+    }
+  } finally {
+    avatarResetting.value = false;
   }
-
-  applyLocalSettings();
 }
 
 function resetPasswordForm() {
@@ -1164,9 +1589,24 @@ function normalizeTempFileList(files: unknown) {
   return Array.isArray(files) ? files : files ? [files] : [];
 }
 
-function resolvePickedAvatarName(
+function resolvePickedFilePath(file: unknown, fallbackPath: string) {
+  if (file && typeof file === "object") {
+    const record = file as Record<string, unknown>;
+    if (typeof record.path === "string" && record.path) {
+      return record.path;
+    }
+    if (typeof record.tempFilePath === "string" && record.tempFilePath) {
+      return record.tempFilePath;
+    }
+  }
+
+  return fallbackPath;
+}
+
+function resolvePickedFileName(
   file: unknown,
   fallbackPath: string,
+  fallbackName: string,
 ) {
   if (file && typeof file === "object") {
     const record = file as Record<string, unknown>;
@@ -1174,11 +1614,21 @@ function resolvePickedAvatarName(
       return record.name;
     }
     if (typeof record.path === "string" && record.path) {
-      return record.path.split(/[\\/]/).pop() || "avatar.png";
+      return record.path.split(/[\\/]/).pop() || fallbackName;
+    }
+    if (typeof record.tempFilePath === "string" && record.tempFilePath) {
+      return record.tempFilePath.split(/[\\/]/).pop() || fallbackName;
     }
   }
 
-  return fallbackPath.split(/[\\/]/).pop() || "avatar.png";
+  return fallbackPath.split(/[\\/]/).pop() || fallbackName;
+}
+
+function resolvePickedAvatarName(
+  file: unknown,
+  fallbackPath: string,
+) {
+  return resolvePickedFileName(file, fallbackPath, "avatar.png");
 }
 
 async function uploadPendingAvatar() {
@@ -1434,15 +1884,11 @@ async function createSession() {
   draft.value = "";
   closeBoardMenu();
   closeMoreMenu();
-
-  try {
-    await chatStore.createSession();
-    syncComposerModeWithCurrentSession();
-    closeMobileSidebar();
-    await scrollToBottom();
-  } catch (err) {
-    showError(err, "创建会话失败");
-  }
+  chatStore.startNewConversation();
+  syncComposerModeWithCurrentSession();
+  closeMobileSidebar();
+  await nextTick();
+  updateComposerInputHeight();
 }
 
 async function selectSession(sessionId: string) {
@@ -2228,7 +2674,7 @@ page {
   position: relative;
   width: 188px;
   flex: 0 0 188px;
-  padding: 12px 11px 88px;
+  padding: 12px 0 88px;
   overflow: hidden;
   background: linear-gradient(180deg, #f6f7f9 0%, #f2f4f7 100%);
   border-right: 1px solid #edf0f4;
@@ -2248,7 +2694,7 @@ page {
 }
 
 .sidebar-content {
-  width: 166px;
+  /* width: 166px; */
 }
 
 .brand-mark {
@@ -2258,7 +2704,6 @@ page {
   width: 60px;
   height: 60px;
   border-radius: 60px;
-  border: 1px solid #121212;
 }
 
 .brand-logo {
@@ -2344,11 +2789,11 @@ page {
 
 .chat-item {
   display: flex;
-  width: 100%;
+  /* width: 100%; */
   height: 25px;
   align-items: center;
   justify-content: space-between;
-  padding: 0 7px;
+  margin: 0 12px;
   color: #252a33;
   font-size: 11px;
   line-height: 25px;
@@ -2451,6 +2896,26 @@ page {
   border-radius: 50%;
 }
 
+.setting-icon.feedback::before {
+  inset: 2px 1px 4px;
+  content: "";
+  background: transparent;
+  border: 1.5px solid #596579;
+  border-radius: 4px;
+}
+
+.setting-icon.feedback::after {
+  bottom: 1px;
+  left: 4px;
+  width: 5px;
+  height: 5px;
+  content: "";
+  background: transparent;
+  border-bottom: 1.5px solid #596579;
+  border-left: 1.5px solid #596579;
+  transform: skew(-18deg);
+}
+
 .setting-icon.logout::before {
   top: 2px;
   left: 1px;
@@ -2522,7 +2987,6 @@ page {
   flex: 1;
   min-width: 0;
   height: calc(100vh - 36px);
-  padding-bottom: 156px;
   background: #ffffff;
 }
 
@@ -2636,9 +3100,6 @@ page {
   margin: 46px 26px 0;
   padding: 18px;
   overflow: hidden;
-  background: #f7f9fc;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
   width: initial;
 }
 
@@ -2733,12 +3194,18 @@ page {
 .composer {
   position: absolute;
   right: auto;
-  bottom: 27px;
+  bottom: 0;
   left: 50%;
+  display: flex;
+  box-sizing: border-box;
   width: 68%;
   max-width: 1080px;
   min-width: 720px;
   min-height: 82px;
+  max-height: min(214px, calc(100vh - 126px));
+  flex-direction: column;
+  gap: 8px;
+  overflow: hidden;
   padding: 12px 12px 10px 18px;
   background: #ffffff;
   border: 1px solid #a9c7ff;
@@ -2749,7 +3216,11 @@ page {
 
 .editor-wrap {
   position: relative;
+  box-sizing: border-box;
+  flex: 0 1 auto;
   min-height: 32px;
+  max-height: 132px;
+  overflow: hidden;
 }
 
 .message-placeholder {
@@ -2766,20 +3237,36 @@ page {
 
 .message-input {
   display: block;
+  box-sizing: border-box;
   width: 100%;
+  height: 32px;
   min-height: 32px;
-  max-height: 88px;
+  max-height: 132px;
+  overflow-y: auto;
   padding: 0 12px 0 0;
   color: #1f2733;
   font-size: 14px;
   line-height: 22px;
+  white-space: pre-wrap;
+  word-break: break-word;
   background: transparent;
+  border: 0;
+  outline: 0;
+  resize: none;
+}
+
+.message-input textarea {
+  height: 100% !important;
+  min-height: 100% !important;
+  max-height: 100% !important;
+  overflow-y: auto !important;
 }
 
 .composer-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex: 0 0 auto;
   width: 100%;
   min-height: 28px;
 }
@@ -3176,6 +3663,171 @@ page {
   box-shadow: 0 24px 70px rgb(15 23 42 / 18%);
 }
 
+.feedback-panel {
+  box-sizing: border-box;
+  width: min(520px, calc(100vw - 48px));
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  padding: 24px;
+  background: #ffffff;
+  border: 1px solid #d8d8d8;
+  border-radius: 18px;
+  box-shadow: 0 24px 70px rgb(15 23 42 / 18%);
+}
+
+.feedback-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #ebebeb;
+}
+
+.feedback-title-copy {
+  min-width: 0;
+}
+
+.feedback-title {
+  display: block;
+  color: #111111;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.feedback-subtitle {
+  display: block;
+  margin-top: 6px;
+  color: #7a7a7a;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.feedback-close {
+  margin: 0;
+}
+
+.feedback-body {
+  padding-top: 18px;
+}
+
+.feedback-textarea {
+  box-sizing: border-box;
+  width: 100%;
+  height: 180px;
+  padding: 13px 14px;
+  color: #1f2733;
+  font-size: 14px;
+  line-height: 22px;
+  background: #f7f7f7;
+  border: 1px solid transparent;
+  border-radius: 10px;
+}
+
+.feedback-counter {
+  display: block;
+  margin-top: 8px;
+  color: #8b8b8b;
+  font-size: 12px;
+  line-height: 18px;
+  text-align: right;
+}
+
+.feedback-image-section {
+  padding-top: 14px;
+}
+
+.feedback-image-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  color: #4b5563;
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.feedback-image-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.feedback-image-item,
+.feedback-image-add {
+  position: relative;
+  box-sizing: border-box;
+  width: 76px;
+  height: 76px;
+  flex: 0 0 76px;
+  margin: 0;
+  overflow: hidden;
+  border-radius: 10px;
+}
+
+.feedback-image-item {
+  background: #f3f4f6;
+}
+
+.feedback-image-item image {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.feedback-image-remove {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  display: flex;
+  width: 20px;
+  height: 20px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  color: #ffffff;
+  font-size: 16px;
+  line-height: 20px;
+  background: rgb(17 24 39 / 68%);
+  border: 0;
+  border-radius: 50%;
+  box-shadow: none;
+}
+
+.feedback-image-remove::after {
+  border: 0;
+}
+
+.feedback-image-add {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 0;
+  color: #4b5563;
+  font-size: 12px;
+  line-height: 16px;
+  background: #f7f7f7;
+  border: 1px dashed #d1d5db;
+  box-shadow: none;
+}
+
+.feedback-image-add::after {
+  border: 0;
+}
+
+.feedback-image-add-icon {
+  font-size: 22px;
+  font-weight: 400;
+  line-height: 18px;
+}
+
+.feedback-actions {
+  padding-top: 18px;
+}
+
 .settings-nav {
   display: flex;
   flex-direction: column;
@@ -3460,7 +4112,15 @@ page {
   font-size: 14px;
   font-weight: 600;
   line-height: 36px;
+  border: 0;
   border-radius: 999px;
+  box-shadow: none;
+}
+
+.secondary-button::after,
+.ghost-button::after,
+.primary-button::after {
+  border: 0;
 }
 
 .secondary-button,
@@ -3664,7 +4324,6 @@ button[disabled] {
     height: 100vh;
     height: 100dvh;
     padding-top: var(--mobile-nav-height);
-    padding-bottom: 148px;
     overflow: hidden;
   }
 
@@ -3781,6 +4440,7 @@ button[disabled] {
     width: auto;
     min-width: 0;
     min-height: 116px;
+    max-height: min(226px, calc(100vh - var(--mobile-nav-height) - 24px));
     flex-direction: column;
     gap: 10px;
     padding: 0 22px calc(14px + env(safe-area-inset-bottom));
@@ -3836,6 +4496,8 @@ button[disabled] {
     order: 2;
     box-sizing: border-box;
     min-height: 54px;
+    max-height: 136px;
+    overflow: hidden;
     padding: 14px 86px 10px 18px;
     background: #ffffff;
     border-radius: 15px;
@@ -3852,8 +4514,10 @@ button[disabled] {
   }
 
   .message-input {
+    height: 32px;
     min-height: 30px;
-    max-height: 84px;
+    max-height: 112px;
+    overflow-y: auto;
     padding: 0;
     font-size: 14px;
     line-height: 24px;
@@ -3911,21 +4575,140 @@ button[disabled] {
   }
 
   .settings-overlay {
+    align-items: stretch;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .feedback-overlay {
+    align-items: center;
     padding: 16px;
   }
 
   .settings-panel {
-    grid-template-columns: 128px minmax(0, 1fr);
+    display: flex;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    flex-direction: column;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .feedback-panel {
     width: calc(100vw - 32px);
-    height: calc(100vh - 32px);
+    padding: 20px;
+  }
+
+  .feedback-textarea {
+    height: 220px;
   }
 
   .settings-nav {
-    padding: 22px 14px;
+    flex: 0 0 auto;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    padding: calc(10px + env(safe-area-inset-top)) 14px 10px;
+    overflow-x: auto;
+    border-bottom: 1px solid #eeeeee;
+  }
+
+  .settings-close {
+    width: 36px;
+    height: 36px;
+    flex: 0 0 36px;
+    margin: 0 4px 0 0;
+  }
+
+  .settings-nav-item {
+    width: auto;
+    height: 36px;
+    flex: 0 0 auto;
+    gap: 7px;
+    padding: 0 12px;
+    font-size: 14px;
+    line-height: 36px;
+    background: #f7f7f7;
+    border-radius: 10px;
+  }
+
+  .settings-nav-item.active {
+    color: #111827;
+    background: #eef4ff;
+  }
+
+  .settings-nav-icon {
+    width: 18px;
+    height: 18px;
+    flex-basis: 18px;
+  }
+
+  .settings-nav-item>text:last-child {
+    line-height: 36px;
+  }
+
+  .settings-content {
+    flex: 1 1 auto;
+    height: auto;
+    min-height: 0;
   }
 
   .settings-content-inner {
-    padding-right: 24px;
+    padding: 18px 16px calc(24px + env(safe-area-inset-bottom));
+  }
+
+  .settings-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 6px;
+    padding-bottom: 14px;
+  }
+
+  .settings-title {
+    font-size: 22px;
+    line-height: 1.25;
+  }
+
+  .settings-status {
+    font-size: 12px;
+  }
+
+  .settings-error {
+    margin-top: 10px;
+  }
+
+  .settings-section {
+    padding: 14px 0;
+  }
+
+  .account-summary {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .avatar-preview {
+    width: 52px;
+    height: 52px;
+    font-size: 20px;
+  }
+
+  .summary-text {
+    flex: 1 1 calc(100% - 70px);
+  }
+
+  .summary-name {
+    font-size: 16px;
+  }
+
+  .summary-id {
+    font-size: 12px;
+  }
+
+  .account-summary .secondary-button {
+    width: 100%;
+    flex: 0 0 100%;
   }
 
   .form-row,
@@ -3937,7 +4720,26 @@ button[disabled] {
 
   .form-row input,
   .readonly-row>text:last-child {
+    width: 100%;
+    max-width: none;
+    justify-self: stretch;
     text-align: left;
+  }
+
+  .section-title {
+    margin-bottom: 8px;
+    font-size: 16px;
+  }
+
+  .settings-actions {
+    gap: 8px;
+    padding-top: 16px;
+  }
+
+  .settings-actions .ghost-button,
+  .settings-actions .primary-button {
+    flex: 1 1 0;
+    padding: 0 12px;
   }
 }
 </style>

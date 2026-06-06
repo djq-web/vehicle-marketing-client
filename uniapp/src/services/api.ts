@@ -51,6 +51,34 @@ type BrowserUploadOptions = {
   timeout?: number;
 };
 
+type UploadFileItem = {
+  filePath: string;
+  name?: string;
+  fileName?: string;
+};
+
+type MultiUploadOptions = {
+  files: UploadFileItem[];
+  formData?: Record<string, string>;
+  headers?: Record<string, string>;
+  skipAuth?: boolean;
+  timeout?: number;
+};
+
+type BrowserUploadFileItem = {
+  file: Blob;
+  name?: string;
+  fileName?: string;
+};
+
+type BrowserMultiUploadOptions = {
+  files: BrowserUploadFileItem[];
+  formData?: Record<string, string>;
+  headers?: Record<string, string>;
+  skipAuth?: boolean;
+  timeout?: number;
+};
+
 export class ApiError extends Error {
   status: number;
   detail: unknown;
@@ -196,6 +224,40 @@ export function upload<T>(path: string, options: UploadOptions) {
   });
 }
 
+export function uploadFiles<T>(path: string, options: MultiUploadOptions) {
+  return new Promise<T>((resolve, reject) => {
+    const uploadOptions = {
+      url: buildUrl(path),
+      files: options.files.map((file) => ({
+        name: file.name ?? "file",
+        uri: file.filePath,
+        fileName: file.fileName,
+      })),
+      formData: options.formData,
+      header: getAuthHeaders(options.skipAuth, options.headers),
+      timeout: options.timeout ?? API_LONG_REQUEST_TIMEOUT_MS,
+      success: (response: UniApp.UploadFileSuccessCallbackResult) => {
+        const status = response.statusCode;
+        const payload = normalizePayload(response.data);
+
+        if (status < 200 || status >= 300) {
+          reject(
+            new ApiError(resolveErrorMessage(payload, status), status, payload),
+          );
+          return;
+        }
+
+        resolve(payload as T);
+      },
+      fail: (err: UniApp.GeneralCallbackResult) => {
+        reject(new ApiError(err.errMsg || "文件上传失败", 0, err));
+      },
+    };
+
+    uni.uploadFile(uploadOptions as unknown as UniApp.UploadFileOption);
+  });
+}
+
 export async function uploadBrowserFile<T>(
   path: string,
   options: BrowserUploadOptions,
@@ -210,6 +272,68 @@ export async function uploadBrowserFile<T>(
   } else {
     body.append(options.name ?? "file", options.file);
   }
+
+  const controller =
+    typeof AbortController !== "undefined" ? new AbortController() : null;
+  const timeoutMs = options.timeout ?? API_LONG_REQUEST_TIMEOUT_MS;
+  const timeoutId = controller
+    ? setTimeout(() => controller.abort(), timeoutMs)
+    : null;
+
+  try {
+    const response = await fetch(buildUrl(path), {
+      method: "POST",
+      body,
+      headers: getAuthHeaders(options.skipAuth, options.headers),
+      signal: controller?.signal,
+    });
+    const responseText = await response.text();
+    const payload = normalizePayload(responseText);
+
+    if (!response.ok) {
+      throw new ApiError(
+        resolveErrorMessage(payload, response.status),
+        response.status,
+        payload,
+      );
+    }
+
+    return payload as T;
+  } catch (err) {
+    if (err instanceof ApiError) {
+      throw err;
+    }
+
+    const message =
+      err instanceof DOMException && err.name === "AbortError"
+        ? "文件上传超时"
+        : err instanceof Error
+          ? err.message
+          : "文件上传失败";
+    throw new ApiError(message, 0, err);
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+  }
+}
+
+export async function uploadBrowserFiles<T>(
+  path: string,
+  options: BrowserMultiUploadOptions,
+) {
+  const body = new FormData();
+
+  Object.entries(options.formData ?? {}).forEach(([key, value]) => {
+    body.append(key, value);
+  });
+  options.files.forEach((file) => {
+    if (file.fileName) {
+      body.append(file.name ?? "file", file.file, file.fileName);
+    } else {
+      body.append(file.name ?? "file", file.file);
+    }
+  });
 
   const controller =
     typeof AbortController !== "undefined" ? new AbortController() : null;

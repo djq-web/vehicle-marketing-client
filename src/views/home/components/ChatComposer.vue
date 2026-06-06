@@ -803,7 +803,7 @@ onBeforeUnmount(removeMenuListeners);
 .composer {
   position: absolute;
   right: 16%;
-  bottom: 27px;
+  bottom: 0;
   left: 16%;
   min-height: 74px;
   padding: 12px 7px 7px 15px;

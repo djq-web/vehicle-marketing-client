@@ -66,6 +66,7 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
     authScopeKey: "",
     error: "",
     unavailableReason: "",
+    forceNextStrategySession: false,
   }),
   getters: {
     currentSession: (state) =>
@@ -120,6 +121,7 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
       this.authScopeKey = "";
       this.error = "";
       this.unavailableReason = "";
+      this.forceNextStrategySession = false;
     },
     startNewConversation() {
       this.error = "";
@@ -129,6 +131,7 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
       this.messages = [];
       this.animatedAssistantMessageIds = {};
       this.pendingFrameworkUpdate = null;
+      this.forceNextStrategySession = true;
       this.sessions = this.sessions.map((session) => ({
         ...session,
         isActive: false,
@@ -228,6 +231,7 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
         `/agent/sessions/${encodeURIComponent(resolvedSessionId)}`,
       );
 
+      this.forceNextStrategySession = false;
       this.sessionId = result.sessionId;
       this.messages = result.messages;
       this.activeAgentCode = resolveAgentCode(result.session?.agentCode);
@@ -281,6 +285,7 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
     },
     async selectSession(sessionId: string) {
       this.ensureClientStrategyAvailable();
+      this.forceNextStrategySession = false;
       this.sessionId = sessionId;
       await this.loadSession(sessionId);
     },
@@ -397,6 +402,7 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
           this.diagnosisId = session.diagnosisId ?? this.diagnosisId;
           this.pendingFrameworkUpdate = session.pendingFrameworkUpdate ?? null;
           this.activeAgentCode = resolveAgentCode(session.agentCode);
+          this.forceNextStrategySession = false;
         }
 
         const result = await request<AgentChatMessageResponse>(
@@ -447,6 +453,8 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
       this.error = "";
       this.loading = true;
       this.activeAgentCode = STRATEGY_AGENT_CODE;
+      const shouldForceNewSession =
+        this.forceNextStrategySession && !this.sessionId;
       const optimisticExchange = this.createOptimisticExchange(normalized);
 
       try {
@@ -455,6 +463,7 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
           data: {
             tenantId: this.getTenantId(),
             sessionId: this.sessionId ?? undefined,
+            forceNewSession: shouldForceNewSession || undefined,
             content: normalized,
           },
           timeout: API_LONG_REQUEST_TIMEOUT_MS,
@@ -462,6 +471,7 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
 
         this.diagnosisId = result.diagnosisId;
         this.sessionId = result.sessionId;
+        this.forceNextStrategySession = false;
         this.markAssistantMessageForAnimation(result.assistantMessage);
         if (result.messages?.length) {
           this.replaceOptimisticExchangeWithMessages(

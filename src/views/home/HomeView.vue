@@ -318,7 +318,6 @@ onMounted(async () => {
   flex: 1;
   min-width: 0;
   height: calc(100vh - 36px);
-  padding-bottom: 126px;
   background: #ffffff;
 }
 
@@ -362,9 +361,6 @@ onMounted(async () => {
   margin: 46px 26px 0;
   padding: 18px;
   overflow-y: auto;
-  background: #f7f9fc;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
 }
 
 .pending-bar {
