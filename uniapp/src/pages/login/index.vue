@@ -5,9 +5,7 @@
         <text class="mainText">车肆营销智能系统</text>
       </view>
       <view>
-        <text class="subText"
-          >车肆是一个不领工资的AI首席营销官。战略、策略、内容、执行和监控，全部闭环搞定。不用懂技术，不用养团队，实打实把丢掉的市场抢回来。</text
-        >
+        <text class="subText">车肆是一个不领工资的AI首席营销官。战略、策略、内容、执行和监控，全部闭环搞定。不用懂技术，不用养团队，实打实把丢掉的市场抢回来。</text>
       </view>
     </view>
     <view class="top-banner" v-else>
@@ -15,42 +13,34 @@
     </view>
     <view class="login-area">
       <view class="login-card">
-        <image
-          class="login-logo"
-          src="/static/svg/logoIcon.svg"
-          mode="aspectFit"
-        />
+        <image class="login-logo" src="/static/logon-icon.png" mode="aspectFit" />
         <text class="card-title">{{
-          isMobileLayout ? "车肆营销智能系统" : "迎登录"
+          isMobileLayout ? "车肆营销智能系统" : "欢迎登录"
         }}</text>
+        <view class="tab-list" v-if="!isMobileLayout">
+          <text v-for="item in TabList" class="tab-item" :class="{ active: activeTab === item.value }"
+            @click="activeTab = item.value">{{
+              item.label }}</text>
+        </view>
         <view class="field">
           <view class="field-icon user-icon">
             <view class="user-head"></view>
             <view class="user-body"></view>
           </view>
-          <input
-            v-model="form.username"
-            class="field-input"
-            type="text"
-            placeholder="请输入账号"
-            placeholder-class="input-placeholder"
-            confirm-type="next"
-          />
+          <input v-model="form.username" class="field-input" type="text" placeholder="请输入账号"
+            placeholder-class="input-placeholder" confirm-type="next" />
         </view>
         <view class="field">
           <view class="field-icon lock-icon">
             <view class="lock-shackle"></view>
             <view class="lock-body"></view>
           </view>
-          <input
-            v-model="form.password"
-            class="field-input"
-            password
-            placeholder="请输入密码"
-            placeholder-class="input-placeholder"
-            confirm-type="done"
-            @confirm="handleLogin"
-          />
+          <input v-model="form.password" class="field-input" :type="passwordVisible ? 'text' : 'password'"
+            placeholder="请输入密码" placeholder-class="input-placeholder" confirm-type="done" @confirm="handleLogin" />
+          <view class="toggle-icon" @click="passwordVisible = !passwordVisible" aria-label="切换密码可见性">
+            <image v-if="passwordVisible" src="/static/svg/show-password.svg" style="width: 16px; height: 16px;" />
+            <image v-else src="/static/svg/hide-password.svg" style="width: 16px; height: 16px;" />
+          </view>
         </view>
         <view class="login-options">
           <label class="remember">
@@ -62,9 +52,9 @@
         <button class="login-button" :disabled="loading" @click="handleLogin">
           {{ loading ? "登录中..." : "登 录" }}
         </button>
-        <button class="admin-login-button" @click="openAdminLogin">
+        <!-- <button class="admin-login-button" @click="openAdminLogin">
           管理后台登录
-        </button>
+        </button> -->
       </view>
     </view>
   </view>
@@ -85,7 +75,14 @@ const form = reactive({
   password: "123456",
   remember: true,
 });
+
+const TabList = [
+  { label: "客户端", value: "client" },
+  { label: "管理端", value: "admin" },
+];
+const activeTab = ref("client");
 const isMobileLayout = ref(false);
+const passwordVisible = ref(false);
 const configuredAdminLoginUrl = (
   import.meta.env.VITE_ADMIN_LOGIN_URL || "http://47.116.182.109:51081/login"
 ).trim();
@@ -197,6 +194,7 @@ function openAdminLogin() {
   padding: 0 96px 0 123px;
   background: #dbeeff url("/static/login-bg.png") center / cover no-repeat;
 }
+
 .mobileLoginPage {
   flex-direction: column;
   background-color: #ffffff;
@@ -204,6 +202,7 @@ function openAdminLogin() {
   padding: 0;
   position: relative;
 }
+
 .left-desc {
   display: flex;
   flex-direction: column;
@@ -211,21 +210,27 @@ function openAdminLogin() {
   width: 344px;
   padding-top: 96px;
 }
+
 .mainText {
   font-size: 24px;
   line-height: 35px;
   color: rgba(51, 51, 51, 1);
   font-weight: 700;
+  letter-spacing: 2px;
 }
+
 .subText {
-  font-size: 9px;
+  font-size: 10px;
   line-height: 14px;
   color: rgba(51, 51, 51, 1);
   font-weight: 400;
+  font-family: "Noto Sans SC";
 }
+
 .top-banner {
   width: 100%;
 }
+
 .imgBox {
   width: 100%;
 }
@@ -235,12 +240,17 @@ function openAdminLogin() {
   align-items: center;
   justify-content: center;
 }
+
 .mobileLoginPage .login-area {
-  position: absolute;
+  flex: 1;
+  min-height: 0;
+  background: #ffffff;
+  display: block;
+  border-radius: 20px 20px 0 0;
+  overflow: hidden;
+  margin-top: -20px;
+  position: relative;
   z-index: 100;
-  width: 100%;
-  left: 0;
-  bottom: 0;
 }
 
 .login-card {
@@ -252,24 +262,23 @@ function openAdminLogin() {
   border-radius: 10px;
   box-shadow: 0 18px 46px rgb(41 91 139 / 8%);
 }
+
 .mobileLoginPage .login-area .login-card {
   width: 100%;
-  border-radius: 20px;
-  padding-bottom: 90px;
+  box-shadow: none;
+  border-radius: 0;
 }
 
 .login-logo {
   display: block;
   width: 48px;
   height: 48px;
-  margin: 0 auto 16px;
-  border: 1px solid #666;
-  border-radius: 50%;
+  margin: 0 auto 4px;
 }
 
 .card-title {
   display: block;
-  margin: 0 0 26px;
+  margin: 0 0 16px;
   color: #0f0f0f;
   font-size: 15px;
   font-weight: 700;
@@ -278,6 +287,7 @@ function openAdminLogin() {
   letter-spacing: 8px;
   text-indent: 8px;
 }
+
 .mobileLoginPage .card-title {
   letter-spacing: 1px;
 }
@@ -352,7 +362,7 @@ function openAdminLogin() {
   min-width: 0;
   height: 27px;
   color: #303030;
-  font-size: 10px;
+  font-size: 12px;
   line-height: 27px;
 }
 
@@ -375,6 +385,7 @@ function openAdminLogin() {
   display: flex;
   align-items: center;
   gap: 2px;
+  font-size: 12px;
 }
 
 .remember checkbox {
@@ -391,7 +402,7 @@ function openAdminLogin() {
   font-size: 11px;
   font-weight: 400;
   line-height: 28px;
-  background: #1d6df2;
+  background: rgba(16, 98, 236, 1);
   border-radius: 999px;
 }
 
@@ -403,7 +414,7 @@ function openAdminLogin() {
   width: 100%;
   height: 40px;
   margin-top: 10px;
-  color: #1267ff;
+  color: rgba(16, 98, 236, 1);
   font-size: 14px;
   font-weight: 600;
   line-height: 40px;
@@ -423,5 +434,63 @@ function openAdminLogin() {
   color: #d93025;
   font-size: 10px;
   line-height: 14px;
+}
+
+.toggle-icon {
+  margin-left: 8px;
+  color: #9b9b9b;
+  font-size: 14px;
+  line-height: 27px;
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tab-list {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+  position: relative;
+}
+
+.tab-list::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 3px;
+  background: rgba(221, 221, 221, 1);
+  border-radius: 6px;
+  z-index: 1;
+}
+
+.tab-item {
+  flex: 1;
+  font-size: 14px;
+  color: rgba(153, 153, 153, 1);
+  text-align: center;
+  line-height: 20px;
+  padding-bottom: 4px;
+  position: relative;
+  cursor: pointer;
+}
+
+.tab-item.active {
+  color: rgba(51, 51, 51, 1)
+}
+
+.tab-item.active::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 3px;
+  background: rgba(16, 98, 236, 1);
+  border-radius: 6px;
+  z-index: 10;
 }
 </style>

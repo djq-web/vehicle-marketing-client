@@ -15,12 +15,19 @@
       <view class="sidebar"
         :class="{ collapsed: isSidebarCollapsed, 'mobile-open': isMobileSidebarOpen, 'PC-layout': !isMobileLayout }">
         <view v-if="!isSidebarCollapsed" class="sidebar-content">
-          <view class="brand-mark">
-            <image class="brand-logo" src="/static/svg/logoIcon.svg" mode="aspectFit" />
+          <view class="sidebar-header">
+            <view class="brand-mark">
+              <image class="brand-logo" src="/static/logon-icon.png" mode="aspectFit" />
+            </view>
+            <view v-if="companyName" class="company-short-name">
+              {{ shortName }}
+            </view>
           </view>
 
+
+
           <button class="new-chat" :disabled="isBusy" @click="createSession">
-            <view class="button-icon"></view>
+            <image class="button-icon" src="/static/svg/edit-icon.svg" mode="aspectFit‌" />
             <text>创建新对话</text>
           </button>
 
@@ -102,12 +109,8 @@
             <text>用好车肆，先赚一个小目标！</text>
           </view>
           <view class="feature-grid">
-            <button
-              v-for="feature in visibleFeatures"
-              :key="feature.title"
-              class="feature-card"
-              @click="handleFeatureSelect(feature)"
-            >
+            <button v-for="feature in visibleFeatures" :key="feature.title" class="feature-card"
+              @click="handleFeatureSelect(feature)">
               <view class="feature-visual">
                 <image class="feature-svg" :src="feature.icon" mode="aspectFit" />
               </view>
@@ -122,16 +125,9 @@
         <view v-if="isBoardMenuVisible" class="board-mention-menu" :style="boardMenuStyle">
           <text class="board-menu-title">选择看板</text>
           <scroll-view class="board-menu-list" scroll-y>
-            <view
-              v-for="board in filteredBoards"
-              :key="board.id"
-              class="board-option"
-              role="button"
-              tabindex="0"
-              @click="selectBoard(board)"
-              @keydown.enter="selectBoard(board)"
-              @keydown.space.prevent="selectBoard(board)"
-            >
+            <view v-for="board in filteredBoards" :key="board.id" class="board-option" role="button" tabindex="0"
+              @click="selectBoard(board)" @keydown.enter="selectBoard(board)"
+              @keydown.space.prevent="selectBoard(board)">
               <text class="board-icon" @click.stop="selectBoard(board)">
                 <image :src="board.icon" mode="aspectFit" />
               </text>
@@ -160,21 +156,11 @@
           <view class="composer-footer">
             <scroll-view class="quick-actions" scroll-x>
               <view class="quick-action-row">
-                <button
-                  v-if="canUploadMaterial"
-                  class="plus"
-                  :disabled="isBusy"
-                  @click="chooseMaterial"
-                >
+                <button v-if="canUploadMaterial" class="plus" :disabled="isBusy" @click="chooseMaterial">
                   <uni-icons type="plusempty" size="18" color="#111827" />
                 </button>
                 <view v-if="canUploadMaterial" class="tool-divider"></view>
-                <button
-                  v-if="activeComposerModeMeta"
-                  class="mode-chip"
-                  :disabled="isBusy"
-                  @click="cancelComposerMode"
-                >
+                <button v-if="activeComposerModeMeta" class="mode-chip" :disabled="isBusy" @click="cancelComposerMode">
                   <text>{{ activeComposerModeMeta.label }}</text>
                   <text class="chip-close">×</text>
                 </button>
@@ -189,12 +175,7 @@
               :disabled="isBusy || !draft.trim()" @click="sendMessage">
               <uni-icons type="arrow-up" size="17" color="#ffffff" />
             </button>
-            <button
-              v-if="canUploadMaterial"
-              class="mobile-attach-button"
-              :disabled="isBusy"
-              @click="chooseMaterial"
-            >
+            <button v-if="canUploadMaterial" class="mobile-attach-button" :disabled="isBusy" @click="chooseMaterial">
               <uni-icons type="plusempty" size="20" color="#303030" />
             </button>
           </view>
@@ -212,13 +193,8 @@
           <button class="settings-close" @click="closeSettings">
             <text class="close-icon"></text>
           </button>
-          <button
-            v-for="item in settingsMenuItems"
-            :key="item.id"
-            class="settings-nav-item"
-            :class="{ active: activeSettingsMenu === item.id }"
-            @click="setActiveSettingsMenu(item.id)"
-          >
+          <button v-for="item in settingsMenuItems" :key="item.id" class="settings-nav-item"
+            :class="{ active: activeSettingsMenu === item.id }" @click="setActiveSettingsMenu(item.id)">
             <text class="settings-nav-icon" :class="item.id"></text>
             <text>{{ item.label }}</text>
           </button>
@@ -242,11 +218,7 @@
                   <text class="summary-name">{{ settingsForm.nickname || displayName }}</text>
                   <text class="summary-id">{{ userAccountId || "暂无账号ID" }}</text>
                 </view>
-                <button
-                  class="secondary-button"
-                  :disabled="avatarUploading"
-                  @click="chooseAvatar"
-                >
+                <button class="secondary-button" :disabled="avatarUploading" @click="chooseAvatar">
                   {{ avatarUploading ? "上传中" : "更换头像" }}
                 </button>
               </view>
@@ -284,11 +256,7 @@
 
               <view class="settings-actions">
                 <button class="ghost-button" @click="resetSettingsForm">重置</button>
-                <button
-                  class="primary-button"
-                  :disabled="settingsSaving"
-                  @click="saveSettings"
-                >
+                <button class="primary-button" :disabled="settingsSaving" @click="saveSettings">
                   {{ settingsSaving ? "保存中" : "保存设置" }}
                 </button>
               </view>
@@ -298,37 +266,21 @@
               <view class="settings-section password-settings-section">
                 <view class="form-row">
                   <text>当前密码</text>
-                  <input
-                    v-model="settingsForm.currentPassword"
-                    password
-                    placeholder="请输入当前密码"
-                  />
+                  <input v-model="settingsForm.currentPassword" password placeholder="请输入当前密码" />
                 </view>
                 <view class="form-row">
                   <text>新密码</text>
-                  <input
-                    v-model="settingsForm.newPassword"
-                    password
-                    placeholder="至少 6 位"
-                  />
+                  <input v-model="settingsForm.newPassword" password placeholder="至少 6 位" />
                 </view>
                 <view class="form-row">
                   <text>确认新密码</text>
-                  <input
-                    v-model="settingsForm.confirmPassword"
-                    password
-                    placeholder="再次输入新密码"
-                  />
+                  <input v-model="settingsForm.confirmPassword" password placeholder="再次输入新密码" />
                 </view>
               </view>
 
               <view class="settings-actions">
                 <button class="ghost-button" @click="resetPasswordForm">重置</button>
-                <button
-                  class="primary-button"
-                  :disabled="settingsSaving"
-                  @click="savePasswordSettings"
-                >
+                <button class="primary-button" :disabled="settingsSaving" @click="savePasswordSettings">
                   {{ settingsSaving ? "保存中" : "修改密码" }}
                 </button>
               </view>
@@ -586,8 +538,8 @@ const fallbackChats: Array<{
   title: string;
   active?: boolean;
 }> = [
-  // { date: "最近会话", title: "新的聊天", active: true },
-];
+    // { date: "最近会话", title: "新的聊天", active: true },
+  ];
 
 const quickActions: QuickAction[] = [
   {
@@ -712,9 +664,9 @@ const settingsMenuItems: Array<{
   id: SettingsMenuId;
   label: string;
 }> = [
-  { id: "account", label: "账号设置" },
-  { id: "password", label: "修改密码" },
-];
+    { id: "account", label: "账号设置" },
+    { id: "password", label: "修改密码" },
+  ];
 
 const actionPrompts: Record<string, string> = {
   start_diagnosis: "开始战略诊断",
@@ -824,6 +776,10 @@ const avatarInitial = computed(() => {
 const tenantName = computed(
   () => meContext.value?.tenant?.name || authStore.user?.tenantId || "暂未绑定企业",
 );
+const shortName = computed(() => {
+  const name = settingsUser.value?.organizationShortName
+  return name || ""
+});
 const roleText = computed(() => {
   const roleNames = (meContext.value?.roles ?? [])
     .map((role) => role.name)
@@ -2236,7 +2192,7 @@ page {
 }
 
 .PC-layout {
-  padding-top: 24px;
+  padding-top: 10px;
 }
 
 .sidebar.collapsed {
@@ -2251,19 +2207,47 @@ page {
   width: 166px;
 }
 
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+  gap: 6px;
+}
+
 .brand-mark {
   display: flex;
   justify-content: center;
-  margin: 0 auto 12px;
-  width: 60px;
-  height: 60px;
-  border-radius: 60px;
-  border: 1px solid #121212;
+  width: 48px;
+  height: 48px;
 }
 
 .brand-logo {
   width: 100%;
   height: 100%;
+}
+
+.company-short-name {
+  font-size: 13px;
+  line-height: 20px;
+  color: #000;
+  flex: 1;
+  min-width: 0;
+  /* 防止文字溢出 */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: "Noto Sans SC";
+  /* 使用思源黑体 */
+}
+
+.company {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 0 12px;
+  color: #44566c;
+  font-size: 12px;
 }
 
 .new-chat {
@@ -2272,7 +2256,7 @@ page {
   height: 26px;
   align-items: center;
   justify-content: center;
-  gap: 5px;
+  gap: 7px;
   margin: 0 auto 13px;
   color: #1167ff;
   font-size: 12px;
@@ -2299,33 +2283,8 @@ page {
 }
 
 .button-icon {
-  position: relative;
-  width: 13px;
-  height: 13px;
-}
-
-.button-icon::before {
-  position: absolute;
-  top: 6px;
-  left: 2px;
-  width: 9px;
-  height: 2px;
-  content: "";
-  background: #1167ff;
-  border-radius: 2px;
-  transform: rotate(-32deg);
-}
-
-.button-icon::after {
-  position: absolute;
-  top: 3px;
-  right: 1px;
-  width: 3px;
-  height: 3px;
-  content: "";
-  background: #1167ff;
-  border-radius: 1px;
-  transform: rotate(-32deg);
+  width: 14px;
+  height: 14px;
 }
 
 .chat-list {
@@ -2339,19 +2298,19 @@ page {
   display: block;
   margin: 12px 5px 6px;
   color: #a1a8b2;
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .chat-item {
   display: flex;
   width: 100%;
-  height: 25px;
+  height: 26px;
   align-items: center;
   justify-content: space-between;
   padding: 0 7px;
   color: #252a33;
-  font-size: 11px;
-  line-height: 25px;
+  font-size: 13px;
+  line-height: 26px;
   text-align: left;
   background: transparent;
   border: 0;
