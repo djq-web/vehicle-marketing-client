@@ -180,13 +180,13 @@ const fallbackSteps = computed<ProgressStep[]>(() => {
     {
       key: "form",
       index: 2,
-      title: "当前15点战略",
+      title: "当前19点战略",
       description:
         rank >= 3
-          ? "当前15点战略已进入确认阶段。"
+          ? "当前19点战略已进入确认阶段。"
           : rank === 2
-            ? "当前15点战略等待继续补充或确认。"
-            : "等待资料充足后整理当前15点战略。",
+            ? "当前19点战略等待继续补充或确认。"
+            : "等待资料充足后整理当前19点战略。",
       state: rank >= 3 ? "done" : rank === 2 ? "current" : "pending",
       statusText: rank >= 3 ? "已确认" : rank === 2 ? "待确认" : "待生成",
     },
@@ -196,12 +196,12 @@ const fallbackSteps = computed<ProgressStep[]>(() => {
       title: "战略确认",
       description:
         rank >= 5
-          ? "15点战略已确认。"
+          ? "19点战略已确认。"
           : rank === 4
             ? status.value === "framework_refining"
-              ? "正在根据补充信息完善当前15点战略。"
-              : "当前15点战略等待确认。"
-            : "等待当前15点战略补充完成后确认。",
+              ? "正在根据补充信息完善当前19点战略。"
+              : "当前19点战略等待确认。"
+            : "等待当前19点战略补充完成后确认。",
       state: rank >= 5 ? "done" : rank === 4 ? "current" : "pending",
       statusText:
         rank >= 5
@@ -286,11 +286,11 @@ const currentStageLabel = computed(() => {
     not_started: "尚未开始诊断",
     collecting_info: "正在收集企业信息和资料",
     rediagnosing: "重新诊断已启动",
-    form_draft_generated: "15点战略待完善",
+    form_draft_generated: "19点战略待完善",
     form_confirmed: "战略资料已确认",
-    framework_draft_generated: "15点战略待确认",
-    framework_refining: "15点战略完善中",
-    framework_confirmed: "15点战略已确认",
+    framework_draft_generated: "19点战略待确认",
+    framework_refining: "19点战略完善中",
+    framework_confirmed: "19点战略已确认",
     reports_generating: "报告生成中",
     completed: "战略诊断已完成",
   };
@@ -310,13 +310,13 @@ const currentStageDescription = computed(() => {
   const descriptions: Record<string, string> = {
     not_started: "当前企业还没有开始战略诊断。",
     collecting_info:
-      "请继续补充企业信息或上传资料，资料充足后可整理当前15点战略。",
+      "请继续补充企业信息或上传资料，资料充足后可整理当前19点战略。",
     rediagnosing: "本轮诊断已重新开始，后续结果会以新诊断数据为准。",
     form_draft_generated:
-      "请继续核对和补充当前15点战略，确认关键问题后进入战略确认。",
-    form_confirmed: "下一步可以整理当前15点战略。",
-    framework_draft_generated: "请确认当前15点战略，或继续补充证据和关键判断。",
-    framework_refining: "当前正在根据补充信息完善15点战略。",
+      "请继续核对和补充当前19点战略，确认关键问题后进入战略确认。",
+    form_confirmed: "下一步可以整理当前19点战略。",
+    framework_draft_generated: "请确认当前19点战略，或继续补充证据和关键判断。",
+    framework_refining: "当前正在根据补充信息完善19点战略。",
     framework_confirmed: "下一步可以生成7份战略报告。",
     reports_generating: "报告正在生成，请稍后查看结果。",
     completed: "可以查看品牌战略看板和已生成报告。",
