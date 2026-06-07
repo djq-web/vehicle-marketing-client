@@ -98,9 +98,12 @@ export type AgentChatSessionsResponse = {
 
 export type AgentChatSessionResponse = {
   tenantId: string;
+  diagnosisId?: string | null;
+  agentCode?: string;
   sessionId: string | null;
   session?: StrategyChatSessionSummary | null;
   messages: AgentMessage[];
+  pendingFrameworkUpdate?: PendingFrameworkUpdate | null;
   ui: StrategyUiDescriptor;
 };
 
@@ -115,16 +118,6 @@ export type StrategyChatSessionResponse = {
   ui: StrategyUiDescriptor;
 };
 
-export type StrategyChatSessionsResponse = {
-  tenantId: string;
-  diagnosisId: string | null;
-  status: string;
-  activeSessionId: string | null;
-  sessions: StrategyChatSessionSummary[];
-  message: string;
-  ui: StrategyUiDescriptor;
-};
-
 export type StrategyChatResponse = {
   tenantId: string;
   diagnosisId: string;
@@ -132,6 +125,8 @@ export type StrategyChatResponse = {
   intent: string;
   action: string;
   succeeded: boolean;
+  processing?: boolean;
+  messages?: AgentMessage[];
   userMessage: AgentMessage;
   assistantMessage: AgentMessage;
   result: Record<string, unknown>;
@@ -141,10 +136,19 @@ export type StrategyChatResponse = {
 
 export type AgentChatMessageResponse = {
   tenantId: string;
+  diagnosisId?: string | null;
   sessionId: string;
   agentCode: string;
   userMessage: AgentMessage;
   assistantMessage: AgentMessage;
+  messages?: AgentMessage[];
+  ui: StrategyUiDescriptor;
+};
+
+export type AgentMessageResponse = {
+  tenantId: string;
+  sessionId: string;
+  message: AgentMessage;
   ui: StrategyUiDescriptor;
 };
 
@@ -175,6 +179,84 @@ export type StrategyReportResponse = {
   ui: StrategyUiDescriptor;
 };
 
+export type StrategyDashboardPoint = {
+  code: string;
+  title: string;
+  category?: string | null;
+  dashboardGroup?: string | null;
+  dashboardVisible?: boolean;
+  summary?: string | null;
+  recommendation?: string | null;
+  evidence?: unknown[];
+  confidence?: number | null;
+};
+
+export type StrategyDashboardReport = StrategyReportSummary & {
+  href?: string;
+};
+
+export type BrandStrategyDashboard = {
+  type: "brand_strategy_dashboard";
+  summary?: string | null;
+  framework?: {
+    id: string;
+    status: string;
+    schemaVersion?: string | null;
+    confirmedAt?: string | null;
+    pointCount?: number;
+  };
+  sections?: {
+    strategicPoints?: StrategyDashboardPoint[];
+    supportSystem?: {
+      title?: string | null;
+      pointCodes?: string[];
+      points?: StrategyDashboardPoint[];
+      summary?: string | null;
+    };
+    hiddenAssets?: StrategyDashboardPoint[];
+  };
+  reports?: StrategyDashboardReport[];
+};
+
+export type BrandStrategyCard =
+  | {
+      type: "text";
+      key: string;
+      title: string;
+      color: string;
+      lines: string[];
+      highlighted?: boolean;
+    }
+  | {
+      type: "document";
+      key: string;
+      title: string;
+      titleLines: string[];
+      reportType?: string;
+      statusText?: string;
+      disabled?: boolean;
+      needsSync?: boolean;
+    };
+
+export type StrategyDashboardResponse = {
+  tenantId: string;
+  status: string;
+  completed: boolean;
+  diagnosis?: {
+    id: string;
+    title?: string | null;
+    status: string;
+    completedAt?: string | null;
+    updatedAt?: string | null;
+  };
+  dashboard: BrandStrategyDashboard | null;
+  pendingFrameworkUpdate?: PendingFrameworkUpdate | null;
+  message: string;
+  progress?: Record<string, unknown>;
+  nextActions?: string[];
+  ui: StrategyUiDescriptor;
+};
+
 export type StrategyFileUploadResponse = {
   tenantId: string;
   diagnosisId: string;
@@ -195,14 +277,16 @@ export type LoginResponse = {
   token: string;
   user: {
     sub: string;
+    loginName?: string;
     email?: string;
     phone?: string;
     name?: string;
     nickname?: string;
     avatarUrl?: string;
-    loginName?: string;
+    employeeNo?: string;
     departmentName?: string;
     organizationName?: string;
+    organizationShortName?: string;
     roleNames?: string[];
     accountType?: "tenant_user" | "dispatch_staff";
     tenantId?: string;

@@ -23,9 +23,6 @@
               {{ shortName }}
             </view>
           </view>
-
-
-
             <button class="new-chat" :disabled="isBusy" @click="createSession">
               <image class="button-icon" src="/static/svg/edit-icon.svg" mode="aspectFit" />
               <text>创建新对话</text>
@@ -2648,6 +2645,7 @@ page {
 }
 
 .sidebar-header {
+  padding-left: 13px;
   display: flex;
   align-items: center;
   margin-bottom: 12px;
