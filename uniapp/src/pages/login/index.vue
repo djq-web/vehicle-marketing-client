@@ -50,7 +50,7 @@
         </view>
         <text v-if="error" class="login-error">{{ error }}</text>
         <button class="login-button" :disabled="loading" @click="handleLogin">
-          {{ loading ? "登录中..." : "登 录" }}
+          {{ loginButtonText }}
         </button>
         <!-- <button class="admin-login-button" @click="openAdminLogin">
           管理后台登录
@@ -62,7 +62,7 @@
 
 <script setup lang="ts">
 import { onLoad } from "@dcloudio/uni-app";
-import { reactive, ref } from "vue";
+import { computed, reactive, ref } from "vue";
 import { useAuthStore } from "@/stores/auth";
 import { useStrategyChatStore } from "@/stores/strategyChat";
 
@@ -84,8 +84,15 @@ const activeTab = ref("client");
 const isMobileLayout = ref(false);
 const passwordVisible = ref(false);
 const configuredAdminLoginUrl = (
-  import.meta.env.VITE_ADMIN_LOGIN_URL || "http://47.116.182.109:51081/login"
+  import.meta.env.VITE_ADMIN_LOGIN_URL || "http://localhost:3001"
 ).trim();
+const loginButtonText = computed(() => {
+  if (loading.value) {
+    return "登录中...";
+  }
+
+  return activeTab.value === "admin" ? "进入管理端" : "登 录";
+});
 
 function updateMobileLayout(width = uni.getSystemInfoSync().windowWidth) {
   isMobileLayout.value = width <= 760;
@@ -104,6 +111,11 @@ onLoad(() => {
 
 async function handleLogin() {
   if (loading.value) {
+    return;
+  }
+
+  if (activeTab.value === "admin") {
+    openAdminLogin();
     return;
   }
 

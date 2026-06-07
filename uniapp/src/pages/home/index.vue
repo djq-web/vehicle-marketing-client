@@ -1,5 +1,5 @@
 <template>
-  <view class="home-page" :style="homePageStyle">
+  <view class="home-page" :style="homePageStyle" @click="handlePageClick">
     <view class="mobile-nav">
       <view class="mobile-nav-content">
         <button class="mobile-menu-button" :class="{ open: isMobileSidebarOpen }" @click="toggleMobileSidebar">
@@ -15,23 +15,19 @@
       <view class="sidebar"
         :class="{ collapsed: isSidebarCollapsed, 'mobile-open': isMobileSidebarOpen, 'PC-layout': !isMobileLayout }">
         <view v-if="!isSidebarCollapsed" class="sidebar-content">
-          <<<<<<< HEAD <view class="sidebar-header">
+          <view class="sidebar-header">
             <view class="brand-mark">
-              <image class="brand-logo" src="/static/logon-icon.png" mode="aspectFit" />
+              <image class="brand-logo" :src="brandLogoUrl" mode="aspectFit" />
             </view>
             <view v-if="companyName" class="company-short-name">
               {{ shortName }}
             </view>
-            =======
-            <view class="brand-mark">
-              <image class="brand-logo" :src="brandLogoUrl" mode="aspectFit" />
-              >>>>>>> 3185117ace326ca8dd1bb05efc933d0a4cfe4cfd
-            </view>
+          </view>
 
 
 
             <button class="new-chat" :disabled="isBusy" @click="createSession">
-              <image class="button-icon" src="/static/svg/edit-icon.svg" mode="aspectFit‌" />
+              <image class="button-icon" src="/static/svg/edit-icon.svg" mode="aspectFit" />
               <text>创建新对话</text>
             </button>
 
@@ -126,7 +122,12 @@
           </view>
         </view>
 
-        <view v-if="isBoardMenuVisible" class="board-mention-menu" :style="boardMenuStyle">
+        <view
+          v-if="isBoardMenuVisible"
+          class="board-mention-menu"
+          :style="boardMenuStyle"
+          @click.stop
+        >
           <text class="board-menu-title">选择看板</text>
           <scroll-view class="board-menu-list" scroll-y>
             <view v-for="board in filteredBoards" :key="board.id" class="board-option" role="button" tabindex="0"
@@ -146,7 +147,7 @@
           </scroll-view>
         </view>
 
-        <view class="composer">
+        <view class="composer" @click.stop>
           <text v-if="strategyNotice" class="error-text">{{ strategyNotice }}</text>
           <view class="editor-wrap">
             <text v-if="!draft" class="message-placeholder">
@@ -222,9 +223,18 @@
                   <text class="summary-name">{{ settingsForm.nickname || displayName }}</text>
                   <text class="summary-id">{{ userAccountId || "暂无账号ID" }}</text>
                 </view>
-                <button class="secondary-button" :disabled="avatarUploading" @click="chooseAvatar">
-                  {{ avatarUploading ? "上传中" : "更换头像" }}
-                </button>
+                <view class="avatar-actions">
+                  <button class="secondary-button" :disabled="avatarUploading || avatarResetting" @click="chooseAvatar">
+                    {{ avatarUploading ? "上传中" : "更换头像" }}
+                  </button>
+                  <button
+                    class="ghost-button"
+                    :disabled="!settingsForm.avatarUrl || avatarUploading || avatarResetting"
+                    @click="resetAvatar"
+                  >
+                    {{ avatarResetting ? "重置中" : "重置头像" }}
+                  </button>
+                </view>
               </view>
 
               <view class="settings-section">
@@ -259,17 +269,13 @@
               </view>
 
               <view class="settings-actions">
-                <<<<<<< HEAD <button class="ghost-button" @click="resetSettingsForm">重置</button>
-                  <button class="primary-button" :disabled="settingsSaving" @click="saveSettings">
-                    =======
-                    <button class="ghost-button" :disabled="settingsSaving || avatarUploading || avatarResetting"
-                      @click="resetSettingsForm">
-                      {{ avatarResetting ? "重置中" : "重置" }}
-                    </button>
-                    <button class="primary-button" :disabled="settingsSaving" @click="saveSettings">
-                      >>>>>>> 3185117ace326ca8dd1bb05efc933d0a4cfe4cfd
-                      {{ settingsSaving ? "保存中" : "保存设置" }}
-                    </button>
+                <button
+                  class="primary-button"
+                  :disabled="settingsSaving || avatarUploading || avatarResetting"
+                  @click="saveSettings"
+                >
+                  {{ settingsSaving ? "保存中" : "保存设置" }}
+                </button>
               </view>
             </template>
 
@@ -955,8 +961,8 @@ const tenantName = computed(
   () => meContext.value?.tenant?.name || authStore.user?.tenantId || "暂未绑定企业",
 );
 const shortName = computed(() => {
-  const name = settingsUser.value?.organizationShortName
-  return name || ""
+  const name = settingsUser.value?.organizationShortName;
+  return name || "";
 });
 const roleText = computed(() => {
   const roleNames = (meContext.value?.roles ?? [])
@@ -1135,6 +1141,12 @@ function toggleMobileSidebar() {
 function closeMobileSidebar() {
   isMobileSidebarOpen.value = false;
   isCompanyMenuVisible.value = false;
+}
+
+function handlePageClick() {
+  if (isBoardMenuVisible.value) {
+    closeBoardMenu();
+  }
 }
 
 function toggleCompanyMenu() {
@@ -1463,14 +1475,13 @@ function setActiveSettingsMenu(menuId: SettingsMenuId) {
   settingsError.value = "";
 }
 
-async function resetSettingsForm() {
+async function resetAvatar() {
   if (settingsSaving.value || avatarUploading.value || avatarResetting.value) {
     return;
   }
 
   settingsError.value = "";
   clearPendingAvatarSelection();
-  clearPasswordFields();
   avatarEditVersion += 1;
   meFetchVersion += 1;
   avatarResetting.value = true;
@@ -1497,7 +1508,7 @@ async function resetSettingsForm() {
       icon: "success",
     });
   } catch (err) {
-    showSettingsError(err, "头像重置失败");
+    showSettingsError(err, "头像删除失败");
     if (settingsUser.value) {
       applyUserSettings(settingsUser.value);
     } else {
@@ -2251,36 +2262,43 @@ function updateBoardMenuPosition() {
     .createSelectorQuery()
     .select(".main-panel")
     .boundingClientRect()
+    .select(".composer")
+    .boundingClientRect()
     .select(".editor-wrap")
     .boundingClientRect()
     .exec((results) => {
       const mainRect = normalizeRect(results?.[0]);
-      const editorRect = normalizeRect(results?.[1]);
+      const composerRect = normalizeRect(results?.[1]);
+      const editorRect = normalizeRect(results?.[2]);
 
-      if (!mainRect || !editorRect) {
+      if (!mainRect || !composerRect || !editorRect) {
         boardMenuStyle.value = "left:16px;top:96px;width:320px;";
         return;
       }
 
-      const systemInfo = uni.getSystemInfoSync();
-      const viewportHeight = systemInfo.windowHeight || mainRect.bottom;
-      const menuWidth = Math.min(352, Math.max(288, mainRect.width - 32));
+      const horizontalPadding = 16;
+      const availableWidth = Math.max(
+        240,
+        Math.min(composerRect.width, mainRect.width - horizontalPadding * 2),
+      );
+      const menuWidth = Math.min(352, availableWidth);
       const estimatedMenuHeight = Math.min(
         408,
         37 + Math.max(1, filteredBoards.value.length) * 62,
       );
-      const caret = estimateCaretOffset(editorRect.width);
-      const caretLeft = editorRect.left + caret.x;
-      const caretTop = editorRect.top + caret.y;
-      const spaceBelow = viewportHeight - (caretTop + caret.lineHeight);
-      const left = Math.min(
-        Math.max(16, caretLeft - mainRect.left - 12),
-        Math.max(16, mainRect.width - menuWidth - 16),
+      const preferredLeft = editorRect.left - mainRect.left;
+      const maxLeft = Math.max(
+        horizontalPadding,
+        mainRect.width - menuWidth - horizontalPadding,
       );
-      const top =
-        spaceBelow >= Math.min(estimatedMenuHeight, 220)
-          ? caretTop - mainRect.top + caret.lineHeight + 8
-          : Math.max(16, caretTop - mainRect.top - estimatedMenuHeight - 8);
+      const left = Math.min(
+        Math.max(horizontalPadding, preferredLeft),
+        maxLeft,
+      );
+      const top = Math.max(
+        16,
+        editorRect.top - mainRect.top - estimatedMenuHeight - 8,
+      );
 
       boardMenuStyle.value = [
         `left:${Math.round(left)}px`,
@@ -3950,6 +3968,7 @@ page {
 }
 
 .avatar-preview {
+  position: relative;
   display: grid;
   width: 58px;
   height: 58px;
@@ -3972,6 +3991,13 @@ page {
 .summary-text {
   min-width: 0;
   flex: 1;
+}
+
+.avatar-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
 }
 
 .summary-name {
@@ -4642,9 +4668,16 @@ button[disabled] {
     font-size: 12px;
   }
 
-  .account-summary .secondary-button {
+  .avatar-actions {
     width: 100%;
     flex: 0 0 100%;
+    gap: 8px;
+  }
+
+  .avatar-actions .secondary-button,
+  .avatar-actions .ghost-button {
+    flex: 1 1 0;
+    padding: 0 12px;
   }
 
   .form-row,

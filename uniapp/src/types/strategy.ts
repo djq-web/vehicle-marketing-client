@@ -286,6 +286,7 @@ export type LoginResponse = {
     employeeNo?: string;
     departmentName?: string;
     organizationName?: string;
+    organizationShortName?: string;
     roleNames?: string[];
     accountType?: "tenant_user" | "dispatch_staff";
     tenantId?: string;
