@@ -42,4 +42,72 @@ button {
 button::after {
   border: 0;
 }
+
+uni-scroll-view,
+uni-scroll-view .uni-scroll-view,
+.uni-scroll-view {
+  scrollbar-width: auto;
+}
+
+uni-scroll-view::-webkit-scrollbar,
+uni-scroll-view .uni-scroll-view::-webkit-scrollbar,
+.uni-scroll-view::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+  -webkit-appearance: none;
+}
+
+uni-scroll-view::-webkit-scrollbar-button,
+uni-scroll-view .uni-scroll-view::-webkit-scrollbar-button,
+.uni-scroll-view::-webkit-scrollbar-button,
+uni-scroll-view::-webkit-scrollbar-button:vertical:start:decrement,
+uni-scroll-view::-webkit-scrollbar-button:vertical:end:increment,
+uni-scroll-view .uni-scroll-view::-webkit-scrollbar-button:vertical:start:decrement,
+uni-scroll-view .uni-scroll-view::-webkit-scrollbar-button:vertical:end:increment,
+.uni-scroll-view::-webkit-scrollbar-button:vertical:start:decrement,
+.uni-scroll-view::-webkit-scrollbar-button:vertical:end:increment {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+  -webkit-appearance: none;
+}
+
+uni-scroll-view::-webkit-scrollbar-track,
+uni-scroll-view::-webkit-scrollbar-corner,
+uni-scroll-view .uni-scroll-view::-webkit-scrollbar-track,
+uni-scroll-view .uni-scroll-view::-webkit-scrollbar-corner,
+.uni-scroll-view::-webkit-scrollbar-track,
+.uni-scroll-view::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+uni-scroll-view::-webkit-scrollbar-thumb,
+uni-scroll-view .uni-scroll-view::-webkit-scrollbar-thumb,
+.uni-scroll-view::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  border-radius: 999px;
+}
+
+uni-scroll-view:hover::-webkit-scrollbar-track,
+uni-scroll-view:hover::-webkit-scrollbar-corner,
+uni-scroll-view:hover .uni-scroll-view::-webkit-scrollbar-track,
+uni-scroll-view:hover .uni-scroll-view::-webkit-scrollbar-corner,
+.uni-scroll-view:hover::-webkit-scrollbar-track,
+.uni-scroll-view:hover::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+uni-scroll-view:hover::-webkit-scrollbar-thumb,
+uni-scroll-view:hover .uni-scroll-view::-webkit-scrollbar-thumb,
+.uni-scroll-view:hover::-webkit-scrollbar-thumb {
+  background-color: #d4d4d4;
+}
 </style>

@@ -12,69 +12,35 @@
       <text class="title-underline"></text>
     </section>
 
-    <scroll-view class="flow-board" scroll-x scroll-y>
+    <view class="flow-board">
       <view class="flow-canvas operations-canvas">
-        <svg
-          class="operations-flow-svg"
-          :viewBox="`0 0 ${canvasWidth} ${canvasHeight}`"
-          preserveAspectRatio="none"
-        >
+        <svg class="operations-flow-svg" :viewBox="`0 0 ${canvasWidth} ${canvasHeight}`" preserveAspectRatio="none">
           <defs>
-            <marker
-              id="operationsArrowBlue"
-              markerWidth="10"
-              markerHeight="10"
-              refX="8"
-              refY="5"
-              orient="auto"
-              markerUnits="strokeWidth"
-            >
+            <marker id="operationsArrowBlue" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"
+              markerUnits="strokeWidth">
               <path d="M0,0 L10,5 L0,10 Z" fill="#55cfff" />
             </marker>
-            <marker
-              id="operationsArrowMuted"
-              markerWidth="10"
-              markerHeight="10"
-              refX="8"
-              refY="5"
-              orient="auto"
-              markerUnits="strokeWidth"
-            >
+            <marker id="operationsArrowMuted" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"
+              markerUnits="strokeWidth">
               <path d="M0,0 L10,5 L0,10 Z" fill="#d7d7d7" />
             </marker>
           </defs>
 
           <g v-for="edge in drawableEdges" :key="edge.id">
-            <path
-              class="operations-line"
-              :class="{ muted: edge.muted }"
-              :d="svgPath(edge)"
-              fill="none"
-              :marker-end="edge.muted ? 'url(#operationsArrowMuted)' : 'url(#operationsArrowBlue)'"
-            />
-            <path
-              v-if="!edge.muted"
-              class="operations-flow"
-              :style="flowStyle(edge)"
-              :d="svgPath(edge)"
-              fill="none"
-            />
+            <path class="operations-line" :class="{ muted: edge.muted }" :d="svgPath(edge)" fill="none"
+              :marker-end="edge.muted ? 'url(#operationsArrowMuted)' : 'url(#operationsArrowBlue)'" />
+            <path v-if="!edge.muted" class="operations-flow" :style="flowStyle(edge)" :d="svgPath(edge)" fill="none" />
           </g>
         </svg>
 
-        <view
-          v-for="node in nodes"
-          :key="node.id"
-          class="flow-node operation-node"
-          :class="operationNodeClass(node)"
-          :style="nodeStyle(node)"
-        >
+        <view v-for="node in nodes" :key="node.id" class="flow-node operation-node" :class="operationNodeClass(node)"
+          :style="nodeStyle(node)">
           <text class="status-dot" :class="node.status"></text>
           <text class="node-title">{{ node.title }}</text>
           <image class="operation-icon" :src="node.icon" mode="aspectFit" />
         </view>
       </view>
-    </scroll-view>
+    </view>
   </view>
 </template>
 
@@ -249,14 +215,16 @@ const edgeRoutes: Record<string, (source: FlowNode, target: FlowNode) => Point[]
 <style scoped>
 .operations-desktop {
   position: relative;
-  min-height: calc(100vh - 32px);
+  height: calc(100vh - 54px);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .status-legend {
   position: absolute;
   top: 34px;
-  left: 37px;
+  left: 8px;
   z-index: 6;
   display: flex;
   align-items: center;
@@ -323,15 +291,43 @@ const edgeRoutes: Record<string, (source: FlowNode, target: FlowNode) => Point[]
 }
 
 .flow-board {
-  height: calc(100vh - 86px);
-  min-height: 620px;
-  margin-top: 18px;
-  overflow: hidden;
+  flex: 1;
+  min-height: 0;
+  padding-top: 18px;
+  overflow: auto;
+  box-sizing: border-box;
+}
+
+.flow-board::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.flow-board::-webkit-scrollbar-button,
+.flow-board::-webkit-scrollbar-button:vertical:start:decrement,
+.flow-board::-webkit-scrollbar-button:vertical:end:increment,
+.flow-board::-webkit-scrollbar-button:horizontal:start:decrement,
+.flow-board::-webkit-scrollbar-button:horizontal:end:increment {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+  -webkit-appearance: none;
+}
+
+.flow-board::-webkit-scrollbar-track,
+.flow-board::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+.flow-board::-webkit-scrollbar-thumb {
+  background: #d4d4d4;
+  border-radius: 999px;
 }
 
 .flow-canvas {
   position: relative;
-  width: 1260px;
+  max-width: 1260px;
   min-height: 650px;
   margin: 0 auto;
 }

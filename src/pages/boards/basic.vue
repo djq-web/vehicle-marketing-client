@@ -1,32 +1,16 @@
 <template>
   <view class="board-page" :class="`board-page--${activeType}`">
-    <button
-      v-if="activeType !== 'brand-strategy'"
-      class="back-button"
-      :class="{ 'back-button--right': isFlowBoard }"
-      @click="goHome"
-    >
+    <button v-if="activeType !== 'brand-strategy'" class="back-button" @click="goHome">
       返回首页
     </button>
 
     <template v-if="activeType === 'brand-strategy'">
-      <BrandStrategyMobile
-        v-if="isMobileLayout"
-        :cards="brandStrategyCards"
-        :loading="brandDashboardLoading"
-        :error="brandDashboardError"
-        :message="brandDashboardMessage"
-        @back="goHome"
-        @refresh="loadBrandDashboard"
-        @report="openBoardReport"
-      />
+      <BrandStrategyMobile v-if="isMobileLayout" :cards="brandStrategyCards" :loading="brandDashboardLoading"
+        :error="brandDashboardError" :message="brandDashboardMessage" @back="goHome" @refresh="loadBrandDashboard"
+        @report="openBoardReport" />
       <template v-else>
         <view class="brand-board-stage">
-          <button
-            class="brand-board-close"
-            aria-label="关闭品牌战略看板"
-            @click="goHome"
-          >
+          <button class="brand-board-close" aria-label="关闭品牌战略看板" @click="goHome">
             ×
           </button>
 
@@ -35,10 +19,7 @@
             <text class="brand-board-underline"></text>
           </view>
 
-          <section
-            v-if="brandDashboardLoading"
-            class="brand-dashboard-state brand-dashboard-state--loading"
-          >
+          <section v-if="brandDashboardLoading" class="brand-dashboard-state brand-dashboard-state--loading">
             <view class="brand-dashboard-spinner"></view>
             <text>正在读取品牌战略看板</text>
           </section>
@@ -48,18 +29,12 @@
             <text class="brand-dashboard-state-message">{{
               brandDashboardError
             }}</text>
-            <button
-              class="brand-dashboard-state-button"
-              @click="loadBrandDashboard"
-            >
+            <button class="brand-dashboard-state-button" @click="loadBrandDashboard">
               重新加载
             </button>
           </section>
 
-          <section
-            v-else-if="!brandPointCards.length"
-            class="brand-dashboard-state"
-          >
+          <section v-else-if="!brandPointCards.length" class="brand-dashboard-state">
             <text class="brand-dashboard-state-title">暂无品牌战略看板</text>
             <text class="brand-dashboard-state-message">{{
               brandDashboardMessage || "完成战略诊断后，这里会展示品牌战略看板。"
@@ -71,22 +46,12 @@
 
           <view v-else class="brand-board-content">
             <section class="brand-strategy-grid">
-              <view
-                v-for="card in brandPointCards"
-                :key="card.key"
-                class="brand-strategy-point"
-                :class="{
-                  'brand-strategy-point--highlighted': card.highlighted,
-                }"
-                :style="`--brand-card-color:${card.color}`"
-              >
+              <view v-for="card in brandPointCards" :key="card.key" class="brand-strategy-point" :class="{
+                'brand-strategy-point--highlighted': card.highlighted,
+              }" :style="`--brand-card-color:${card.color}`">
                 <text class="brand-strategy-title">{{ card.title }}</text>
                 <view class="brand-star-row" aria-hidden="true">
-                  <text
-                    v-for="index in starIndexes"
-                    :key="`${card.key}-${index}`"
-                    class="brand-star"
-                  >
+                  <text v-for="index in starIndexes" :key="`${card.key}-${index}`" class="brand-star">
                     ★
                   </text>
                 </view>
@@ -97,13 +62,8 @@
             </section>
 
             <section class="brand-report-row">
-              <button
-                v-for="card in brandReportCards"
-                :key="card.key"
-                class="brand-report-button"
-                :class="{ 'brand-report-button--disabled': card.disabled }"
-                @click="handleBrandCardClick(card)"
-              >
+              <button v-for="card in brandReportCards" :key="card.key" class="brand-report-button"
+                :class="{ 'brand-report-button--disabled': card.disabled }" @click="handleBrandCardClick(card)">
                 <view class="brand-report-icon" aria-hidden="true">
                   <text></text>
                   <text></text>
@@ -118,43 +78,21 @@
     </template>
 
     <template v-else-if="activeType === 'key-metrics'">
-      <KeyMetricsMobile
-        v-if="isMobileLayout"
-        v-model:active-time="activeTime"
-        :nodes="metricNodes"
-        :time-options="timeOptions"
-        @back="goHome"
-      />
-      <KeyMetricsDesktop
-        v-else
-        v-model:active-time="activeTime"
-        :edges="metricEdges"
-        :nodes="metricNodes"
-        :time-options="timeOptions"
-      />
+      <KeyMetricsMobile v-if="isMobileLayout" v-model:active-time="activeTime" :nodes="metricNodes"
+        :time-options="timeOptions" @back="goHome" />
+      <KeyMetricsDesktop v-else v-model:active-time="activeTime" :edges="metricEdges" :nodes="metricNodes"
+        :time-options="timeOptions" />
     </template>
 
     <template v-else-if="activeType === 'marketing-operations'">
-      <MarketingOperationsMobile
-        v-if="isMobileLayout"
-        :nodes="operationNodes"
-        :status-legend="statusLegend"
-        @back="goHome"
-      />
-      <MarketingOperationsDesktop
-        v-else
-        :edges="operationEdges"
-        :nodes="operationNodes"
-        :status-legend="statusLegend"
-      />
+      <MarketingOperationsMobile v-if="isMobileLayout" :nodes="operationNodes" :status-legend="statusLegend"
+        @back="goHome" />
+      <MarketingOperationsDesktop v-else :edges="operationEdges" :nodes="operationNodes"
+        :status-legend="statusLegend" />
     </template>
 
     <template v-else-if="activeType === 'marketing-calendar'">
-      <MarketingCalendarMobile
-        v-if="isMobileLayout"
-        :items="scheduleItems"
-        @back="goHome"
-      />
+      <MarketingCalendarMobile v-if="isMobileLayout" :items="scheduleItems" @back="goHome" />
       <template v-else>
         <section class="page-hero">
           <text class="board-title">营销日历看板</text>
@@ -182,17 +120,11 @@
                 <text v-for="day in weekdays" :key="day">{{ day }}</text>
               </view>
               <view class="date-grid">
-                <view
-                  v-for="day in calendarDays"
-                  :key="day.key"
-                  class="date-cell"
-                  :class="{
-                    muted: day.muted,
-                    current: day.current,
-                    selected: day.selected,
-                  }"
-                  @click="selectCalendarDay(day)"
-                >
+                <view v-for="day in calendarDays" :key="day.key" class="date-cell" :class="{
+                  muted: day.muted,
+                  current: day.current,
+                  selected: day.selected,
+                }" @click="selectCalendarDay(day)">
                   <text>{{ day.date }}</text>
                 </view>
               </view>
@@ -208,18 +140,11 @@
               <text>启动时间</text>
             </view>
             <scroll-view class="schedule-list" scroll-y>
-              <button
-                v-for="item in scheduleItems"
-                :key="`${item.account}-${item.title}-${item.time}-${item.index}`"
-                class="schedule-card"
-                :class="{ active: item.active }"
-              >
+              <button v-for="item in scheduleItems" :key="`${item.account}-${item.title}-${item.time}-${item.index}`"
+                class="schedule-card" :class="{ active: item.active }">
                 <view class="method-cell">
-                  <text
-                    class="method-dot"
-                    :style="`background:${item.color}`"
-                  ></text>
-                  <text>{{ item.method }}</text>
+                  <text class="method-dot" :style="`background:${item.color}`"></text>
+                  <text class="method-text">{{ item.method }}</text>
                 </view>
                 <text>{{ item.platform }}</text>
                 <text>{{ item.account }}</text>
@@ -233,25 +158,14 @@
     </template>
 
     <template v-else-if="activeType === 'market-feedback'">
-      <MarketFeedbackMobile
-        v-if="isMobileLayout"
-        v-model:active-filter="activeFeedbackFilter"
-        :competitor-panel="competitorPanel"
-        :filters="feedbackFilters"
-        :stream-panel="streamPanel"
-        :top-panels="topPanels"
-        @back="goHome"
-      />
+      <MarketFeedbackMobile v-if="isMobileLayout" v-model:active-filter="activeFeedbackFilter"
+        :competitor-panel="competitorPanel" :filters="feedbackFilters" :stream-panel="streamPanel"
+        :top-panels="topPanels" @back="goHome" />
       <template v-else>
         <section class="feedback-toolbar">
           <text class="toolbar-label">时间：</text>
-          <view
-            v-for="item in feedbackFilters"
-            :key="item"
-            class="filter-pill"
-            :class="{ active: item === activeFeedbackFilter }"
-            @click="activeFeedbackFilter = item"
-          >
+          <view v-for="item in feedbackFilters" :key="item" class="filter-pill"
+            :class="{ active: item === activeFeedbackFilter }" @click="activeFeedbackFilter = item">
             {{ item }}
           </view>
         </section>
@@ -259,132 +173,90 @@
         <section class="page-hero feedback-hero">
           <text class="board-title">市场反馈看板</text>
           <text class="title-underline calendar-underline"></text>
-          <text class="hero-note"
-            >数据来源于微信聊天、外呼系统、录音工牌、友商直播间</text
-          >
+          <text class="hero-note">数据来源于微信聊天、外呼系统、录音工牌、友商直播间</text>
         </section>
-
-        <section class="feedback-grid top-grid">
-          <article
-            v-for="panel in topPanels"
-            :key="panel.title"
-            class="feedback-card"
-          >
-            <view class="card-head">
-              <text class="card-title">{{ panel.title }}</text>
-            </view>
-            <view class="panel-content">
-              <section
-                v-for="group in panel.groups"
-                :key="group.title || group.summaryTitle"
-                class="content-group"
-              >
-                <text v-if="group.title" class="group-title">{{
-                  group.title
-                }}</text>
-                <view v-if="group.items?.length" class="ordered-list">
-                  <view
-                    v-for="(item, index) in group.items"
-                    :key="item"
-                    class="list-item"
-                  >
-                    <text>{{ index + 1 }}.</text>
-                    <text>{{ item }}</text>
+        <view class="feedback-content">
+          <section class="feedback-grid top-grid">
+            <article v-for="panel in topPanels" :key="panel.title" class="feedback-card">
+              <view class="card-head">
+                <text class="card-title">{{ panel.title }}</text>
+              </view>
+              <view class="panel-content">
+                <section v-for="group in panel.groups" :key="group.title || group.summaryTitle" class="content-group">
+                  <text v-if="group.title" class="group-title">{{
+                    group.title
+                  }}</text>
+                  <view v-if="group.items?.length" class="ordered-list">
+                    <view v-for="(item, index) in group.items" :key="item" class="list-item">
+                      <text>{{ index + 1 }}.</text>
+                      <text>{{ item }}</text>
+                    </view>
                   </view>
-                </view>
-                <view v-if="group.summaryRows" class="summary">
-                  <view
-                    v-for="row in group.summaryRows"
-                    :key="row.label"
-                    class="summary-row"
-                  >
-                    <text class="summary-label">{{ row.label }}</text>
-                    <text>{{ row.value }}</text>
+                  <view v-if="group.summaryRows" class="summary">
+                    <view v-for="row in group.summaryRows" :key="row.label" class="summary-row">
+                      <text class="summary-label">{{ row.label }}</text>
+                      <text>{{ row.value }}</text>
+                    </view>
                   </view>
-                </view>
-              </section>
-            </view>
-          </article>
-        </section>
+                </section>
+              </view>
+            </article>
+          </section>
 
-        <section class="feedback-grid bottom-grid">
-          <article class="feedback-card feedback-card--narrow">
-            <view class="card-head">
-              <text class="card-title">{{ competitorPanel.title }}</text>
-            </view>
-            <view class="panel-content">
-              <section
-                v-for="group in competitorPanel.groups"
-                :key="group.title"
-                class="content-group"
-              >
-                <text class="group-title">{{ group.title }}</text>
-                <view class="ordered-list">
-                  <view
-                    v-for="(item, index) in group.items"
-                    :key="item"
-                    class="list-item"
-                  >
-                    <text>{{ index + 1 }}.</text>
-                    <text>{{ item }}</text>
-                  </view>
-                </view>
-              </section>
-            </view>
-          </article>
-
-          <article class="feedback-card feedback-card--wide">
-            <view class="card-head">
-              <text class="card-title">{{ streamPanel.title }}</text>
-            </view>
-            <view class="wide-content">
-              <view class="wide-column">
-                <section
-                  v-for="group in streamPanel.leftGroups"
-                  :key="group.title"
-                  class="content-group"
-                >
+          <section class="feedback-grid bottom-grid">
+            <article class="feedback-card feedback-card--narrow">
+              <view class="card-head">
+                <text class="card-title">{{ competitorPanel.title }}</text>
+              </view>
+              <view class="panel-content">
+                <section v-for="group in competitorPanel.groups" :key="group.title" class="content-group">
                   <text class="group-title">{{ group.title }}</text>
-                  <view v-if="group.mode === 'plain'" class="plain-list">
-                    <view
-                      v-for="item in group.items"
-                      :key="item"
-                      class="plain-item"
-                      >{{ item }}</view
-                    >
-                  </view>
-                  <text v-else class="tag-line">{{
-                    group.items.join("、")
-                  }}</text>
-                </section>
-              </view>
-              <view class="wide-column">
-                <section class="content-group">
-                  <text class="group-title">{{
-                    streamPanel.alertGroup.title
-                  }}</text>
-                  <view class="plain-list">
-                    <view
-                      v-for="item in streamPanel.alertGroup.items"
-                      :key="item"
-                      class="plain-item"
-                      >{{ item }}</view
-                    >
+                  <view class="ordered-list">
+                    <view v-for="(item, index) in group.items" :key="item" class="list-item">
+                      <text>{{ index + 1 }}.</text>
+                      <text>{{ item }}</text>
+                    </view>
                   </view>
                 </section>
               </view>
-            </view>
-          </article>
-        </section>
+            </article>
+
+            <article class="feedback-card feedback-card--wide">
+              <view class="card-head">
+                <text class="card-title">{{ streamPanel.title }}</text>
+              </view>
+              <view class="wide-content">
+                <view class="wide-column">
+                  <section v-for="group in streamPanel.leftGroups" :key="group.title" class="content-group">
+                    <text class="group-title">{{ group.title }}</text>
+                    <view v-if="group.mode === 'plain'" class="plain-list">
+                      <view v-for="item in group.items" :key="item" class="plain-item">{{ item }}</view>
+                    </view>
+                    <text v-else class="tag-line">{{
+                      group.items.join("、")
+                    }}</text>
+                  </section>
+                </view>
+                <view class="wide-column">
+                  <section class="content-group">
+                    <text class="group-title">{{
+                      streamPanel.alertGroup.title
+                    }}</text>
+                    <view class="plain-list">
+                      <view v-for="item in streamPanel.alertGroup.items" :key="item" class="plain-item">{{ item }}
+                      </view>
+                    </view>
+                  </section>
+                </view>
+              </view>
+            </article>
+          </section>
+        </view>
       </template>
     </template>
 
     <template v-else-if="activeType === 'ecological-partner'">
-      <EcologicalPartnerMobile
-        v-if="isMobileLayout"
-        :cards="partnerCards"
-        @back="goHome"
-      />
+      <EcologicalPartnerMobile v-if="isMobileLayout" :cards="partnerCards" @back="goHome" />
       <template v-else>
         <section class="page-hero partner-hero">
           <text class="board-title">生态伙伴看板</text>
@@ -392,19 +264,9 @@
         </section>
 
         <section class="partner-grid">
-          <button
-            v-for="card in partnerCards"
-            :key="card.title"
-            class="partner-card"
-            :class="{ active: card.active }"
-          >
+          <button v-for="card in partnerCards" :key="card.title" class="partner-card" :class="{ active: card.active }">
             <view class="partner-image-wrap">
-              <image
-                class="partner-image"
-                :src="card.image"
-                :alt="card.title"
-                mode="aspectFill"
-              />
+              <image class="partner-image" :src="card.image" :alt="card.title" mode="aspectFill" />
             </view>
             <text>{{ card.title }}</text>
           </button>
@@ -412,15 +274,9 @@
       </template>
     </template>
 
-    <StrategyReportModal
-      :visible="isReportModalVisible"
-      :loading="reportModalLoading"
-      :report="activeReportResponse?.report ?? null"
-      :next-actions="activeReportResponse?.nextActions ?? []"
-      :actions-disabled="reportModalLoading"
-      @close="closeReportModal"
-      @action="handleReportModalAction"
-    />
+    <StrategyReportModal :visible="isReportModalVisible" :loading="reportModalLoading"
+      :report="activeReportResponse?.report ?? null" :next-actions="activeReportResponse?.nextActions ?? []"
+      :actions-disabled="reportModalLoading" @close="closeReportModal" @action="handleReportModalAction" />
   </view>
 </template>
 
@@ -1799,24 +1655,25 @@ function goHome() {
 
 .back-button {
   position: absolute;
-  top: 22px;
+  top: 16px;
   left: 32px;
   z-index: 5;
-  height: 32px;
-  padding: 0 16px;
-  color: #1267ff;
-  font-size: 14px;
-  line-height: 32px;
-  background: #eef5ff;
-  border: 1px solid #c8ddff;
+  height: 28px;
+  padding: 0 12px;
+  color: #33466c;
+  font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: 12px;
+  line-height: 28px;
+  background: #ffffff;
+  border: 1px solid #d4d4d4;
+  outline: none;
   border-radius: 999px;
 }
 
-.back-button--right {
-  top: 34px;
-  right: 28px;
-  left: auto;
+.back-button:after {
+  display: none
 }
+
 
 .basic-hero,
 .page-hero,
@@ -2219,6 +2076,7 @@ function goHome() {
 }
 
 @media (max-width: 1440px) {
+
   .brand-strategy-grid,
   .brand-report-row {
     gap: 24px;
@@ -2234,6 +2092,7 @@ function goHome() {
 }
 
 @media (max-width: 1080px) {
+
   .brand-strategy-grid,
   .brand-report-row {
     grid-template-columns: repeat(3, minmax(160px, 1fr));
@@ -2430,7 +2289,7 @@ function goHome() {
   white-space: nowrap;
 }
 
-.metric-group > text {
+.metric-group>text {
   display: block;
   margin-bottom: 5px;
   color: #8b93a1;
@@ -2493,11 +2352,13 @@ function goHome() {
 }
 
 .calendar-layout {
+  height: calc(100vh - 153px);
   display: grid;
   grid-template-columns: 372px minmax(0, 1fr);
   gap: 34px;
   width: 100%;
   max-width: 1560px;
+  overflow: hidden;
   margin: 32px auto 0;
 }
 
@@ -2621,6 +2482,8 @@ function goHome() {
 }
 
 .schedule-panel {
+  height: 100%;
+  overflow: hidden;
   display: flex;
   min-width: 0;
   flex-direction: column;
@@ -2641,12 +2504,15 @@ function goHome() {
 }
 
 .schedule-list {
-  max-height: 690px;
+  flex: 1;
+  min-height: 0;
+  box-sizing: border-box;
   padding: 12px;
-  overflow: auto;
 }
 
 .schedule-card {
+  margin-right: 10px;
+  margin-left: 5px;
   min-height: 56px;
   margin-bottom: 14px;
   padding: 0 28px;
@@ -2656,7 +2522,7 @@ function goHome() {
   text-align: left;
   background: #ffffff;
   border: 1px solid #edf0f4;
-  border-radius: 22px;
+  border-radius: 56px;
   box-shadow: 0 3px 12px rgb(29 42 66 / 10%);
 }
 
@@ -2670,6 +2536,17 @@ function goHome() {
   align-items: center;
   gap: 10px;
   min-width: 0;
+}
+
+.method-text {
+  display: block;
+  color: #2f333a;
+  font-size: 14px;
+  line-height: 1.3;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .method-dot {
@@ -2777,7 +2654,7 @@ function goHome() {
   line-height: 1.7;
 }
 
-.content-group + .content-group {
+.content-group+.content-group {
   margin-top: 14px;
 }
 
@@ -2881,7 +2758,7 @@ function goHome() {
   display: block;
 }
 
-.partner-card > text {
+.partner-card>text {
   display: block;
   margin-top: 18px;
   color: #333333;
@@ -2978,5 +2855,40 @@ function goHome() {
   .feedback-hero {
     margin-top: 8px;
   }
+}
+
+.feedback-content {
+  height: calc(100vh - 153px);
+  overflow: auto;
+  padding-right: 10px;
+  padding-bottom: 10px;
+  box-sizing: border-box;
+}
+
+.feedback-content::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.feedback-content::-webkit-scrollbar-button,
+.feedback-content::-webkit-scrollbar-button:vertical:start:decrement,
+.feedback-content::-webkit-scrollbar-button:vertical:end:increment,
+.feedback-content::-webkit-scrollbar-button:horizontal:start:decrement,
+.feedback-content::-webkit-scrollbar-button:horizontal:end:increment {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+  -webkit-appearance: none;
+}
+
+.feedback-content::-webkit-scrollbar-track,
+.feedback-content::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+.feedback-content::-webkit-scrollbar-thumb {
+  background: #d4d4d4;
+  border-radius: 999px;
 }
 </style>

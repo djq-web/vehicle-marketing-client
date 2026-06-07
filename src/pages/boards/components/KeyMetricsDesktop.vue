@@ -13,7 +13,7 @@
       <text class="metrics-underline"></text>
     </view>
 
-    <scroll-view class="metrics-board" scroll-x scroll-y>
+    <view class="metrics-board">
       <view class="metrics-canvas-wrap">
         <canvas id="metrics-flow-canvas" canvas-id="metrics-flow-canvas" class="metrics-flow-canvas"></canvas>
 
@@ -70,7 +70,7 @@
           </view>
         </view>
       </view>
-    </scroll-view>
+    </view>
   </view>
 </template>
 
@@ -458,16 +458,18 @@ watch(
 <style>
 .key-metrics-desktop {
   position: relative;
-  min-height: calc(100vh - 32px);
+  height: calc(100vh - 54px);
   overflow: hidden;
   color: #2d323a;
   background: #ffffff;
+  display: flex;
+  flex-direction: column;
 }
 
 .metrics-filter {
   position: absolute;
   top: 36px;
-  left: 32px;
+  left: 8px;
   z-index: 8;
   display: flex;
   align-items: center;
@@ -529,23 +531,50 @@ watch(
   width: 228px;
   height: 4px;
   margin-top: 7px;
-  background: linear-gradient(90deg, transparent, #1267ff 12%, #1267ff 88%, transparent);
+  background: #1267ff;
   border-radius: 999px;
   box-shadow: 0 4px 10px rgb(18 103 255 / 22%);
 }
 
 .metrics-board {
-  height: calc(100vh - 98px);
-  min-height: 680px;
-  margin-top: 20px;
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  padding-top: 18px;
   overflow: auto;
+}
+
+.metrics-board::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.metrics-board::-webkit-scrollbar-button,
+.metrics-board::-webkit-scrollbar-button:vertical:start:decrement,
+.metrics-board::-webkit-scrollbar-button:vertical:end:increment,
+.metrics-board::-webkit-scrollbar-button:horizontal:start:decrement,
+.metrics-board::-webkit-scrollbar-button:horizontal:end:increment {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+  -webkit-appearance: none;
+}
+
+.metrics-board::-webkit-scrollbar-track,
+.metrics-board::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+.metrics-board::-webkit-scrollbar-thumb {
+  background: #d4d4d4;
+  border-radius: 999px;
 }
 
 .metrics-canvas-wrap {
   position: relative;
-  width: 1400px;
-  min-height: 730px;
-  margin: 0 auto;
+  width: 100%;
+  height: 100%;
 }
 
 .metrics-flow-canvas {
@@ -553,8 +582,8 @@ watch(
   top: 0;
   left: 0;
   z-index: 1;
-  width: 1400px;
-  height: 730px;
+  width: 100%;
+  height: 100%;
   pointer-events: none;
 }
 
