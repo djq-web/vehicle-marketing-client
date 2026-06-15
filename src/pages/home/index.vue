@@ -235,7 +235,9 @@
       <view class="file-preview-panel" @click.stop>
         <view class="file-preview-header">
           <text class="file-preview-title">{{ imagePreview.name }}</text>
-          <button class="file-preview-close" @click="closeImagePreview">关闭</button>
+          <button class="file-preview-close" aria-label="关闭预览" @click="closeImagePreview">
+            ×
+          </button>
         </view>
         <image class="file-preview-image" :src="imagePreview.url" mode="aspectFit" />
       </view>
@@ -4305,12 +4307,13 @@ page {
 }
 
 .file-preview-header {
+  position: relative;
   display: flex;
   min-height: 48px;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 10px 14px;
+  padding: 10px 56px 10px 14px;
   border-bottom: 1px solid #e5e7eb;
 }
 
@@ -4325,16 +4328,24 @@ page {
 }
 
 .file-preview-close {
-  width: auto;
+  position: absolute;
+  top: 50%;
+  right: 14px;
+  display: flex;
+  width: 32px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
   margin: 0;
-  padding: 0 12px;
+  padding: 0;
   color: #4b5563;
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 28px;
-  background: #ffffff;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
+  font-size: 26px;
+  font-weight: 300;
+  line-height: 1;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  transform: translateY(-50%);
 }
 
 .file-preview-close::after {

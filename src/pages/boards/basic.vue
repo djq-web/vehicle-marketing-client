@@ -1,7 +1,12 @@
 <template>
   <view class="board-page" :class="`board-page--${activeType}`">
-    <button v-if="activeType !== 'brand-strategy'" class="back-button" @click="goHome">
-      返回首页
+    <button
+      v-if="activeType !== 'brand-strategy' && !isMobileLayout"
+      class="back-button"
+      aria-label="返回首页"
+      @click="goHome"
+    >
+      ×
     </button>
 
     <template v-if="activeType === 'brand-strategy'">
@@ -1660,18 +1665,24 @@ function goHome() {
 .back-button {
   position: absolute;
   top: 16px;
-  left: 32px;
+  right: 32px;
   z-index: 5;
-  height: 28px;
-  padding: 0 12px;
-  color: #33466c;
+  display: flex;
+  width: 42px;
+  height: 42px;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  color: #7a7d82;
   font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
-  font-size: 12px;
-  line-height: 28px;
-  background: #ffffff;
-  border: 1px solid #d4d4d4;
+  font-size: 34px;
+  font-weight: 300;
+  line-height: 1;
+  background: transparent;
+  border: 0;
   outline: none;
-  border-radius: 999px;
+  border-radius: 0;
 }
 
 .back-button:after {

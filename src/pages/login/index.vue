@@ -35,7 +35,7 @@
             <view class="user-head"></view>
             <view class="user-body"></view>
           </view>
-          <input v-model="form.username" class="field-input" type="text" placeholder="请输入账号"
+          <input v-model="form.username" class="field-input" type="text" placeholder="请输入手机号/邮箱"
             placeholder-class="input-placeholder" confirm-type="next" />
         </view>
         <view class="field">

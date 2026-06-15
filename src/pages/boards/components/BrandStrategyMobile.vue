@@ -2,7 +2,9 @@
   <view class="brand-strategy-mobile" :style="pageStyle">
     <view class="mobile-board-nav">
       <view class="mobile-board-nav-content">
-        <button class="mobile-back" @click="emit('back')"></button>
+        <button class="mobile-back" aria-label="返回首页" @click="emit('back')">
+          ×
+        </button>
         <text class="mobile-title">品牌战略</text>
       </view>
     </view>
@@ -110,7 +112,7 @@ const starIndexes = [0, 1, 2, 3, 4, 5, 6];
 const mobileStatusBarHeight = ref(0);
 const mobileNavHeight = ref(56);
 const mobileNavContentHeight = ref(44);
-const mobileRightSafeWidth = ref(58);
+const mobileRightSafeWidth = ref(14);
 
 const pointCards = computed(() =>
   props.cards.filter(
@@ -155,7 +157,7 @@ function initMobileChrome() {
   mobileStatusBarHeight.value = statusBarHeight;
   mobileNavContentHeight.value = 44;
   mobileNavHeight.value = statusBarHeight + 56;
-  mobileRightSafeWidth.value = 58;
+  mobileRightSafeWidth.value = 14;
 
   // #ifdef MP-WEIXIN
   const menuButton = uni.getMenuButtonBoundingClientRect();
@@ -202,28 +204,31 @@ function initMobileChrome() {
 }
 
 .mobile-back {
-  position: relative;
+  position: absolute;
+  top: 50%;
+  right: var(--mobile-right-safe-width);
   z-index: 2;
+  display: flex;
   width: 68rpx;
   height: 68rpx;
+  align-items: center;
+  justify-content: center;
   margin: 0;
   padding: 0;
+  color: #2f333a;
+  font-size: 56rpx;
+  font-weight: 300;
+  line-height: 1;
   background: transparent;
   border: 0;
   border-radius: 0;
   box-shadow: none;
+  transform: translateY(-50%);
 }
 
 .mobile-back::before {
-  position: absolute;
-  top: 18rpx;
-  left: 12rpx;
-  width: 28rpx;
-  height: 28rpx;
-  content: "";
-  border-bottom: 4rpx solid #2f333a;
-  border-left: 4rpx solid #2f333a;
-  transform: rotate(45deg);
+  display: none;
+  content: none;
 }
 
 .mobile-back::after {
@@ -232,7 +237,7 @@ function initMobileChrome() {
 
 .mobile-title {
   position: absolute;
-  right: var(--mobile-right-safe-width);
+  right: calc(var(--mobile-right-safe-width) + 88rpx);
   left: 116rpx;
   overflow: hidden;
   color: #000000;

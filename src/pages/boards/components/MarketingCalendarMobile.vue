@@ -2,7 +2,9 @@
   <view class="calendar-mobile" :style="pageStyle">
     <view class="mobile-board-nav">
       <view class="mobile-board-nav-content">
-        <button class="mobile-back" @click="emit('back')"></button>
+        <button class="mobile-back" aria-label="返回首页" @click="emit('back')">
+          ×
+        </button>
         <text class="mobile-title">营销日历</text>
       </view>
     </view>
@@ -64,7 +66,7 @@ const emit = defineEmits<{
 const mobileStatusBarHeight = ref(0);
 const mobileNavHeight = ref(56);
 const mobileNavContentHeight = ref(44);
-const mobileRightSafeWidth = ref(58);
+const mobileRightSafeWidth = ref(14);
 const selectedDate = ref(new Date(2026, 4, 20));
 
 const pageStyle = computed(
@@ -113,7 +115,7 @@ function initMobileChrome() {
   mobileStatusBarHeight.value = statusBarHeight;
   mobileNavContentHeight.value = 44;
   mobileNavHeight.value = statusBarHeight + 56;
-  mobileRightSafeWidth.value = 58;
+  mobileRightSafeWidth.value = 14;
 
   // #ifdef MP-WEIXIN
   const menuButton = uni.getMenuButtonBoundingClientRect();
@@ -159,28 +161,31 @@ function initMobileChrome() {
 }
 
 .mobile-back {
-  position: relative;
+  position: absolute;
+  top: 50%;
+  right: var(--mobile-right-safe-width);
   z-index: 2;
+  display: flex;
   width: 34px;
   height: 34px;
+  align-items: center;
+  justify-content: center;
   margin: 0;
   padding: 0;
+  color: #2f333a;
+  font-size: 28px;
+  font-weight: 300;
+  line-height: 1;
   background: transparent;
   border: 0;
   border-radius: 0;
   box-shadow: none;
+  transform: translateY(-50%);
 }
 
 .mobile-back::before {
-  position: absolute;
-  top: 9px;
-  left: 6px;
-  width: 14px;
-  height: 14px;
-  content: "";
-  border-bottom: 2px solid #2f333a;
-  border-left: 2px solid #2f333a;
-  transform: rotate(45deg);
+  display: none;
+  content: none;
 }
 
 .mobile-back::after {
@@ -189,7 +194,7 @@ function initMobileChrome() {
 
 .mobile-title {
   position: absolute;
-  right: var(--mobile-right-safe-width);
+  right: calc(var(--mobile-right-safe-width) + 44px);
   left: 58px;
   overflow: hidden;
   color: #000000;

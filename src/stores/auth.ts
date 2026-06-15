@@ -41,7 +41,6 @@ export const useAuthStore = defineStore("auth", {
         method: "POST",
         data: {
           loginName,
-          email: loginName,
           password,
         },
         skipAuth: true,
