@@ -283,7 +283,8 @@
 <script setup lang="ts">
 import { onLoad } from "@dcloudio/uni-app";
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
-import { request } from "@/services/api";
+import { miniappStaticAssets } from "@/config/static-assets";
+import { getUserErrorMessage, request } from "@/services/api";
 import { useAuthStore } from "@/stores/auth";
 import { useStrategyChatStore } from "@/stores/strategyChat";
 import type {
@@ -1233,16 +1234,19 @@ const streamPanel = {
 };
 
 const partnerCards = [
-  { title: "平台投流", image: "/static/svg/platform-traffic-distribution.svg" },
-  { title: "产品拍摄", image: "/static/svg/product-photography.svg" },
+  {
+    title: "平台投流",
+    image: miniappStaticAssets.boards.platformTrafficDistribution,
+  },
+  { title: "产品拍摄", image: miniappStaticAssets.boards.productPhotography },
   {
     title: "短视频制作",
-    image: "/static/svg/short-video-production.svg",
+    image: miniappStaticAssets.boards.shortVideoProduction,
     active: true,
   },
   {
     title: "独立站建设",
-    image: "/static/svg/independent-website-construction.svg",
+    image: miniappStaticAssets.boards.independentWebsiteConstruction,
   },
 ];
 
@@ -1442,7 +1446,7 @@ function findDashboardPoint(
 }
 
 function resolveErrorMessage(err: unknown, fallback: string) {
-  return err instanceof Error && err.message ? err.message : fallback;
+  return getUserErrorMessage(err, fallback);
 }
 
 function handleBrandCardClick(card: BrandStrategyCard) {

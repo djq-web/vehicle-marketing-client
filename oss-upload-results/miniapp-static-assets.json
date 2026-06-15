@@ -1,0 +1,60 @@
+{
+  "uploadedAt": "2026-06-13T10:34:33.934Z",
+  "clientRoot": "/Users/luoxd/workspace/vehicle-marketing-client",
+  "assets": [
+    {
+      "source": "src/static/login-bg.png",
+      "size": 6145162,
+      "mimeType": "image/png",
+      "storageKey": "miniapp-static/login/b6820560-d604-4cbf-935c-950446f3f6b5-login-bg.png",
+      "storageProvider": "oss",
+      "storageUrl": "https://chesi-agent.oss-cn-shanghai.aliyuncs.com/miniapp-static/login/b6820560-d604-4cbf-935c-950446f3f6b5-login-bg.png",
+      "sha256": "2db48aed64416eaf7196947d441ed170cda7c9d1f4c8b2af03ab2856b464da11"
+    },
+    {
+      "source": "src/static/mobile-bg.png",
+      "size": 952832,
+      "mimeType": "image/png",
+      "storageKey": "miniapp-static/login/465ed472-798f-4de0-a337-4b63d7edff8b-mobile-bg.png",
+      "storageProvider": "oss",
+      "storageUrl": "https://chesi-agent.oss-cn-shanghai.aliyuncs.com/miniapp-static/login/465ed472-798f-4de0-a337-4b63d7edff8b-mobile-bg.png",
+      "sha256": "1ad07b65d779f751d59cda575e1fcd802d7fb3666354cf23f0fb0413f8ab38a7"
+    },
+    {
+      "source": "src/static/svg/platform-traffic-distribution.svg",
+      "size": 441835,
+      "mimeType": "image/svg+xml",
+      "storageKey": "miniapp-static/boards/5e7d35ed-772c-479d-8105-b233210d1a6b-platform-traffic-distribution.svg",
+      "storageProvider": "oss",
+      "storageUrl": "https://chesi-agent.oss-cn-shanghai.aliyuncs.com/miniapp-static/boards/5e7d35ed-772c-479d-8105-b233210d1a6b-platform-traffic-distribution.svg",
+      "sha256": "50d42223b999e933d0e2413484f2926a6de51211077f80c06aa8e5ff16485063"
+    },
+    {
+      "source": "src/static/svg/product-photography.svg",
+      "size": 383690,
+      "mimeType": "image/svg+xml",
+      "storageKey": "miniapp-static/boards/3c98bd31-7121-49bc-807a-79cb04840bf6-product-photography.svg",
+      "storageProvider": "oss",
+      "storageUrl": "https://chesi-agent.oss-cn-shanghai.aliyuncs.com/miniapp-static/boards/3c98bd31-7121-49bc-807a-79cb04840bf6-product-photography.svg",
+      "sha256": "7ece40318be340ee921b0cca318875cb687190a84e4ea513a06a67b438ceccc6"
+    },
+    {
+      "source": "src/static/svg/short-video-production.svg",
+      "size": 452939,
+      "mimeType": "image/svg+xml",
+      "storageKey": "miniapp-static/boards/080f4fee-bb41-487b-a9eb-ac1552ee1073-short-video-production.svg",
+      "storageProvider": "oss",
+      "storageUrl": "https://chesi-agent.oss-cn-shanghai.aliyuncs.com/miniapp-static/boards/080f4fee-bb41-487b-a9eb-ac1552ee1073-short-video-production.svg",
+      "sha256": "c878b6a7e106ff80ef178d3c603fdc725fb7174ce44a2a427b7ebceb0d7523c8"
+    },
+    {
+      "source": "src/static/svg/independent-website-construction.svg",
+      "size": 368961,
+      "mimeType": "image/svg+xml",
+      "storageKey": "miniapp-static/boards/d0a13f4c-f039-454c-8cca-4393862768e8-independent-website-construction.svg",
+      "storageProvider": "oss",
+      "storageUrl": "https://chesi-agent.oss-cn-shanghai.aliyuncs.com/miniapp-static/boards/d0a13f4c-f039-454c-8cca-4393862768e8-independent-website-construction.svg",
+      "sha256": "3b3548623d96e073fb7e2ccfe05b7e94547bc359e3128f9d2a2bc9df38aeba8e"
+    }
+  ]
+}

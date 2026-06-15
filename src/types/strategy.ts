@@ -28,6 +28,7 @@ export type StrategyFileAsset = {
   mimeType?: string | null;
   size: number;
   status: string;
+  previewUrl?: string | null;
   extractedTextLength?: number;
   metadata?: Record<string, unknown> | null;
   createdAt?: string;
@@ -128,7 +129,7 @@ export type StrategyChatResponse = {
   processing?: boolean;
   messages?: AgentMessage[];
   userMessage: AgentMessage;
-  assistantMessage: AgentMessage;
+  assistantMessage?: AgentMessage | null;
   result: Record<string, unknown>;
   nextActions: string[];
   ui: StrategyUiDescriptor;

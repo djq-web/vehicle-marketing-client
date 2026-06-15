@@ -19,8 +19,22 @@
             })
           "
         >
-          <text>{{ report.title || report.type }}</text>
+          <text>{{ report.title }}</text>
           <text v-if="report.needsSync" class="chip-small">需同步</text>
+        </button>
+      </view>
+    </view>
+
+    <view v-if="openingActions.length" class="opening-action-section">
+      <view class="opening-action-list">
+        <button
+          v-for="item in openingActions"
+          :key="item.id"
+          class="opening-action-button"
+          :disabled="actionsDisabled"
+          @click="emit('action', item.action, item.payload)"
+        >
+          <text>{{ item.label }}</text>
         </button>
       </view>
     </view>
@@ -58,6 +72,13 @@ type DisplayReport = {
   needsSync: boolean;
 };
 
+type DisplayAction = {
+  id: string;
+  action: string;
+  label: string;
+  payload: Record<string, unknown> | undefined;
+};
+
 const asRecord = (value: unknown): Record<string, unknown> =>
   value && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
@@ -70,7 +91,19 @@ const asArray = (value: unknown): Record<string, unknown>[] =>
 
 const reportCardTypes = new Set<string>([]);
 
+const openingCardTypes = new Set<string>(["strategy_conversation_opening"]);
+
 const reportActionTypes = new Set(["sync_reports"]);
+
+const reportTypeLabels: Record<string, string> = {
+  enterprise_diagnosis: "企业战略诊断报告",
+  enterprise_solution: "企业战略方案报告",
+  beidou_declaration: "北斗宣言",
+  strategy_positioning: "战略定位报告",
+  advantages_barriers: "优势与壁垒报告",
+  business_model_panorama: "商业模式全景图",
+  brand_experience_blueprint: "品牌与体验蓝图",
+};
 
 const card = computed(() => asRecord(props.metadata?.card));
 const cardDiagnosisId = computed(() =>
@@ -93,7 +126,7 @@ const reports = computed<DisplayReport[]>(() =>
     id: String(report.id || report.type || `report-${index}`),
     diagnosisId: String(report.diagnosisId || cardDiagnosisId.value),
     type: String(report.type || "report"),
-    title: String(report.title || report.type || "战略报告"),
+    title: resolveReportTitle(report),
     needsSync: report.needsSync === true,
   })),
 );
@@ -105,14 +138,45 @@ const reportDetail = computed(() => {
 const hasReportContent = computed(
   () => reports.value.length > 0 || Boolean(reportDetail.value),
 );
+const openingActions = computed<DisplayAction[]>(() =>
+  asArray(card.value.actions)
+    .map((item, index) => {
+      const action = String(item.action || "").trim();
+      const label = String(item.label || "").trim();
+
+      if (!action || !label) {
+        return null;
+      }
+
+      const payload = asRecord(item.payload);
+
+      return {
+        id: String(item.id || action || `opening-action-${index}`),
+        action,
+        label,
+        payload: Object.keys(payload).length > 0 ? payload : undefined,
+      };
+    })
+    .filter((item): item is DisplayAction => Boolean(item)),
+);
+const hasOpeningActionContent = computed(
+  () => openingCardTypes.has(uiType.value) && openingActions.value.length > 0,
+);
 const cardReady = computed(
   () =>
     Object.keys(card.value).length > 0 &&
-    reportCardTypes.has(uiType.value) &&
-    hasReportContent.value,
+    ((reportCardTypes.has(uiType.value) && hasReportContent.value) ||
+      hasOpeningActionContent.value),
 );
 const cardTitle = computed(() => {
+  const explicitTitle = String(card.value.title || "").trim();
+
+  if (explicitTitle && !isInternalCode(explicitTitle)) {
+    return explicitTitle;
+  }
+
   const titleMap: Record<string, string> = {
+    strategy_conversation_opening: "当前诊断进展",
     strategy_reports_generated: "战略报告",
     strategy_reports_synced: "战略报告",
     strategy_reports_pending: "战略报告",
@@ -143,6 +207,21 @@ function toVisibleStatusText(value: unknown) {
   }
 
   return text;
+}
+
+function resolveReportTitle(report: Record<string, unknown>) {
+  const title = String(report.title || "").trim();
+
+  if (title && !isInternalCode(title)) {
+    return title;
+  }
+
+  const type = String(report.type || "").trim();
+  return reportTypeLabels[type] || "战略报告";
+}
+
+function isInternalCode(value: string) {
+  return /^[a-z][a-z0-9_./-]*$/i.test(value) && !/[\u3400-\u9fff]/.test(value);
 }
 </script>
 
@@ -182,6 +261,43 @@ function toVisibleStatusText(value: unknown) {
 
 .report-section {
   margin-top: 12px;
+}
+
+.opening-action-section {
+  margin-top: 12px;
+}
+
+.opening-action-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.opening-action-button {
+  display: inline-flex;
+  width: auto;
+  min-width: 92px;
+  min-height: 32px;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0 12px;
+  color: #1267ff;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 30px;
+  background: #edf5ff;
+  border: 1px solid #cfe0f7;
+  border-radius: 6px;
+  box-shadow: none;
+}
+
+.opening-action-button::after {
+  border: 0;
+}
+
+.opening-action-button[disabled] {
+  opacity: 0.55;
 }
 
 .report-list {

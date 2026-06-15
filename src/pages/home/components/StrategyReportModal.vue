@@ -70,9 +70,28 @@ const isRendered = ref(false);
 const isClosing = ref(false);
 let closeTimer: ReturnType<typeof setTimeout> | null = null;
 
+const reportTypeLabels: Record<string, string> = {
+  enterprise_diagnosis: "企业战略诊断报告",
+  enterprise_solution: "企业战略方案报告",
+  beidou_declaration: "北斗宣言",
+  strategy_positioning: "战略定位报告",
+  advantages_barriers: "优势与壁垒报告",
+  business_model_panorama: "商业模式全景图",
+  brand_experience_blueprint: "品牌与体验蓝图",
+};
+
 const modalTitle = computed(() => {
   const title = props.report?.title;
-  return typeof title === "string" && title.trim() ? title.trim() : "战略报告";
+  const text = typeof title === "string" ? title.trim() : "";
+
+  if (text && !isInternalCode(text)) {
+    return text;
+  }
+
+  const type = props.report?.type;
+  const reportType = typeof type === "string" ? type.trim() : "";
+
+  return reportTypeLabels[reportType] || "战略报告";
 });
 const canExportPdf = computed(() => {
   const report = props.report ?? {};
@@ -123,6 +142,10 @@ function requestClose() {
   if (!props.loading) {
     emit("close");
   }
+}
+
+function isInternalCode(value: string) {
+  return /^[a-z][a-z0-9_./-]*$/i.test(value) && !/[\u3400-\u9fff]/.test(value);
 }
 </script>
 

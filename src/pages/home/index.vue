@@ -28,19 +28,30 @@
               <text>创建新对话</text>
             </button>
 
-            <scroll-view class="chat-list">
-              <template v-for="chat in sessionChats" :key="chat.id">
-                <text v-if="chat.date" class="date-label">{{ chat.date }}</text>
-                <button class="chat-item" :class="{ active: chat.active }" @click="selectSession(chat.id)">
-                  <text>{{ chat.title }}</text>
-                </button>
-              </template>
+            <scroll-view class="chat-list" scroll-y>
+              <view v-for="group in sessionChatGroups" :key="group.label" class="chat-section">
+                <text class="date-label">{{ group.label }}</text>
+                <view
+                  v-for="chat in group.items"
+                  :key="chat.id"
+                  class="chat-item"
+                  :class="{ active: chat.active }"
+                  role="button"
+                  tabindex="0"
+                  @click="selectSession(chat.id)"
+                >
+                  <text class="chat-title">{{ chat.title }}</text>
+                  <!-- <button class="chat-more" :aria-label="`${chat.title}更多操作`" @click.stop="handleSessionMore">
+                    <text>...</text>
+                  </button> -->
+                </view>
+              </view>
 
               <template v-if="!sessionChats.length">
                 <template v-for="(item, index) in fallbackChats" :key="`${item.title}-${index}`">
                   <text v-if="item.date" class="date-label">{{ item.date }}</text>
                   <view class="chat-item" :class="{ active: item.active }">
-                    <text>{{ item.title }}</text>
+                    <text class="chat-title">{{ item.title }}</text>
                   </view>
                 </template>
               </template>
@@ -80,14 +91,43 @@
             <view v-for="message in chatStore.messages" :key="message.id" class="message-row"
               :class="{ mine: message.role === 'USER' }">
               <view class="message-bubble">
-                <text v-if="message.role === 'USER'" class="message-content">
-                  {{ message.content }}
-                </text>
+                <template v-if="message.role === 'USER'">
+                  <text v-if="shouldShowUserMessageText(message)" class="message-content">
+                    {{ message.content }}
+                  </text>
+                  <view
+                    v-if="getMessageUploadFile(message)"
+                    class="upload-file-card"
+                    :class="{ previewable: canPreviewUploadFile(message) }"
+                    role="button"
+                    tabindex="0"
+                    @click="previewUploadFile(message)"
+                  >
+                    <view class="upload-file-icon" :class="getUploadFileKind(message)">
+                      <text>{{ getUploadFileKindLabel(message) }}</text>
+                    </view>
+                    <view class="upload-file-main">
+                      <text class="upload-file-label">上传资料</text>
+                      <text class="upload-file-name">
+                        {{ getMessageUploadFile(message)?.originalName }}
+                      </text>
+                      <text class="upload-file-meta">
+                        {{ getUploadFileMetaText(message) }}
+                      </text>
+                    </view>
+                    <text v-if="canPreviewUploadFile(message)" class="upload-file-action">
+                      {{ getUploadFileActionText(message) }}
+                    </text>
+                  </view>
+                  <text v-if="getUploadFileError(message)" class="upload-file-error">
+                    {{ getUploadFileError(message) }}
+                  </text>
+                </template>
                 <MessageMarkdown v-else class="message-content" :content="message.content"
                   :animate="chatStore.shouldAnimateAssistantMessage(message)" @animation-finished="
                     chatStore.finishAssistantMessageAnimation(message.id)
                     " @typing-progress="scrollToBottom" />
-                <StrategyMessageCard v-if="message.metadata?.card" :metadata="message.metadata"
+                <StrategyMessageCard v-if="message.role !== 'USER' && message.metadata?.card" :metadata="message.metadata"
                   :actions-disabled="isBusy" :show-next-actions="message.id === latestActionableMessageId"
                   @action="handleCardAction" />
                 <!-- <text class="message-time">{{ formatTime(message.createdAt) }}</text> -->
@@ -146,13 +186,15 @@
 
         <view class="composer" @click.stop>
           <text v-if="strategyNotice" class="error-text">{{ strategyNotice }}</text>
-          <view class="editor-wrap">
-            <text v-if="!draft" class="message-placeholder">
+          <view class="editor-wrap" :style="editorWrapStyle">
+            <text v-if="!draft && !isComposing && !isEditorFocused" class="message-placeholder">
               {{ composerPlaceholder }}
             </text>
             <textarea v-model="draft" class="message-input" :style="{ height: messageInputHeight }" :disabled="isBusy"
-              :maxlength="-1" @blur="handleEditorBlur" @confirm="sendMessage" @focus="handleEditorFocus"
-              @input="handleDraftInput" @keydown="handleEditorKeydown" @tap="handleEditorPointerEnd" />
+              :maxlength="-1" placeholder="" @blur="handleEditorBlur" @confirm="sendMessage" @focus="handleEditorFocus"
+              @compositioncancel="handleEditorCompositionEnd" @compositionend="handleEditorCompositionEnd"
+              @compositionstart="handleEditorCompositionStart" @input="handleDraftInput" @keydown="handleEditorKeydown"
+              @tap="handleEditorPointerEnd" />
           </view>
 
           <view class="composer-footer">
@@ -189,12 +231,22 @@
       :report="activeReportResponse?.report ?? null" :next-actions="activeReportResponse?.nextActions ?? []"
       :actions-disabled="isBusy" @close="closeReportModal" @action="handleReportModalAction" />
 
+    <view v-if="imagePreview.visible" class="file-preview-overlay" @click="closeImagePreview">
+      <view class="file-preview-panel" @click.stop>
+        <view class="file-preview-header">
+          <text class="file-preview-title">{{ imagePreview.name }}</text>
+          <button class="file-preview-close" @click="closeImagePreview">关闭</button>
+        </view>
+        <image class="file-preview-image" :src="imagePreview.url" mode="aspectFit" />
+      </view>
+    </view>
+
     <view v-if="isSettingsVisible" class="settings-overlay" @click="closeSettings">
       <view class="settings-panel" @click.stop>
+        <button class="settings-close settings-panel-close" @click="closeSettings">
+          <text class="close-icon"></text>
+        </button>
         <view class="settings-nav">
-          <button class="settings-close" @click="closeSettings">
-            <text class="close-icon"></text>
-          </button>
           <button v-for="item in settingsMenuItems" :key="item.id" class="settings-nav-item"
             :class="{ active: activeSettingsMenu === item.id }" @click="setActiveSettingsMenu(item.id)">
             <text class="settings-nav-icon" :class="item.id"></text>
@@ -364,6 +416,8 @@
 import { onLoad, onUnload } from "@dcloudio/uni-app";
 import { computed, nextTick, reactive, ref, watch } from "vue";
 import {
+  fetchBlob,
+  getUserErrorMessage,
   request,
   upload,
   uploadBrowserFile,
@@ -372,7 +426,13 @@ import {
 } from "@/services/api";
 import { useAuthStore } from "@/stores/auth";
 import { useStrategyChatStore } from "@/stores/strategyChat";
-import type { LoginResponse, StrategyReportResponse } from "@/types/strategy";
+import type {
+  AgentMessage,
+  LoginResponse,
+  StrategyChatSessionSummary,
+  StrategyFileAsset,
+  StrategyReportResponse,
+} from "@/types/strategy";
 import MessageMarkdown from "./components/MessageMarkdown.vue";
 import StrategyMessageCard from "./components/StrategyMessageCard.vue";
 import StrategyReportModal from "./components/StrategyReportModal.vue";
@@ -428,6 +488,18 @@ type ComposerMode = {
   placeholder: string;
 };
 
+type SessionChatItem = {
+  id: string;
+  title: string;
+  preview: string;
+  active: boolean;
+};
+
+type SessionChatGroup = {
+  label: string;
+  items: SessionChatItem[];
+};
+
 type PickedFile = {
   path?: string;
   tempFilePath?: string;
@@ -451,6 +523,13 @@ type RectLike = {
 
 type AuthUser = LoginResponse["user"];
 type SettingsMenuId = "account" | "password";
+type PreviewableStrategyFile = Pick<
+  StrategyFileAsset,
+  "id" | "originalName" | "mimeType" | "previewUrl" | "status"
+> & {
+  size?: number | null;
+  metadata?: Record<string, unknown> | null;
+};
 type MeContext = {
   user?: AuthUser;
   tenant?: {
@@ -506,6 +585,7 @@ const COMPOSER_INPUT_DESKTOP_MAX_HEIGHT = 132;
 const COMPOSER_INPUT_MOBILE_MAX_HEIGHT = 112;
 const COMPOSER_INPUT_DESKTOP_LINE_HEIGHT = 22;
 const COMPOSER_INPUT_MOBILE_LINE_HEIGHT = 24;
+const SESSION_DAY_MS = 24 * 60 * 60 * 1000;
 const FEEDBACK_MAX_IMAGE_COUNT = 6;
 
 const authStore = useAuthStore();
@@ -531,7 +611,9 @@ const boardMenuStyle = ref("left:16px;top:96px;width:320px;");
 const editorCursor = ref(0);
 const boardMenuCloseTimer = ref<ReturnType<typeof setTimeout> | null>(null);
 const draft = ref("");
-const messageInputHeight = ref(`${COMPOSER_INPUT_MIN_HEIGHT}px`);
+const isComposing = ref(false);
+const isEditorFocused = ref(false);
+const messageInputHeightValue = ref(COMPOSER_INPUT_MIN_HEIGHT);
 const messageScrollTop = ref(0);
 const activeSettingsMenu = ref<SettingsMenuId>("account");
 const settingsLoading = ref(false);
@@ -541,6 +623,14 @@ const feedbackSubmitting = ref(false);
 const feedbackError = ref("");
 const avatarUploading = ref(false);
 const avatarResetting = ref(false);
+const previewingFileId = ref("");
+const filePreviewErrors = reactive<Record<string, string>>({});
+const imagePreview = reactive({
+  visible: false,
+  url: "",
+  name: "",
+});
+const previewObjectUrls = new Set<string>();
 const pendingAvatarFilePath = ref("");
 const pendingAvatarFileName = ref("");
 const pendingAvatarBrowserFile = ref<Blob | null>(null);
@@ -564,6 +654,14 @@ const feedbackForm = reactive({
 });
 const feedbackImages = ref<FeedbackImage[]>([]);
 const isMobileLayout = ref(false);
+const messageInputHeight = computed(() => `${messageInputHeightValue.value}px`);
+const editorWrapStyle = computed(() => {
+  const verticalPadding = isMobileLayout.value ? 24 : 0;
+
+  return {
+    height: `${messageInputHeightValue.value + verticalPadding}px`,
+  };
+});
 
 function updateMobileLayout(width = uni.getSystemInfoSync().windowWidth) {
   isMobileLayout.value = width <= 760;
@@ -573,6 +671,15 @@ function getComposerInputMaxHeight() {
   return isMobileLayout.value
     ? COMPOSER_INPUT_MOBILE_MAX_HEIGHT
     : COMPOSER_INPUT_DESKTOP_MAX_HEIGHT;
+}
+
+function setComposerInputHeight(height: number) {
+  messageInputHeightValue.value = Math.round(
+    Math.min(
+      getComposerInputMaxHeight(),
+      Math.max(COMPOSER_INPUT_MIN_HEIGHT, height),
+    ),
+  );
 }
 
 function countComposerColumns(text: string) {
@@ -607,7 +714,7 @@ function estimateComposerInputHeight(value: string) {
 
 function updateComposerInputHeight() {
   const estimatedHeight = estimateComposerInputHeight(draft.value);
-  messageInputHeight.value = `${estimatedHeight}px`;
+  setComposerInputHeight(estimatedHeight);
 
   // #ifdef H5
   nextTick(() => {
@@ -619,16 +726,30 @@ function updateComposerInputHeight() {
     }
 
     const maxHeight = getComposerInputMaxHeight();
-    textarea.style.height = `${COMPOSER_INPUT_MIN_HEIGHT}px`;
+    textarea.style.setProperty("height", "auto", "important");
+    textarea.style.setProperty("min-height", `${COMPOSER_INPUT_MIN_HEIGHT}px`, "important");
+    textarea.style.setProperty("max-height", `${maxHeight}px`, "important");
+
+    if (!draft.value) {
+      setComposerInputHeight(COMPOSER_INPUT_MIN_HEIGHT);
+      textarea.style.setProperty("height", `${COMPOSER_INPUT_MIN_HEIGHT}px`, "important");
+      textarea.style.setProperty("overflow-y", "hidden", "important");
+      return;
+    }
+
     const scrollHeight = textarea.scrollHeight || estimatedHeight;
     const height = Math.min(
       maxHeight,
       Math.max(COMPOSER_INPUT_MIN_HEIGHT, scrollHeight),
     );
 
-    messageInputHeight.value = `${height}px`;
-    textarea.style.height = `${height}px`;
-    textarea.style.overflowY = scrollHeight > maxHeight ? "auto" : "hidden";
+    setComposerInputHeight(height);
+    textarea.style.setProperty("height", `${messageInputHeightValue.value}px`, "important");
+    textarea.style.setProperty(
+      "overflow-y",
+      scrollHeight > maxHeight ? "auto" : "hidden",
+      "important",
+    );
   });
   // #endif
 }
@@ -1016,6 +1137,342 @@ function canAccessBoard(type: BoardType) {
 
   return board ? hasAllPermissions(board.requiredAll) : false;
 }
+
+function asRecord(value: unknown): Record<string, unknown> {
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      return asRecord(parsed);
+    } catch {
+      return {};
+    }
+  }
+
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+function getString(value: unknown) {
+  return typeof value === "string" && value.trim() ? value.trim() : "";
+}
+
+function getNumber(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    const numberValue = Number(value);
+    return Number.isFinite(numberValue) ? numberValue : null;
+  }
+
+  return null;
+}
+
+function extractUploadedFileName(content: string) {
+  return /^(?:上传资料|已上传资料)[:：]\s*(.+?)\s*$/.exec(content)?.[1]?.trim() || "";
+}
+
+function toPreviewableStrategyFile(
+  source: Record<string, unknown>,
+  fallbackName = "",
+): PreviewableStrategyFile | null {
+  const id = getString(source.id) || getString(source.fileId);
+  const originalName =
+    getString(source.originalName) ||
+    getString(source.name) ||
+    getString(source.fileName) ||
+    fallbackName;
+
+  if (!id || !originalName) {
+    return null;
+  }
+
+  return {
+    id,
+    originalName,
+    mimeType: getString(source.mimeType) || getString(source.contentType) || null,
+    size: getNumber(source.size),
+    status: getString(source.status) || "uploaded",
+    metadata: asRecord(source.metadata),
+    previewUrl:
+      getString(source.previewUrl) ||
+      getString(source.url) ||
+      `/strategy/files/${id}/preview`,
+  };
+}
+
+function getMessageUploadFile(message: AgentMessage): PreviewableStrategyFile | null {
+  if (message.role !== "USER") {
+    return null;
+  }
+
+  const metadata = asRecord(message.metadata);
+  const card = asRecord(metadata.card);
+  const fallbackName =
+    extractUploadedFileName(message.content) ||
+    extractUploadedFileName(getString(card.message));
+  const sources = [
+    asRecord(metadata.file),
+    asRecord(card.file),
+    asRecord(metadata.uploadedFile),
+    asRecord(card.uploadedFile),
+    metadata,
+  ];
+
+  for (const source of sources) {
+    const file = toPreviewableStrategyFile(source, fallbackName);
+
+    if (file) {
+      return file;
+    }
+  }
+
+  return null;
+}
+
+function isPdfUploadFile(file: PreviewableStrategyFile) {
+  return (
+    file.mimeType?.toLowerCase() === "application/pdf" ||
+    /\.pdf$/i.test(file.originalName)
+  );
+}
+
+function isImageUploadFile(file: PreviewableStrategyFile) {
+  return (
+    file.mimeType?.toLowerCase().startsWith("image/") ||
+    /\.(png|jpe?g|gif|webp|bmp)$/i.test(file.originalName)
+  );
+}
+
+function canPreviewFile(file: PreviewableStrategyFile | null) {
+  return Boolean(file && (isPdfUploadFile(file) || isImageUploadFile(file)));
+}
+
+function canPreviewUploadFile(message: AgentMessage) {
+  return canPreviewFile(getMessageUploadFile(message));
+}
+
+function getUploadFileActionText(message: AgentMessage) {
+  const file = getMessageUploadFile(message);
+
+  if (!file) {
+    return "";
+  }
+
+  if (previewingFileId.value === file.id) {
+    return "读取中";
+  }
+
+  if (file.status === "failed") {
+    return "读取失败";
+  }
+
+  if (file.status === "uploaded") {
+    return "读取中";
+  }
+
+  return "预览";
+}
+
+function shouldShowUserMessageText(message: AgentMessage) {
+  return Boolean(message.content && !getMessageUploadFile(message));
+}
+
+function getUploadFileKind(message: AgentMessage) {
+  const file = getMessageUploadFile(message);
+
+  if (!file) {
+    return "file";
+  }
+
+  if (isImageUploadFile(file)) {
+    return "image";
+  }
+
+  if (isPdfUploadFile(file)) {
+    return "pdf";
+  }
+
+  return "file";
+}
+
+function getUploadFileKindLabel(message: AgentMessage) {
+  const kind = getUploadFileKind(message);
+
+  if (kind === "image") {
+    return "图";
+  }
+
+  if (kind === "pdf") {
+    return "PDF";
+  }
+
+  return "文";
+}
+
+function formatFileSize(size?: number | null) {
+  if (!size || size <= 0) {
+    return "";
+  }
+
+  if (size < 1024) {
+    return `${size} B`;
+  }
+
+  if (size < 1024 * 1024) {
+    return `${(size / 1024).toFixed(1)} KB`;
+  }
+
+  return `${(size / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function getUploadFileMetaText(message: AgentMessage) {
+  const file = getMessageUploadFile(message);
+
+  if (!file) {
+    return "";
+  }
+
+  const typeText = isImageUploadFile(file)
+    ? "图片资料"
+    : isPdfUploadFile(file)
+      ? "PDF 资料"
+      : file.mimeType || "资料文件";
+
+  return [typeText, formatFileSize(file.size)].filter(Boolean).join(" · ");
+}
+
+function getUploadFileError(message: AgentMessage) {
+  const file = getMessageUploadFile(message);
+
+  return file ? filePreviewErrors[file.id] || "" : "";
+}
+
+function revokePreviewObjectUrl(url: string) {
+  if (!url || !previewObjectUrls.has(url)) {
+    return;
+  }
+
+  URL.revokeObjectURL(url);
+  previewObjectUrls.delete(url);
+}
+
+function closeImagePreview() {
+  revokePreviewObjectUrl(imagePreview.url);
+  imagePreview.visible = false;
+  imagePreview.url = "";
+  imagePreview.name = "";
+}
+
+function cleanupPreviewObjectUrls() {
+  closeImagePreview();
+  for (const url of [...previewObjectUrls]) {
+    revokePreviewObjectUrl(url);
+  }
+}
+
+async function previewUploadFile(message: AgentMessage) {
+  const file = getMessageUploadFile(message);
+
+  if (!file || !canPreviewFile(file) || previewingFileId.value) {
+    return;
+  }
+
+  filePreviewErrors[file.id] = "";
+  previewingFileId.value = file.id;
+
+  const pdfWindow = isPdfUploadFile(file) ? window.open("", "_blank") : null;
+
+  if (pdfWindow) {
+    pdfWindow.opener = null;
+  }
+
+  if (isPdfUploadFile(file) && !pdfWindow) {
+    filePreviewErrors[file.id] = "浏览器阻止了新窗口，请允许弹窗后重试。";
+    previewingFileId.value = "";
+    return;
+  }
+
+  try {
+    const blob = await fetchBlob(file.previewUrl || `/strategy/files/${file.id}/preview`);
+    const objectUrl = URL.createObjectURL(blob);
+    previewObjectUrls.add(objectUrl);
+
+    if (isImageUploadFile(file)) {
+      closeImagePreview();
+      imagePreview.url = objectUrl;
+      imagePreview.name = file.originalName;
+      imagePreview.visible = true;
+      return;
+    }
+
+    if (pdfWindow) {
+      pdfWindow.location.href = objectUrl;
+    }
+
+    window.setTimeout(() => revokePreviewObjectUrl(objectUrl), 60_000);
+  } catch (err) {
+    pdfWindow?.close();
+    filePreviewErrors[file.id] = getUserErrorMessage(err, "资料预览读取失败");
+  } finally {
+    previewingFileId.value = "";
+  }
+}
+
+function getSessionActivityDate(session: StrategyChatSessionSummary) {
+  const dateSource =
+    session.lastActivityAt ||
+    session.lastMessageAt ||
+    session.updatedAt ||
+    session.createdAt;
+  const date = new Date(dateSource);
+
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function getLocalDateStart(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function getSessionDayDiff(date: Date) {
+  const todayStart = getLocalDateStart(new Date());
+  const sessionDateStart = getLocalDateStart(date);
+
+  return Math.floor(
+    (todayStart.getTime() - sessionDateStart.getTime()) / SESSION_DAY_MS,
+  );
+}
+
+function formatSessionDateLabel(session: StrategyChatSessionSummary) {
+  const date = getSessionActivityDate(session);
+
+  if (!date) {
+    return "未知时间";
+  }
+
+  const dayDiff = getSessionDayDiff(date);
+
+  if (dayDiff <= 0) {
+    return "今天";
+  }
+
+  if (dayDiff === 1) {
+    return "昨天";
+  }
+
+  if (dayDiff < 7) {
+    return "7天内";
+  }
+
+  if (dayDiff < 30) {
+    return "30天内";
+  }
+
+  return `${date.getFullYear()}年${date.getMonth() + 1}月`;
+}
+
 const accessibleBoardOptions = computed(() =>
   boardOptions.filter((board) => hasAllPermissions(board.requiredAll)),
 );
@@ -1028,15 +1485,36 @@ const canUploadMaterial = computed(() =>
   hasAllPermissions(STRATEGY_UPLOAD_MATERIAL_SKILL_PERMISSIONS),
 );
 const sessionChats = computed(() =>
-  chatStore.sessions.map((session, index) => ({
+  chatStore.sessions.map((session) => ({
     id: session.id,
-    date: index === 0 ? "最近会话" : "",
     title:
       session.title ||
       (session.agentCode === "strategy_agent" ? "品牌战略诊断" : "新的聊天"),
     preview: session.lastMessage?.content || "",
     active: session.id === chatStore.sessionId,
   })),
+);
+const sessionChatGroups = computed<SessionChatGroup[]>(() =>
+  chatStore.sessions.reduce<SessionChatGroup[]>((groups, session, index) => {
+    const label = formatSessionDateLabel(session);
+    const previousGroup = groups[groups.length - 1];
+    const chat = sessionChats.value[index];
+
+    if (!chat) {
+      return groups;
+    }
+
+    if (!previousGroup || previousGroup.label !== label) {
+      groups.push({
+        label,
+        items: [chat],
+      });
+      return groups;
+    }
+
+    previousGroup.items.push(chat);
+    return groups;
+  }, []),
 );
 const filteredBoards = computed(() => {
   const query = boardMenuQuery.value.trim().toLowerCase().replace(/[\s-]+/g, "");
@@ -1090,6 +1568,7 @@ onLoad(async () => {
 
 onUnload(() => {
   stopBusyTimer();
+  cleanupPreviewObjectUrls();
 });
 
 watch(draft, () => {
@@ -1339,7 +1818,7 @@ async function submitFeedback() {
       icon: "success",
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "反馈提交失败";
+    const message = getUserErrorMessage(err, "反馈提交失败");
     feedbackError.value = message;
     uni.showToast({
       title: message,
@@ -1842,6 +2321,13 @@ async function selectSession(sessionId: string) {
   }
 }
 
+function handleSessionMore() {
+  uni.showToast({
+    title: "更多操作暂未开放",
+    icon: "none",
+  });
+}
+
 async function handleFeatureSelect(feature: Feature) {
   if (feature.action === "strategy-chat") {
     try {
@@ -2065,6 +2551,7 @@ function handleDraftInput(event: Event) {
 }
 
 function handleEditorFocus() {
+  isEditorFocused.value = true;
   closeMoreMenu();
   clearBoardMenuCloseTimer();
   syncNativeTextareaCursor();
@@ -2072,10 +2559,20 @@ function handleEditorFocus() {
 }
 
 function handleEditorBlur() {
+  isEditorFocused.value = false;
+  isComposing.value = false;
   clearBoardMenuCloseTimer();
   boardMenuCloseTimer.value = setTimeout(() => {
     closeBoardMenu();
   }, 120);
+}
+
+function handleEditorCompositionStart() {
+  isComposing.value = true;
+}
+
+function handleEditorCompositionEnd() {
+  isComposing.value = false;
 }
 
 function handleEditorPointerEnd() {
@@ -2086,7 +2583,13 @@ function handleEditorPointerEnd() {
 }
 
 function handleEditorKeydown(event: KeyboardEvent) {
-  if (event.key !== "Enter" || event.shiftKey || event.isComposing) {
+  if (
+    event.key !== "Enter" ||
+    event.shiftKey ||
+    isComposing.value ||
+    event.isComposing ||
+    event.keyCode === 229
+  ) {
     return;
   }
 
@@ -2325,7 +2828,7 @@ async function sendPreset(content: string, strategy = false) {
 
 async function sendMessage() {
   const content = draft.value.trim();
-  if (!content || isBusy.value) {
+  if (!content || isBusy.value || isComposing.value) {
     return;
   }
 
@@ -2572,14 +3075,16 @@ function formatTime(value: string) {
 }
 
 function showError(err: unknown, fallback: string) {
+  const message = getUserErrorMessage(err, fallback);
+
   uni.showToast({
-    title: err instanceof Error ? err.message : fallback,
+    title: message,
     icon: "none",
   });
 }
 
 function showSettingsError(err: unknown, fallback: string) {
-  const message = err instanceof Error ? err.message : fallback;
+  const message = getUserErrorMessage(err, fallback);
   settingsError.value = message;
   uni.showToast({
     title: message,
@@ -2619,9 +3124,9 @@ page {
 
 .sidebar {
   position: relative;
-  width: 188px;
-  flex: 0 0 188px;
-  padding: 12px 0 88px;
+  width: 240px;
+  flex: 0 0 240px;
+  padding: 16px 0 68px;
   overflow: hidden;
   background: linear-gradient(180deg, #f6f7f9 0%, #f2f4f7 100%);
   border-right: 1px solid #edf0f4;
@@ -2642,6 +3147,9 @@ page {
 
 .sidebar-content {
   /* width: 166px; */
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .sidebar-header {
@@ -2690,26 +3198,38 @@ page {
 
 .new-chat {
   display: flex;
-  width: 162px;
-  height: 26px;
+  width: calc(100% - 40px);
+  height: 40px;
   align-items: center;
   justify-content: center;
-  gap: 7px;
-  margin: 0 auto 13px;
+  gap: 10px;
+  margin: 0 20px 30px;
   color: #1167ff;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
-  line-height: 26px;
+  line-height: 44px;
   background: #ffffff;
-  border: 1px solid #e2e7ef;
+  border: 0;
   border-radius: 999px;
-  box-shadow: 0 2px 7px rgb(25 40 78 / 10%);
+  box-shadow: 0 8px 22px rgb(20 35 70 / 12%);
   overflow: hidden;
   padding: 0;
+  transition: box-shadow 0.18s ease, opacity 0.18s ease, transform 0.18s ease;
+}
+
+.new-chat:not(:disabled):hover {
+  box-shadow: 0 10px 26px rgb(20 35 70 / 16%);
+  transform: translateY(-1px);
+}
+
+.new-chat:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
 }
 
 .new-chat::after,
 .chat-item::after,
+.chat-more::after,
 .company::after,
 .setting-item::after,
 .collapse-button::after,
@@ -2721,52 +3241,105 @@ page {
 }
 
 .button-icon {
-  width: 14px;
-  height: 14px;
+  width: 22px;
+  height: 22px;
 }
 
 .chat-list {
-  height: calc(100vh - 258px);
+  flex: 1;
+  box-sizing: border-box;
+  height: calc(100vh - 282px);
+  /* padding: 0 12px 24px; */
   overflow-y: auto;
   overflow-x: hidden;
-  font-size: 11px;
+  font-size: 14px;
+}
+
+.chat-section {
+  margin-bottom: 22px;
 }
 
 .date-label {
   display: block;
-  margin: 12px 5px 6px;
-  color: #a1a8b2;
-  font-size: 10px;
+  margin: 0 12px 14px;
+  color: #999;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 22px;
 }
 
 .chat-item {
+  position: relative;
   display: flex;
-  /* width: 100%; */
-  height: 25px;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 38px;
   align-items: center;
   justify-content: space-between;
-  margin: 0 12px;
-  color: #252a33;
-  font-size: 13px;
-  line-height: 25px;
+  gap: 10px;
+  margin: 0 0 4px;
+  padding: 0 12px 0 16px;
+  color: #2d3138;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 22px;
   text-align: left;
   background: transparent;
   border: 0;
-  border-radius: 7px;
+  border-radius: 10px;
   box-shadow: none;
   cursor: pointer;
+  transition: background 0.16s ease, box-shadow 0.16s ease, color 0.16s ease;
 }
 
-.chat-item text {
+.chat-title {
+  display: block;
+  min-width: 0;
+  flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.chat-item:hover,
+.chat-item:focus-visible {
+  background: #eaebed;
+}
+
 .chat-item.active {
+  color: #252a33;
   font-weight: 700;
   background: #ffffff;
-  box-shadow: inset 0 0 0 1px #e8ecf2;
+  box-shadow: 0 4px 14px rgb(21 31 52 / 8%);
+}
+
+.chat-more {
+  display: flex;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  color: #92979f;
+  font-size: 14px;
+  line-height: 28px;
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  box-shadow: none;
+  opacity: 0;
+  transition: background 0.16s ease, opacity 0.16s ease;
+}
+
+.chat-item:hover .chat-more,
+.chat-item:focus-within .chat-more,
+.chat-item.active .chat-more {
+  opacity: 1;
+}
+
+.chat-more:hover {
+  background: rgb(37 42 51 / 8%);
 }
 
 .company-menu-wrap {
@@ -2780,7 +3353,7 @@ page {
   position: absolute;
   bottom: 41px;
   left: 0;
-  width: 112px;
+  width: 125px;
   padding: 6px;
   background: #ffffff;
   border-radius: 8px;
@@ -2790,12 +3363,12 @@ page {
 .setting-item {
   display: flex;
   width: 100%;
-  height: 27px;
+  height: 36px;
   align-items: center;
   gap: 8px;
   padding: 0 9px;
   color: #2f3540;
-  font-size: 10px;
+  font-size: 14px;
   line-height: 27px;
   text-align: left;
   white-space: nowrap;
@@ -2893,7 +3466,7 @@ page {
   align-items: center;
   gap: 12px;
   color: #303640;
-  font-size: 11px;
+  font-size: 14px;
   line-height: 28px;
   padding: 0;
   text-align: left;
@@ -3049,16 +3622,17 @@ page {
 .message-panel {
   box-sizing: border-box;
   height: calc(100vh - 184px);
-  margin: 46px 26px 0;
-  padding: 18px;
+  margin: 46px 0 26px 0;
+  padding: 18px 0 18px 18px;
   overflow: hidden;
   width: initial;
 }
 
 .message-stream {
   box-sizing: border-box;
-  width: 100%;
-  max-width: 100%;
+  width: min(100%, 800px);
+  max-width: 800px;
+  margin: 0 auto;
   overflow: hidden;
 }
 
@@ -3085,6 +3659,8 @@ page {
 
 .message-row.mine {
   justify-content: flex-end;
+  margin-right: 20px;
+  width: calc(100% - 20px);
 }
 
 .message-bubble {
@@ -3110,6 +3686,108 @@ page {
   line-height: 1.75;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.upload-file-card {
+  box-sizing: border-box;
+  display: flex;
+  width: min(360px, 100%);
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  color: #263142;
+  background: #ffffff;
+  border: 1px solid rgb(255 255 255 / 70%);
+  border-radius: 8px;
+}
+
+.upload-file-card.previewable {
+  cursor: pointer;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.upload-file-card.previewable:hover {
+  border-color: #bdd4ff;
+  box-shadow: 0 8px 18px rgb(15 35 80 / 14%);
+}
+
+.upload-file-icon {
+  display: flex;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  align-items: center;
+  justify-content: center;
+  color: #1267ff;
+  background: #edf5ff;
+  border-radius: 8px;
+}
+
+.upload-file-icon text {
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.upload-file-icon.image {
+  color: #047857;
+  background: #e8f7ef;
+}
+
+.upload-file-icon.pdf {
+  color: #b42318;
+  background: #fff0ec;
+}
+
+.upload-file-main {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.upload-file-label {
+  color: #6b7280;
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.upload-file-name {
+  max-width: 100%;
+  overflow: hidden;
+  color: #111827;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.upload-file-meta {
+  max-width: 100%;
+  overflow: hidden;
+  color: #7a8596;
+  font-size: 11px;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.upload-file-action {
+  flex: 0 0 auto;
+  color: #1267ff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.upload-file-error {
+  display: block;
+  margin-top: 6px;
+  color: #ffe3e3;
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .message-time {
@@ -3603,7 +4281,75 @@ page {
   background: rgb(0 0 0 / 12%);
 }
 
+.file-preview-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px;
+  background: rgb(15 23 42 / 72%);
+}
+
+.file-preview-panel {
+  display: flex;
+  width: min(1040px, calc(100vw - 56px));
+  height: min(760px, calc(100vh - 56px));
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+  background: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 24px 80px rgb(0 0 0 / 28%);
+}
+
+.file-preview-header {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.file-preview-title {
+  min-width: 0;
+  overflow: hidden;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-preview-close {
+  width: auto;
+  margin: 0;
+  padding: 0 12px;
+  color: #4b5563;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 28px;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+}
+
+.file-preview-close::after {
+  border: 0;
+}
+
+.file-preview-image {
+  width: 100%;
+  min-height: 0;
+  flex: 1;
+  background: #0f172a;
+}
+
 .settings-panel {
+  position: relative;
   display: grid;
   grid-template-columns: 260px minmax(0, 1fr);
   width: min(980px, calc(100vw - 96px));
@@ -3804,6 +4550,19 @@ page {
   box-shadow: none;
 }
 
+.settings-panel-close {
+  position: absolute;
+  top: 22px;
+  right: 22px;
+  z-index: 2;
+  margin: 0;
+  background: #ffffff;
+}
+
+.settings-panel-close:hover {
+  background: #f4f4f4;
+}
+
 .close-icon {
   position: relative;
   display: block;
@@ -3924,7 +4683,7 @@ page {
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
-  padding: 28px 64px 34px 16px;
+  padding: 28px 64px 4px 16px;
 }
 
 .settings-header {
@@ -3955,7 +4714,7 @@ page {
 }
 
 .settings-section {
-  padding: 20px 0;
+  padding: 12px 0;
   border-bottom: 1px solid #ebebeb;
 }
 
@@ -4260,13 +5019,17 @@ button[disabled] {
 
   .sidebar.mobile-open .new-chat {
     width: 210px;
-    height: 32px;
-    font-size: 13px;
-    line-height: 32px;
+    height: 44px;
+    margin-right: auto;
+    margin-left: auto;
+    font-size: 16px;
+    line-height: 44px;
   }
 
   .sidebar.mobile-open .chat-list {
-    height: calc(100vh - var(--mobile-nav-height) - 190px);
+    height: calc(100vh - var(--mobile-nav-height) - 206px);
+    padding-right: 4px;
+    padding-left: 4px;
   }
 
   .sidebar.mobile-open .company-menu-wrap {
@@ -4570,7 +5333,7 @@ button[disabled] {
     flex-direction: row;
     align-items: center;
     gap: 8px;
-    padding: calc(10px + env(safe-area-inset-top)) 14px 10px;
+    padding: calc(10px + env(safe-area-inset-top)) 64px 10px 14px;
     overflow-x: auto;
     border-bottom: 1px solid #eeeeee;
   }
@@ -4580,6 +5343,12 @@ button[disabled] {
     height: 36px;
     flex: 0 0 36px;
     margin: 0 4px 0 0;
+  }
+
+  .settings-panel-close {
+    top: calc(10px + env(safe-area-inset-top));
+    right: 14px;
+    margin: 0;
   }
 
   .settings-nav-item {

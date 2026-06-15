@@ -3,6 +3,7 @@ import {
   API_LONG_REQUEST_TIMEOUT_MS,
   ApiError,
   download,
+  getUserErrorMessage,
   request,
   upload,
   uploadBrowserFile,
@@ -31,6 +32,7 @@ const TITLE_REFRESH_POLL_MAX_ATTEMPTS = 8;
 
 const activeProcessingPolls = new Set<string>();
 const activeTitleRefreshPolls = new Set<string>();
+const activeAsyncResponsePolls = new Set<string>();
 
 function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -277,7 +279,7 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
         this.activeAgentCode = resolveAgentCode(result.agentCode);
         await this.loadSessions();
       } catch (err) {
-        this.error = err instanceof Error ? err.message : "创建会话失败";
+        this.error = getUserErrorMessage(err, "创建会话失败");
         throw err;
       } finally {
         this.loading = false;
@@ -349,6 +351,12 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
       const nextMessages = [...this.messages];
       nextMessages.splice(startIndex, 1, ...messages);
       this.messages = nextMessages;
+    },
+    replaceOptimisticExchangeWithUserMessage(
+      exchange: OptimisticExchange,
+      userMessage: AgentMessage,
+    ) {
+      this.replaceOptimisticExchangeWithMessages(exchange, [userMessage]);
     },
     failOptimisticExchange(exchange: OptimisticExchange) {
       const userIndex = this.messages.findIndex(
@@ -435,7 +443,7 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
         await this.loadSession(result.sessionId, { preserveAnimations: true });
         this.startSessionTitleRefreshPoll(result.sessionId);
       } catch (err) {
-        this.error = err instanceof Error ? err.message : "发送失败";
+        this.error = getUserErrorMessage(err, "发送失败");
         this.failOptimisticExchange(optimisticExchange);
         throw err;
       } finally {
@@ -478,11 +486,16 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
             optimisticExchange,
             result.messages,
           );
-        } else {
+        } else if (result.assistantMessage) {
           this.replaceOptimisticExchange(
             optimisticExchange,
             result.userMessage,
             result.assistantMessage,
+          );
+        } else {
+          this.replaceOptimisticExchangeWithUserMessage(
+            optimisticExchange,
+            result.userMessage,
           );
         }
         await this.loadSessions();
@@ -492,13 +505,17 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
           result.sessionId,
           result.assistantMessage,
         );
+        if (result.processing && !result.assistantMessage) {
+          await this.pollAsyncStrategyResponse(
+            result.sessionId,
+            result.userMessage.id,
+          );
+        }
         this.startSessionTitleRefreshPoll(result.sessionId);
       } catch (err) {
         this.error = this.isStrategyEntitlementDenied(err)
           ? "当前企业未开通战略智能体权益"
-          : err instanceof Error
-            ? err.message
-            : "发送失败";
+          : getUserErrorMessage(err, "发送失败");
         this.failOptimisticExchange(optimisticExchange);
         throw err;
       } finally {
@@ -672,6 +689,65 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
         }
       }
     },
+    async pollAsyncStrategyResponse(sessionId: string, userMessageId: string) {
+      const pollKey = `${sessionId}:${userMessageId}`;
+
+      if (activeAsyncResponsePolls.has(pollKey)) {
+        return;
+      }
+
+      activeAsyncResponsePolls.add(pollKey);
+
+      try {
+        for (
+          let attempt = 0;
+          attempt < PROCESSING_POLL_MAX_ATTEMPTS;
+          attempt += 1
+        ) {
+          await delay(PROCESSING_POLL_INTERVAL_MS);
+
+          if (this.sessionId !== sessionId) {
+            return;
+          }
+
+          const previousMessageIds = new Set(
+            this.messages.map((message) => message.id),
+          );
+
+          try {
+            await this.loadSession(sessionId, { preserveAnimations: true });
+          } catch {
+            continue;
+          }
+
+          const userIndex = this.messages.findIndex(
+            (message) => message.id === userMessageId,
+          );
+          const assistantMessage =
+            userIndex >= 0
+              ? this.messages
+                .slice(userIndex + 1)
+                .find(
+                  (message) =>
+                    message.role === "ASSISTANT" &&
+                    !this.isProcessingMessage(message),
+                )
+              : null;
+
+          if (assistantMessage) {
+            if (!previousMessageIds.has(assistantMessage.id)) {
+              this.markAssistantMessageForAnimation(assistantMessage);
+            }
+
+            await this.loadStrategySessionState(sessionId);
+            this.startSessionTitleRefreshPoll(sessionId);
+            return;
+          }
+        }
+      } finally {
+        activeAsyncResponsePolls.delete(pollKey);
+      }
+    },
     async enterStrategy() {
       if (!this.sessionId) {
         await this.createSession();
@@ -774,9 +850,7 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
       } catch (err) {
         this.error = this.isStrategyEntitlementDenied(err)
           ? "当前企业未开通战略智能体权益"
-          : err instanceof Error
-            ? err.message
-            : "上传失败";
+          : getUserErrorMessage(err, "上传失败");
         throw err;
       } finally {
         this.uploading = false;
@@ -835,7 +909,7 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
 
         return result;
       } catch (err) {
-        this.error = err instanceof Error ? err.message : "读取报告失败";
+        this.error = getUserErrorMessage(err, "读取报告失败");
         throw err;
       } finally {
         this.loading = false;
@@ -866,7 +940,7 @@ export const useStrategyChatStore = defineStore("strategy-chat", {
           },
         );
       } catch (err) {
-        this.error = err instanceof Error ? err.message : "导出报告失败";
+        this.error = getUserErrorMessage(err, "导出报告失败");
         throw err;
       } finally {
         this.loading = false;

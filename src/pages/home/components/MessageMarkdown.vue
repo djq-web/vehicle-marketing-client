@@ -42,6 +42,52 @@
         <text>{{ block.text }}</text>
       </view>
 
+      <scroll-view
+        v-else-if="block.type === 'table'"
+        class="md-block md-table-scroll"
+        scroll-x
+      >
+        <view class="md-table" :style="{ minWidth: tableMinWidth(block.columnCount) }">
+          <view class="md-table-row md-table-header">
+            <view
+              v-for="(header, headerIndex) in block.headers"
+              :key="`table-header-${blockIndex}-${headerIndex}`"
+              class="md-table-cell"
+              :class="{ 'first-column': headerIndex === 0 }"
+            >
+              <text
+                v-for="(token, tokenIndex) in header"
+                :key="`table-header-token-${blockIndex}-${headerIndex}-${tokenIndex}`"
+                :class="tokenClass(token)"
+              >
+                {{ token.text }}
+              </text>
+            </view>
+          </view>
+
+          <view
+            v-for="(row, rowIndex) in block.rows"
+            :key="`table-row-${blockIndex}-${rowIndex}`"
+            class="md-table-row"
+          >
+            <view
+              v-for="(cell, cellIndex) in row"
+              :key="`table-cell-${blockIndex}-${rowIndex}-${cellIndex}`"
+              class="md-table-cell"
+              :class="{ 'first-column': cellIndex === 0 }"
+            >
+              <text
+                v-for="(token, tokenIndex) in cell"
+                :key="`table-cell-token-${blockIndex}-${rowIndex}-${cellIndex}-${tokenIndex}`"
+                :class="tokenClass(token)"
+              >
+                {{ token.text }}
+              </text>
+            </view>
+          </view>
+        </view>
+      </scroll-view>
+
       <view v-else class="md-block md-paragraph">
         <text
           v-for="(token, tokenIndex) in block.tokens"
@@ -83,6 +129,12 @@ type MarkdownBlock =
   | {
       type: "code";
       text: string;
+    }
+  | {
+      type: "table";
+      headers: InlineToken[][];
+      rows: InlineToken[][][];
+      columnCount: number;
     };
 
 const props = defineProps<{
@@ -172,6 +224,7 @@ function parseMarkdown(source: string): MarkdownBlock[] {
   let paragraphLines: string[] = [];
   let codeLines: string[] = [];
   let inCodeBlock = false;
+  let index = 0;
 
   const flushParagraph = () => {
     if (!paragraphLines.length) {
@@ -193,7 +246,8 @@ function parseMarkdown(source: string): MarkdownBlock[] {
     codeLines = [];
   };
 
-  lines.forEach((line) => {
+  while (index < lines.length) {
+    const line = lines[index] || "";
     const trimmed = line.trim();
 
     if (trimmed.startsWith("```")) {
@@ -205,17 +259,48 @@ function parseMarkdown(source: string): MarkdownBlock[] {
         inCodeBlock = true;
         codeLines = [];
       }
-      return;
+      index += 1;
+      continue;
     }
 
     if (inCodeBlock) {
       codeLines.push(line);
-      return;
+      index += 1;
+      continue;
     }
 
     if (!trimmed) {
       flushParagraph();
-      return;
+      index += 1;
+      continue;
+    }
+
+    if (isMarkdownTable(lines, index)) {
+      flushParagraph();
+
+      const headerCells = splitMarkdownTableRow(lines[index] || "");
+      const columnCount = headerCells.length;
+      const rows: string[][] = [];
+      index += 2;
+
+      while (
+        index < lines.length &&
+        isMarkdownTableRow(lines[index] || "") &&
+        !isMarkdownTableSeparator(lines[index] || "")
+      ) {
+        rows.push(
+          normalizeTableRow(splitMarkdownTableRow(lines[index] || ""), columnCount),
+        );
+        index += 1;
+      }
+
+      blocks.push({
+        type: "table",
+        headers: normalizeTableRow(headerCells, columnCount).map(parseInline),
+        rows: rows.map((row) => row.map(parseInline)),
+        columnCount,
+      });
+      continue;
     }
 
     const headingMatch = /^(#{1,3})\s+(.+)$/.exec(trimmed);
@@ -226,7 +311,8 @@ function parseMarkdown(source: string): MarkdownBlock[] {
         level: headingMatch[1].length,
         tokens: parseInline(headingMatch[2]),
       });
-      return;
+      index += 1;
+      continue;
     }
 
     const listMatch = /^((?:[-*+])|(?:\d+[.)]))\s+(.+)$/.exec(trimmed);
@@ -237,7 +323,8 @@ function parseMarkdown(source: string): MarkdownBlock[] {
         marker: /^\d/.test(listMatch[1]) ? listMatch[1] : "•",
         tokens: parseInline(listMatch[2]),
       });
-      return;
+      index += 1;
+      continue;
     }
 
     const quoteMatch = /^>\s?(.+)$/.exec(trimmed);
@@ -247,11 +334,13 @@ function parseMarkdown(source: string): MarkdownBlock[] {
         type: "quote",
         tokens: parseInline(quoteMatch[1]),
       });
-      return;
+      index += 1;
+      continue;
     }
 
     paragraphLines.push(line);
-  });
+    index += 1;
+  }
 
   if (inCodeBlock) {
     flushCode();
@@ -259,6 +348,51 @@ function parseMarkdown(source: string): MarkdownBlock[] {
   flushParagraph();
 
   return blocks;
+}
+
+function isMarkdownTable(lines: string[], index: number) {
+  return (
+    isMarkdownTableRow(lines[index] || "") &&
+    isMarkdownTableSeparator(lines[index + 1] || "")
+  );
+}
+
+function isMarkdownTableRow(source: string) {
+  return splitMarkdownTableRow(source).length >= 2;
+}
+
+function isMarkdownTableSeparator(source: string) {
+  const cells = splitMarkdownTableRow(source);
+
+  return (
+    cells.length >= 2 &&
+    cells.every((cell) => /^:?-{3,}:?$/.test(cell.replace(/\s+/g, "")))
+  );
+}
+
+function splitMarkdownTableRow(source: string) {
+  const trimmed = source.trim();
+
+  if (!trimmed.includes("|")) {
+    return [];
+  }
+
+  return trimmed
+    .replace(/^\|/, "")
+    .replace(/\|$/, "")
+    .split("|")
+    .map((cell) => cell.trim());
+}
+
+function normalizeTableRow(cells: string[], columnCount: number) {
+  if (cells.length >= columnCount) {
+    return cells.slice(0, columnCount);
+  }
+
+  return [
+    ...cells,
+    ...Array.from({ length: columnCount - cells.length }, () => ""),
+  ];
 }
 
 function parseInline(source: string): InlineToken[] {
@@ -339,6 +473,10 @@ function tokenClass(token: InlineToken) {
     "md-code": token.type === "code",
     "md-link": token.type === "link",
   };
+}
+
+function tableMinWidth(columnCount: number) {
+  return `${Math.max(520, columnCount * 220)}px`;
 }
 </script>
 
@@ -421,6 +559,66 @@ function tokenClass(token: InlineToken) {
   background: #f5f7fb;
   border: 1px solid #e2e8f0;
   border-radius: 6px;
+}
+
+.md-table-scroll {
+  max-width: 100%;
+  margin: 8px 0;
+  white-space: normal;
+}
+
+.md-table {
+  display: block;
+  overflow: hidden;
+  color: #243041;
+  white-space: normal;
+  background: #ffffff;
+  border: 1px solid #dbe3ef;
+  border-radius: 6px;
+}
+
+.md-table-row {
+  display: flex;
+  align-items: stretch;
+}
+
+.md-table-cell {
+  box-sizing: border-box;
+  display: block;
+  flex: 1 0 220px;
+  min-width: 180px;
+  padding: 8px 10px;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.65;
+  vertical-align: top;
+  white-space: normal;
+  word-break: break-word;
+  border-right: 1px solid #dbe3ef;
+  border-bottom: 1px solid #dbe3ef;
+}
+
+.md-table-cell.first-column {
+  flex: 0 0 128px;
+  min-width: 128px;
+  color: #111827;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.md-table-header .md-table-cell {
+  color: #111827;
+  font-weight: 800;
+  background: #f1f5f9;
+}
+
+.md-table-row .md-table-cell:last-child {
+  border-right: 0;
+}
+
+.md-table-row:last-child .md-table-cell {
+  border-bottom: 0;
 }
 
 .md-inline {

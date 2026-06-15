@@ -44,8 +44,18 @@ const emit = defineEmits<{
   action: [action: string];
 }>();
 
+const reportTypeLabels: Record<string, string> = {
+  enterprise_diagnosis: "企业战略诊断报告",
+  enterprise_solution: "企业战略方案报告",
+  beidou_declaration: "北斗宣言",
+  strategy_positioning: "战略定位报告",
+  advantages_barriers: "优势与壁垒报告",
+  business_model_panorama: "商业模式全景图",
+  brand_experience_blueprint: "品牌与体验蓝图",
+};
+
 const report = computed(() => props.report ?? {});
-const title = computed(() => stringValue(report.value.title));
+const title = computed(() => resolveReportTitle(report.value));
 const status = computed(() => stringValue(report.value.status));
 const contentText = computed(() => stringValue(report.value.content));
 const needsSync = computed(() => report.value.needsSync === true);
@@ -117,9 +127,28 @@ function statusLabel(value: string) {
 function actionLabel(action: string) {
   const labels: Record<string, string> = {
     sync_reports: "同步报告",
+    open_dashboard: "查看看板",
+    rediagnose: "重新诊断",
+    confirm_diagnosis_report: "确认诊断报告",
+    confirm_solution_report: "确认方案报告",
   };
 
-  return labels[action] || action;
+  return labels[action] || "继续处理";
+}
+
+function resolveReportTitle(reportValue: Record<string, unknown>) {
+  const rawTitle = stringValue(reportValue.title);
+
+  if (rawTitle && !isInternalCode(rawTitle)) {
+    return rawTitle;
+  }
+
+  const type = stringValue(reportValue.type);
+  return reportTypeLabels[type] || "";
+}
+
+function isInternalCode(value: string) {
+  return /^[a-z][a-z0-9_./-]*$/i.test(value) && !/[\u3400-\u9fff]/.test(value);
 }
 </script>
 

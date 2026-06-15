@@ -1,5 +1,9 @@
 <template>
-  <view class="login-page" :class="{ mobileLoginPage: isMobileLayout }">
+  <view
+    class="login-page"
+    :class="{ mobileLoginPage: isMobileLayout }"
+    :style="loginPageStyle"
+  >
     <view class="left-desc" v-if="!isMobileLayout">
       <view>
         <text class="mainText">车肆营销智能系统</text>
@@ -9,7 +13,11 @@
       </view>
     </view>
     <view class="top-banner" v-else>
-      <image src="/static/mobile-bg.png" mode="widthFix" class="imgBox" />
+      <image
+        :src="miniappStaticAssets.login.mobileBg"
+        mode="widthFix"
+        class="imgBox"
+      />
     </view>
     <view class="login-area">
       <view class="login-card">
@@ -63,6 +71,8 @@
 <script setup lang="ts">
 import { onLoad } from "@dcloudio/uni-app";
 import { computed, reactive, ref } from "vue";
+import { miniappStaticAssets } from "@/config/static-assets";
+import { getUserErrorMessage } from "@/services/api";
 import { useAuthStore } from "@/stores/auth";
 import { useStrategyChatStore } from "@/stores/strategyChat";
 
@@ -93,6 +103,11 @@ const loginButtonText = computed(() => {
 
   return activeTab.value === "admin" ? "进入管理端" : "登 录";
 });
+const loginPageStyle = computed(() => ({
+  backgroundImage: isMobileLayout.value
+    ? "none"
+    : `url(${miniappStaticAssets.login.desktopBg})`,
+}));
 
 function updateMobileLayout(width = uni.getSystemInfoSync().windowWidth) {
   isMobileLayout.value = width <= 760;
@@ -135,7 +150,7 @@ async function handleLogin() {
       url: "/pages/home/index",
     });
   } catch (err) {
-    error.value = err instanceof Error ? err.message : "登录失败";
+    error.value = getUserErrorMessage(err, "登录失败");
   } finally {
     loading.value = false;
   }
@@ -204,7 +219,10 @@ function openAdminLogin() {
   box-sizing: border-box;
   min-height: 100vh;
   padding: 0 96px 0 123px;
-  background: #dbeeff url("/static/login-bg.png") center / cover no-repeat;
+  background-color: #dbeeff;
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
 }
 
 .mobileLoginPage {
