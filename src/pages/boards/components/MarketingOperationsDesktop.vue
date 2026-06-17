@@ -275,7 +275,7 @@ const edgeRoutes: Record<string, (source: FlowNode, target: FlowNode) => Point[]
 .flow-title {
   display: block;
   color: #333333;
-  font-size: 28px;
+  font-size: 36px;
   font-weight: 800;
   letter-spacing: 7px;
   line-height: 1.25;

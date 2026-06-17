@@ -520,7 +520,7 @@ watch(
 .metrics-title {
   display: block;
   color: #2b3038;
-  font-size: 30px;
+  font-size: 36px;
   font-weight: 900;
   line-height: 1.25;
   letter-spacing: 8px;

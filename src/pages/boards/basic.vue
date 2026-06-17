@@ -1720,7 +1720,7 @@ function goHome() {
 .flow-title {
   display: block;
   color: #2f333a;
-  font-size: 28px;
+  font-size: 36px;
   font-weight: 800;
   letter-spacing: 2px;
   line-height: 1.25;
