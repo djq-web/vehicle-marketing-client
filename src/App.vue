@@ -49,6 +49,8 @@ uni-scroll-view .uni-scroll-view,
   scrollbar-width: auto;
 }
 
+/* #ifdef H5 */
+
 uni-scroll-view::-webkit-scrollbar,
 uni-scroll-view .uni-scroll-view::-webkit-scrollbar,
 .uni-scroll-view::-webkit-scrollbar {
@@ -110,4 +112,5 @@ uni-scroll-view:hover .uni-scroll-view::-webkit-scrollbar-thumb,
 .uni-scroll-view:hover::-webkit-scrollbar-thumb {
   background-color: #d4d4d4;
 }
+/* #endif */
 </style>

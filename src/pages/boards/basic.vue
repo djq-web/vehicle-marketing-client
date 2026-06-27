@@ -1020,7 +1020,7 @@ const calendarDays = computed<CalendarDay[]>(() => {
     });
   }
 
-  const trailingCount = Math.max(42 - days.length, 0);
+  const trailingCount = (7 - (days.length % 7)) % 7;
   for (let date = 1; date <= trailingCount; date += 1) {
     days.push({
       key: `next-${date}`,
@@ -2880,6 +2880,7 @@ function goHome() {
   box-sizing: border-box;
 }
 
+/* #ifdef H5 */
 .feedback-content::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -2906,4 +2907,5 @@ function goHome() {
   background: #d4d4d4;
   border-radius: 999px;
 }
+/* #endif */
 </style>

@@ -122,6 +122,7 @@ export type StrategyChatSessionResponse = {
 export type StrategyChatResponse = {
   tenantId: string;
   diagnosisId: string;
+  status: string;
   sessionId: string;
   intent: string;
   action: string;

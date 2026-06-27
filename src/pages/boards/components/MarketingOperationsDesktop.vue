@@ -298,6 +298,7 @@ const edgeRoutes: Record<string, (source: FlowNode, target: FlowNode) => Point[]
   box-sizing: border-box;
 }
 
+/* #ifdef H5 */
 .flow-board::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -324,6 +325,7 @@ const edgeRoutes: Record<string, (source: FlowNode, target: FlowNode) => Point[]
   background: #d4d4d4;
   border-radius: 999px;
 }
+/* #endif */
 
 .flow-canvas {
   position: relative;

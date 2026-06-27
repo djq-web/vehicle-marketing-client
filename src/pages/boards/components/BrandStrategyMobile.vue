@@ -112,6 +112,7 @@ const starIndexes = [0, 1, 2, 3, 4, 5, 6];
 const mobileStatusBarHeight = ref(0);
 const mobileNavHeight = ref(56);
 const mobileNavContentHeight = ref(44);
+const mobileNavTopOffset = ref(0);
 const mobileRightSafeWidth = ref(14);
 
 const pointCards = computed(() =>
@@ -134,6 +135,7 @@ const pageStyle = computed(
       "--mobile-status-height": `${mobileStatusBarHeight.value}px`,
       "--mobile-nav-height": `${mobileNavHeight.value}px`,
       "--mobile-nav-content-height": `${mobileNavContentHeight.value}px`,
+      "--mobile-nav-top-offset": `${mobileNavTopOffset.value}px`,
       "--mobile-right-safe-width": `${mobileRightSafeWidth.value}px`,
     }) as Record<string, string>,
 );
@@ -156,6 +158,7 @@ function initMobileChrome() {
 
   mobileStatusBarHeight.value = statusBarHeight;
   mobileNavContentHeight.value = 44;
+  mobileNavTopOffset.value = 0;
   mobileNavHeight.value = statusBarHeight + 56;
   mobileRightSafeWidth.value = 14;
 
@@ -165,6 +168,7 @@ function initMobileChrome() {
   const bottomGap = topGap || 6;
 
   mobileNavContentHeight.value = menuButton.height;
+  mobileNavTopOffset.value = topGap;
   mobileNavHeight.value = menuButton.bottom + bottomGap;
   mobileRightSafeWidth.value =
     Math.max(88, systemInfo.windowWidth - menuButton.left) + 12;
@@ -190,7 +194,7 @@ function initMobileChrome() {
   z-index: 30;
   box-sizing: border-box;
   height: var(--mobile-nav-height);
-  padding-top: var(--mobile-status-height);
+  padding-top: calc(var(--mobile-status-height) + var(--mobile-nav-top-offset));
   background: #ffffff;
   box-shadow: 0 8rpx 24rpx rgb(70 70 70 / 8%);
 }
@@ -433,14 +437,20 @@ function initMobileChrome() {
 
 .strategy-copy {
   display: flex;
+  width: 100%;
+  min-width: 0;
   min-height: 118rpx;
   flex-direction: column;
   justify-content: center;
   margin-top: 18rpx;
+  overflow: hidden;
 }
 
 .strategy-copy text {
   display: block;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
   overflow: hidden;
   color: #60636a;
   font-size: 25rpx;

@@ -1,5 +1,8 @@
 const API_BASE_URL = (
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:5010/api"
+  import.meta.env.VITE_API_BASE_URL ||
+  (import.meta.env.PROD
+    ? "https://chesimkt.com/api/api/"
+    : "http://localhost:5010/api")
 ).replace(/\/$/, "");
 const DEFAULT_REQUEST_TIMEOUT_MS = Number(
   import.meta.env.VITE_API_TIMEOUT_MS || 120000,
@@ -15,7 +18,7 @@ export const AUTH_USER_KEY = "vehicle_marketing_client_user";
 type QueryValue = string | number | boolean | null | undefined;
 
 type RequestOptions = {
-  method?: "GET" | "POST" | "PUT" | "DELETE";
+  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   data?: Record<string, unknown>;
   query?: Record<string, QueryValue>;
   headers?: Record<string, string>;
@@ -29,6 +32,10 @@ type DownloadOptions = {
   skipAuth?: boolean;
   timeout?: number;
   fileName?: string;
+};
+
+type StreamOptions<TChunk> = RequestOptions & {
+  onChunk?: (chunk: TChunk) => void;
 };
 
 type UploadOptions = {
@@ -121,6 +128,10 @@ const exactErrorMessages: Record<string, string> = {
   "Strategy report not found": "未找到战略报告",
   "Strategy report content is empty": "战略报告内容为空",
   "Strategy framework content is invalid": "战略框架内容格式不正确",
+  "Strategy files can only be uploaded before the strategy draft is confirmed":
+    "当前诊断阶段暂不支持上传资料，如需补充信息请在会话中说明调整内容",
+  "Strategy files cannot be uploaded while reports are generating":
+    "报告正在生成中，暂时不能上传资料，请稍后再试",
   "Strategy tenant context is required": "缺少企业上下文，请重新登录后再试",
   "Strategy chat session not found": "未找到当前会话，请新建对话后再试",
   "Agent session does not belong to current user": "不能访问其他用户的会话",
@@ -322,7 +333,7 @@ export function request<T>(path: string, options: RequestOptions = {}) {
   return new Promise<T>((resolve, reject) => {
     uni.request({
       url: buildUrl(path, options.query),
-      method: options.method ?? "GET",
+      method: (options.method ?? "GET") as unknown as UniApp.RequestOptions["method"],
       data: options.data,
       header: getAuthHeaders(options.skipAuth, options.headers),
       timeout: options.timeout ?? DEFAULT_REQUEST_TIMEOUT_MS,
@@ -344,6 +355,116 @@ export function request<T>(path: string, options: RequestOptions = {}) {
       },
     });
   });
+}
+
+function parseSseChunkBlocks<TChunk>(
+  raw: string,
+  onChunk?: (chunk: TChunk) => void,
+) {
+  const chunks: TChunk[] = [];
+
+  raw
+    .split(/\r?\n\r?\n/)
+    .map((block) => block.trim())
+    .filter(Boolean)
+    .forEach((block) => {
+      const data = block
+        .split(/\r?\n/)
+        .filter((line) => line.startsWith("data:"))
+        .map((line) => line.replace(/^data:\s?/, ""))
+        .join("\n")
+        .trim();
+
+      if (!data) {
+        return;
+      }
+
+      const chunk = JSON.parse(data) as TChunk;
+      chunks.push(chunk);
+      onChunk?.(chunk);
+    });
+
+  return chunks;
+}
+
+export async function streamRequest<TChunk>(
+  path: string,
+  options: StreamOptions<TChunk> = {},
+) {
+  const controller =
+    typeof AbortController !== "undefined" ? new AbortController() : null;
+  const timeoutMs = options.timeout ?? DEFAULT_REQUEST_TIMEOUT_MS;
+  const timeoutId = controller
+    ? setTimeout(() => controller.abort(), timeoutMs)
+    : null;
+
+  try {
+    const response = await fetch(buildUrl(path, options.query), {
+      method: options.method ?? "POST",
+      headers: {
+        Accept: "text/event-stream",
+        "Content-Type": "application/json",
+        ...getAuthHeaders(options.skipAuth, options.headers),
+      },
+      body: options.data ? JSON.stringify(options.data) : undefined,
+      signal: controller?.signal,
+    });
+
+    if (!response.ok) {
+      const payload = normalizePayload(await response.text());
+      throw new ApiError(
+        resolveErrorMessage(payload, response.status),
+        response.status,
+        payload,
+      );
+    }
+
+    if (!response.body) {
+      return [];
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    const chunks: TChunk[] = [];
+    let buffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      buffer += decoder.decode(value ?? new Uint8Array(), { stream: !done });
+      const parts = buffer.split(/\r?\n\r?\n/);
+      buffer = done ? "" : parts.pop() ?? "";
+      const completeBlocks = done ? parts.concat(buffer ? [buffer] : []) : parts;
+
+      for (const chunk of parseSseChunkBlocks<TChunk>(
+        completeBlocks.join("\n\n"),
+        options.onChunk,
+      )) {
+        chunks.push(chunk);
+      }
+
+      if (done) {
+        break;
+      }
+    }
+
+    return chunks;
+  } catch (err) {
+    if (err instanceof ApiError) {
+      throw err;
+    }
+
+    const message =
+      err instanceof DOMException && err.name === "AbortError"
+        ? "请求超时"
+        : err instanceof Error
+          ? toChineseErrorMessage(err.message, "请求失败")
+          : "请求失败";
+    throw new ApiError(message, 0, err);
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+  }
 }
 
 export function upload<T>(path: string, options: UploadOptions) {

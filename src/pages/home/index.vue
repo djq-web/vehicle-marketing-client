@@ -2,7 +2,11 @@
   <view class="home-page" :style="homePageStyle" @click="handlePageClick">
     <view class="mobile-nav">
       <view class="mobile-nav-content">
-        <button class="mobile-menu-button" :class="{ open: isMobileSidebarOpen }" @click="toggleMobileSidebar">
+        <button
+          class="mobile-menu-button"
+          :class="{ open: isMobileSidebarOpen }"
+          @click="toggleMobileSidebar"
+        >
           <text></text>
           <text></text>
           <text></text>
@@ -10,10 +14,20 @@
         <text class="mobile-nav-title">车肆</text>
       </view>
     </view>
-    <view class="mobile-sidebar-mask" :class="{ open: isMobileSidebarOpen }" @click="closeMobileSidebar"></view>
+    <view
+      class="mobile-sidebar-mask"
+      :class="{ open: isMobileSidebarOpen }"
+      @click="closeMobileSidebar"
+    ></view>
     <view class="workspace">
-      <view class="sidebar"
-        :class="{ collapsed: isSidebarCollapsed, 'mobile-open': isMobileSidebarOpen, 'PC-layout': !isMobileLayout }">
+      <view
+        class="sidebar"
+        :class="{
+          collapsed: isSidebarCollapsed,
+          'mobile-open': isMobileSidebarOpen,
+          'PC-layout': !isMobileLayout,
+        }"
+      >
         <view v-if="!isSidebarCollapsed" class="sidebar-content">
           <view class="sidebar-header">
             <view class="brand-mark">
@@ -23,45 +37,61 @@
               {{ shortName }}
             </view>
           </view>
-            <button class="new-chat" :disabled="isBusy" @click="createSession">
-              <image class="button-icon" src="/static/svg/edit-icon.svg" mode="aspectFit" />
-              <text>创建新对话</text>
-            </button>
+          <button class="new-chat" :disabled="isBusy" @click="createSession">
+            <image
+              class="button-icon"
+              src="/static/svg/edit-icon.svg"
+              mode="aspectFit"
+            />
+            <text>创建新对话</text>
+          </button>
 
-            <scroll-view class="chat-list" scroll-y>
-              <view v-for="group in sessionChatGroups" :key="group.label" class="chat-section">
-                <text class="date-label">{{ group.label }}</text>
-                <view
-                  v-for="chat in group.items"
-                  :key="chat.id"
-                  class="chat-item"
-                  :class="{ active: chat.active }"
-                  role="button"
-                  tabindex="0"
-                  @click="selectSession(chat.id)"
-                >
-                  <text class="chat-title">{{ chat.title }}</text>
-                  <!-- <button class="chat-more" :aria-label="`${chat.title}更多操作`" @click.stop="handleSessionMore">
+          <scroll-view class="chat-list" scroll-y>
+            <view
+              v-for="group in sessionChatGroups"
+              :key="group.label"
+              class="chat-section"
+            >
+              <text class="date-label">{{ group.label }}</text>
+              <view
+                v-for="chat in group.items"
+                :key="chat.id"
+                class="chat-item"
+                :class="{ active: chat.active }"
+                role="button"
+                tabindex="0"
+                @click="selectSession(chat.id)"
+              >
+                <text class="chat-title">{{ chat.title }}</text>
+                <!-- <button class="chat-more" :aria-label="`${chat.title}更多操作`" @click.stop="handleSessionMore">
                     <text>...</text>
                   </button> -->
-                </view>
               </view>
+            </view>
 
-              <template v-if="!sessionChats.length">
-                <template v-for="(item, index) in fallbackChats" :key="`${item.title}-${index}`">
-                  <text v-if="item.date" class="date-label">{{ item.date }}</text>
-                  <view class="chat-item" :class="{ active: item.active }">
-                    <text class="chat-title">{{ item.title }}</text>
-                  </view>
-                </template>
+            <template v-if="!sessionChats.length">
+              <template
+                v-for="(item, index) in fallbackChats"
+                :key="`${item.title}-${index}`"
+              >
+                <text v-if="item.date" class="date-label">{{ item.date }}</text>
+                <view class="chat-item" :class="{ active: item.active }">
+                  <text class="chat-title">{{ item.title }}</text>
+                </view>
               </template>
-            </scroll-view>
+            </template>
+          </scroll-view>
         </view>
 
         <view v-if="!isSidebarCollapsed" class="company-menu-wrap">
           <view v-if="isCompanyMenuVisible" class="settings-card">
-            <button v-for="item in settingItems" :key="item.label" class="setting-item"
-              :class="{ active: item.action === 'settings' }" @click="handleSettingClick(item.action)">
+            <button
+              v-for="item in settingItems"
+              :key="item.label"
+              class="setting-item"
+              :class="{ active: item.action === 'settings' }"
+              @click="handleSettingClick(item.action)"
+            >
               <text class="setting-icon" :class="item.action"></text>
               <text>{{ item.label }}</text>
             </button>
@@ -69,7 +99,11 @@
 
           <button class="company" @click="toggleCompanyMenu">
             <view class="avatar">
-              <image v-if="settingsForm.avatarUrl" :src="settingsForm.avatarUrl" mode="aspectFill" />
+              <image
+                v-if="settingsForm.avatarUrl"
+                :src="settingsForm.avatarUrl"
+                mode="aspectFill"
+              />
               <text v-else>{{ avatarInitial }}</text>
             </view>
             <text class="company-name">{{ companyName }}</text>
@@ -78,21 +112,45 @@
       </view>
 
       <view class="main-panel">
-        <button class="collapse-button" :class="{ collapsed: isSidebarCollapsed }" @click="toggleSidebar">
-          <image class="collapse-icon" src="/static/svg/expandIcon.svg" mode="aspectFit" />
+        <button
+          class="collapse-button"
+          :class="{ collapsed: isSidebarCollapsed }"
+          @click="toggleSidebar"
+        >
+          <image
+            class="collapse-icon"
+            src="/static/svg/expandIcon.svg"
+            mode="aspectFit"
+          />
         </button>
 
-        <scroll-view v-if="showMessages" class="message-panel" scroll-y :scroll-top="messageScrollTop">
+        <scroll-view
+          v-if="showMessages"
+          class="message-panel"
+          scroll-y
+          :scroll-top="messageScrollTop"
+        >
           <view class="message-stream">
             <view v-if="chatStore.pendingFrameworkUpdate" class="pending-bar">
               框架修改待确认：请在会话中回复“确认”或“取消”。
             </view>
 
-            <view v-for="message in chatStore.messages" :key="message.id" class="message-row"
-              :class="{ mine: message.role === 'USER' }">
+            <view
+              v-for="message in chatStore.messages"
+              :key="message.id"
+              class="message-row"
+              :class="{
+                mine: message.role === 'USER',
+                material:
+                  message.role !== 'USER' && isMaterialMessageCard(message),
+              }"
+            >
               <view class="message-bubble">
                 <template v-if="message.role === 'USER'">
-                  <text v-if="shouldShowUserMessageText(message)" class="message-content">
+                  <text
+                    v-if="shouldShowUserMessageText(message)"
+                    class="message-content"
+                  >
                     {{ message.content }}
                   </text>
                   <view
@@ -103,7 +161,10 @@
                     tabindex="0"
                     @click="previewUploadFile(message)"
                   >
-                    <view class="upload-file-icon" :class="getUploadFileKind(message)">
+                    <view
+                      class="upload-file-icon"
+                      :class="getUploadFileKind(message)"
+                    >
                       <text>{{ getUploadFileKindLabel(message) }}</text>
                     </view>
                     <view class="upload-file-main">
@@ -115,21 +176,45 @@
                         {{ getUploadFileMetaText(message) }}
                       </text>
                     </view>
-                    <text v-if="canPreviewUploadFile(message)" class="upload-file-action">
+                    <text
+                      v-if="canPreviewUploadFile(message)"
+                      class="upload-file-action"
+                    >
                       {{ getUploadFileActionText(message) }}
                     </text>
                   </view>
-                  <text v-if="getUploadFileError(message)" class="upload-file-error">
+                  <text
+                    v-if="getUploadFileError(message)"
+                    class="upload-file-error"
+                  >
                     {{ getUploadFileError(message) }}
                   </text>
                 </template>
-                <MessageMarkdown v-else class="message-content" :content="message.content"
-                  :animate="chatStore.shouldAnimateAssistantMessage(message)" @animation-finished="
+                <MessageMarkdown
+                  v-else
+                  class="message-content"
+                  :content="message.content"
+                  :animate="chatStore.shouldAnimateAssistantMessage(message)"
+                  @animation-finished="
                     chatStore.finishAssistantMessageAnimation(message.id)
-                    " @typing-progress="scrollToBottom" />
-                <StrategyMessageCard v-if="message.role !== 'USER' && message.metadata?.card" :metadata="message.metadata"
-                  :actions-disabled="isBusy" :show-next-actions="message.id === latestActionableMessageId"
-                  @action="handleCardAction" />
+                  "
+                  @typing-progress="scrollToBottom"
+                />
+                <MaterialMessageCard
+                  v-if="
+                    message.role !== 'USER' && isMaterialMessageCard(message)
+                  "
+                  :metadata="message.metadata"
+                  :actions-disabled="isBusy"
+                  @action="handleCardAction"
+                />
+                <StrategyMessageCard
+                  v-else-if="message.role !== 'USER' && message.metadata?.card"
+                  :metadata="message.metadata"
+                  :actions-disabled="isBusy"
+                  :show-next-actions="message.id === latestActionableMessageId"
+                  @action="handleCardAction"
+                />
                 <!-- <text class="message-time">{{ formatTime(message.createdAt) }}</text> -->
               </view>
             </view>
@@ -146,14 +231,24 @@
             <text>用好车肆，先赚一个小目标！</text>
           </view>
           <view class="feature-grid">
-            <button v-for="feature in visibleFeatures" :key="feature.title" class="feature-card"
-              @click="handleFeatureSelect(feature)">
+            <button
+              v-for="feature in visibleFeatures"
+              :key="feature.title"
+              class="feature-card"
+              @click="handleFeatureSelect(feature)"
+            >
               <view class="feature-visual">
-                <image class="feature-svg" :src="feature.icon" mode="aspectFit" />
+                <image
+                  class="feature-svg"
+                  :src="feature.icon"
+                  mode="aspectFit"
+                />
               </view>
               <view class="feature-copy">
                 <text class="feature-title">{{ feature.title }}</text>
-                <text class="feature-description">{{ feature.description }}</text>
+                <text class="feature-description">{{
+                  feature.description
+                }}</text>
               </view>
             </button>
           </view>
@@ -167,9 +262,16 @@
         >
           <text class="board-menu-title">选择看板</text>
           <scroll-view class="board-menu-list" scroll-y>
-            <view v-for="board in filteredBoards" :key="board.id" class="board-option" role="button" tabindex="0"
-              @click="selectBoard(board)" @keydown.enter="selectBoard(board)"
-              @keydown.space.prevent="selectBoard(board)">
+            <view
+              v-for="board in filteredBoards"
+              :key="board.id"
+              class="board-option"
+              role="button"
+              tabindex="0"
+              @click="selectBoard(board)"
+              @keydown.enter="selectBoard(board)"
+              @keydown.space.prevent="selectBoard(board)"
+            >
               <text class="board-icon" @click.stop="selectBoard(board)">
                 <image :src="board.icon" mode="aspectFit" />
               </text>
@@ -185,41 +287,144 @@
         </view>
 
         <view class="composer" @click.stop>
-          <text v-if="strategyNotice" class="error-text">{{ strategyNotice }}</text>
+          <text v-if="strategyNotice" class="error-text">{{
+            strategyNotice
+          }}</text>
+          <view
+            v-if="hasPendingMaterialAttachments || materialAttachmentUploading"
+            class="composer-attachments"
+          >
+            <scroll-view class="composer-attachment-scroll" scroll-x>
+              <view class="composer-attachment-row">
+                <view
+                  v-for="attachment in pendingMaterialAttachments"
+                  :key="attachment.id"
+                  class="composer-attachment"
+                >
+                  <image
+                    v-if="isPreviewableMaterialImage(attachment)"
+                    class="composer-attachment-thumb"
+                    :src="attachment.url"
+                    mode="aspectFill"
+                  />
+                  <view v-else class="composer-attachment-file">
+                    <text>{{
+                      resolveMaterialTypeLabel(attachment.materialType)
+                    }}</text>
+                  </view>
+                  <view class="composer-attachment-copy">
+                    <text class="composer-attachment-name">{{
+                      attachment.originalName
+                    }}</text>
+                    <text class="composer-attachment-meta">{{
+                      formatUploadSize(attachment.size)
+                    }}</text>
+                  </view>
+                  <button
+                    class="composer-attachment-remove"
+                    :disabled="isBusy"
+                    @click.stop="removePendingMaterialAttachment(attachment.id)"
+                  >
+                    ×
+                  </button>
+                </view>
+                <view
+                  v-if="materialAttachmentUploading"
+                  class="composer-attachment uploading"
+                >
+                  <view class="composer-attachment-file">
+                    <text>上传</text>
+                  </view>
+                  <view class="composer-attachment-copy">
+                    <text class="composer-attachment-name">正在上传素材</text>
+                    <text class="composer-attachment-meta">请稍候</text>
+                  </view>
+                </view>
+              </view>
+            </scroll-view>
+          </view>
           <view class="editor-wrap" :style="editorWrapStyle">
-            <text v-if="!draft && !isComposing && !isEditorFocused" class="message-placeholder">
+            <text
+              v-if="!draft && !isComposing && !isEditorFocused"
+              class="message-placeholder"
+            >
               {{ composerPlaceholder }}
             </text>
-            <textarea v-model="draft" class="message-input" :style="{ height: messageInputHeight }" :disabled="isBusy"
-              :maxlength="-1" placeholder="" @blur="handleEditorBlur" @confirm="sendMessage" @focus="handleEditorFocus"
-              @compositioncancel="handleEditorCompositionEnd" @compositionend="handleEditorCompositionEnd"
-              @compositionstart="handleEditorCompositionStart" @input="handleDraftInput" @keydown="handleEditorKeydown"
-              @tap="handleEditorPointerEnd" />
+            <textarea
+              v-model="draft"
+              class="message-input"
+              :style="{ height: messageInputHeight }"
+              :disabled="isBusy"
+              :maxlength="-1"
+              placeholder=""
+              @blur="handleEditorBlur"
+              @confirm="sendMessage"
+              @focus="handleEditorFocus"
+              @compositioncancel="handleEditorCompositionEnd"
+              @compositionend="handleEditorCompositionEnd"
+              @compositionstart="handleEditorCompositionStart"
+              @input="handleDraftInput"
+              @keydown="handleEditorKeydown"
+              @tap="handleEditorPointerEnd"
+            />
           </view>
 
           <view class="composer-footer">
             <scroll-view class="quick-actions" scroll-x>
               <view class="quick-action-row">
-                <button v-if="canUploadMaterial" class="plus" :disabled="isBusy" @click="chooseMaterial">
+                <button
+                  v-if="canUseUploadMaterial"
+                  class="plus"
+                  :disabled="isBusy || materialAttachmentUploading"
+                  @click="chooseMaterial"
+                >
                   <uni-icons type="plusempty" size="18" color="#111827" />
                 </button>
-                <view v-if="canUploadMaterial" class="tool-divider"></view>
-                <button v-if="activeComposerModeMeta" class="mode-chip" :disabled="isBusy" @click="cancelComposerMode">
+                <view v-if="canUseUploadMaterial" class="tool-divider"></view>
+                <button
+                  v-if="activeComposerModeMeta"
+                  class="mode-chip"
+                  :disabled="isBusy || materialAttachmentUploading"
+                  @click="cancelComposerMode"
+                >
                   <text>{{ activeComposerModeMeta.label }}</text>
                   <text class="chip-close">×</text>
                 </button>
-                <button v-for="action in visibleQuickActions" :key="action.label" class="quick-action"
-                  :class="{ inert: action.interactive === false }" :disabled="isBusy"
-                  @click="handleQuickAction(action)">
+                <button
+                  v-for="action in visibleQuickActions"
+                  :key="action.label"
+                  class="quick-action"
+                  :class="{ inert: action.interactive === false }"
+                  :disabled="isBusy"
+                  @click="handleQuickAction(action)"
+                >
                   <text>{{ action.label }}</text>
                 </button>
               </view>
             </scroll-view>
-            <button class="send-button" :class="{ 'is-disabled': isBusy || !draft.trim() }"
-              :disabled="isBusy || !draft.trim()" @click="sendMessage">
+            <button
+              class="send-button"
+              :class="{
+                'is-disabled':
+                  isBusy ||
+                  materialAttachmentUploading ||
+                  !canSubmitComposerMessage,
+              }"
+              :disabled="
+                isBusy ||
+                materialAttachmentUploading ||
+                !canSubmitComposerMessage
+              "
+              @click="sendMessage"
+            >
               <uni-icons type="arrow-up" size="17" color="#ffffff" />
             </button>
-            <button v-if="canUploadMaterial" class="mobile-attach-button" :disabled="isBusy" @click="chooseMaterial">
+            <button
+              v-if="canUseUploadMaterial"
+              class="mobile-attach-button"
+              :disabled="isBusy || materialAttachmentUploading"
+              @click="chooseMaterial"
+            >
               <uni-icons type="plusempty" size="20" color="#303030" />
             </button>
           </view>
@@ -227,30 +432,60 @@
       </view>
     </view>
 
-    <StrategyReportModal :visible="isReportModalVisible" :loading="reportModalLoading"
-      :report="activeReportResponse?.report ?? null" :next-actions="activeReportResponse?.nextActions ?? []"
-      :actions-disabled="isBusy" @close="closeReportModal" @action="handleReportModalAction" />
+    <StrategyReportModal
+      :visible="isReportModalVisible"
+      :loading="reportModalLoading"
+      :report="activeReportResponse?.report ?? null"
+      :next-actions="activeReportResponse?.nextActions ?? []"
+      :actions-disabled="isBusy"
+      @close="closeReportModal"
+      @action="handleReportModalAction"
+    />
 
-    <view v-if="imagePreview.visible" class="file-preview-overlay" @click="closeImagePreview">
+    <view
+      v-if="imagePreview.visible"
+      class="file-preview-overlay"
+      @click="closeImagePreview"
+    >
       <view class="file-preview-panel" @click.stop>
         <view class="file-preview-header">
           <text class="file-preview-title">{{ imagePreview.name }}</text>
-          <button class="file-preview-close" aria-label="关闭预览" @click="closeImagePreview">
+          <button
+            class="file-preview-close"
+            aria-label="关闭预览"
+            @click="closeImagePreview"
+          >
             ×
           </button>
         </view>
-        <image class="file-preview-image" :src="imagePreview.url" mode="aspectFit" />
+        <image
+          class="file-preview-image"
+          :src="imagePreview.url"
+          mode="aspectFit"
+        />
       </view>
     </view>
 
-    <view v-if="isSettingsVisible" class="settings-overlay" @click="closeSettings">
+    <view
+      v-if="isSettingsVisible"
+      class="settings-overlay"
+      @click="closeSettings"
+    >
       <view class="settings-panel" @click.stop>
-        <button class="settings-close settings-panel-close" @click="closeSettings">
+        <button
+          class="settings-close settings-panel-close"
+          @click="closeSettings"
+        >
           <text class="close-icon"></text>
         </button>
         <view class="settings-nav">
-          <button v-for="item in settingsMenuItems" :key="item.id" class="settings-nav-item"
-            :class="{ active: activeSettingsMenu === item.id }" @click="setActiveSettingsMenu(item.id)">
+          <button
+            v-for="item in settingsMenuItems"
+            :key="item.id"
+            class="settings-nav-item"
+            :class="{ active: activeSettingsMenu === item.id }"
+            @click="setActiveSettingsMenu(item.id)"
+          >
             <text class="settings-nav-icon" :class="item.id"></text>
             <text>{{ item.label }}</text>
           </button>
@@ -260,27 +495,47 @@
           <view class="settings-content-inner">
             <view class="settings-header">
               <text class="settings-title">{{ settingsPanelTitle }}</text>
-              <text v-if="settingsLoading" class="settings-status">正在同步账号信息</text>
+              <text v-if="settingsLoading" class="settings-status"
+                >正在同步账号信息</text
+              >
             </view>
-            <text v-if="settingsError" class="settings-error">{{ settingsError }}</text>
+            <text v-if="settingsError" class="settings-error">{{
+              settingsError
+            }}</text>
 
             <template v-if="activeSettingsMenu === 'account'">
               <view class="settings-section account-summary">
                 <view class="avatar-preview">
-                  <image v-if="settingsForm.avatarUrl" :src="settingsForm.avatarUrl" mode="aspectFill" />
+                  <image
+                    v-if="settingsForm.avatarUrl"
+                    :src="settingsForm.avatarUrl"
+                    mode="aspectFill"
+                  />
                   <text v-else>{{ avatarInitial }}</text>
                 </view>
                 <view class="summary-text">
-                  <text class="summary-name">{{ settingsForm.nickname || displayName }}</text>
-                  <text class="summary-id">{{ userAccountId || "暂无账号ID" }}</text>
+                  <text class="summary-name">{{
+                    settingsForm.nickname || displayName
+                  }}</text>
+                  <text class="summary-id">{{
+                    userAccountId || "暂无账号ID"
+                  }}</text>
                 </view>
                 <view class="avatar-actions">
-                  <button class="secondary-button" :disabled="avatarUploading || avatarResetting" @click="chooseAvatar">
+                  <button
+                    class="secondary-button"
+                    :disabled="avatarUploading || avatarResetting"
+                    @click="chooseAvatar"
+                  >
                     {{ avatarUploading ? "上传中" : "更换头像" }}
                   </button>
                   <button
                     class="ghost-button"
-                    :disabled="!settingsForm.avatarUrl || avatarUploading || avatarResetting"
+                    :disabled="
+                      !settingsForm.avatarUrl ||
+                      avatarUploading ||
+                      avatarResetting
+                    "
                     @click="resetAvatar"
                   >
                     {{ avatarResetting ? "重置中" : "重置头像" }}
@@ -291,11 +546,18 @@
               <view class="settings-section">
                 <view class="form-row">
                   <text>昵称</text>
-                  <input v-model.trim="settingsForm.nickname" placeholder="请输入昵称" />
+                  <input
+                    v-model.trim="settingsForm.nickname"
+                    placeholder="请输入昵称"
+                  />
                 </view>
                 <view class="form-row">
                   <text>手机号码</text>
-                  <input v-model.trim="settingsForm.phone" placeholder="请输入手机号码" type="number" />
+                  <input
+                    v-model.trim="settingsForm.phone"
+                    placeholder="请输入手机号码"
+                    type="number"
+                  />
                 </view>
               </view>
 
@@ -322,7 +584,9 @@
               <view class="settings-actions">
                 <button
                   class="primary-button"
-                  :disabled="settingsSaving || avatarUploading || avatarResetting"
+                  :disabled="
+                    settingsSaving || avatarUploading || avatarResetting
+                  "
                   @click="saveSettings"
                 >
                   {{ settingsSaving ? "保存中" : "保存设置" }}
@@ -334,21 +598,39 @@
               <view class="settings-section password-settings-section">
                 <view class="form-row">
                   <text>当前密码</text>
-                  <input v-model="settingsForm.currentPassword" password placeholder="请输入当前密码" />
+                  <input
+                    v-model="settingsForm.currentPassword"
+                    password
+                    placeholder="请输入当前密码"
+                  />
                 </view>
                 <view class="form-row">
                   <text>新密码</text>
-                  <input v-model="settingsForm.newPassword" password placeholder="至少 6 位" />
+                  <input
+                    v-model="settingsForm.newPassword"
+                    password
+                    placeholder="至少 6 位"
+                  />
                 </view>
                 <view class="form-row">
                   <text>确认新密码</text>
-                  <input v-model="settingsForm.confirmPassword" password placeholder="再次输入新密码" />
+                  <input
+                    v-model="settingsForm.confirmPassword"
+                    password
+                    placeholder="再次输入新密码"
+                  />
                 </view>
               </view>
 
               <view class="settings-actions">
-                <button class="ghost-button" @click="resetPasswordForm">重置</button>
-                <button class="primary-button" :disabled="settingsSaving" @click="savePasswordSettings">
+                <button class="ghost-button" @click="resetPasswordForm">
+                  重置
+                </button>
+                <button
+                  class="primary-button"
+                  :disabled="settingsSaving"
+                  @click="savePasswordSettings"
+                >
                   {{ settingsSaving ? "保存中" : "修改密码" }}
                 </button>
               </view>
@@ -358,21 +640,34 @@
       </view>
     </view>
 
-    <view v-if="isFeedbackVisible" class="settings-overlay feedback-overlay" @click="closeFeedback">
+    <view
+      v-if="isFeedbackVisible"
+      class="settings-overlay feedback-overlay"
+      @click="closeFeedback"
+    >
       <view class="feedback-panel" @click.stop>
         <view class="feedback-header">
           <view class="feedback-title-copy">
             <text class="feedback-title">问题反馈</text>
             <text class="feedback-subtitle">提交后将生成调度中心工单</text>
           </view>
-          <button class="settings-close feedback-close" :disabled="feedbackSubmitting" @click="closeFeedback">
+          <button
+            class="settings-close feedback-close"
+            :disabled="feedbackSubmitting"
+            @click="closeFeedback"
+          >
             <text class="close-icon"></text>
           </button>
         </view>
 
         <view class="feedback-body">
-          <textarea v-model="feedbackForm.description" class="feedback-textarea" :disabled="feedbackSubmitting"
-            :maxlength="2000" placeholder="请描述你遇到的问题、期望结果或复现步骤" />
+          <textarea
+            v-model="feedbackForm.description"
+            class="feedback-textarea"
+            :disabled="feedbackSubmitting"
+            :maxlength="2000"
+            placeholder="请描述你遇到的问题、期望结果或复现步骤"
+          />
           <text class="feedback-counter">
             {{ feedbackForm.description.length }}/2000
           </text>
@@ -380,32 +675,56 @@
           <view class="feedback-image-section">
             <view class="feedback-image-header">
               <text>图片附件</text>
-              <text>{{ feedbackImages.length }}/{{ FEEDBACK_MAX_IMAGE_COUNT }}</text>
+              <text
+                >{{ feedbackImages.length }}/{{
+                  FEEDBACK_MAX_IMAGE_COUNT
+                }}</text
+              >
             </view>
             <view class="feedback-image-list">
-              <view v-for="image in feedbackImages" :key="image.id" class="feedback-image-item">
+              <view
+                v-for="image in feedbackImages"
+                :key="image.id"
+                class="feedback-image-item"
+              >
                 <image :src="image.url" mode="aspectFill" />
-                <button class="feedback-image-remove" :disabled="feedbackSubmitting"
-                  @click="removeFeedbackImage(image.id)">
+                <button
+                  class="feedback-image-remove"
+                  :disabled="feedbackSubmitting"
+                  @click="removeFeedbackImage(image.id)"
+                >
                   ×
                 </button>
               </view>
-              <button v-if="feedbackImages.length < FEEDBACK_MAX_IMAGE_COUNT" class="feedback-image-add"
-                :disabled="feedbackSubmitting" @click="chooseFeedbackImages">
+              <button
+                v-if="feedbackImages.length < FEEDBACK_MAX_IMAGE_COUNT"
+                class="feedback-image-add"
+                :disabled="feedbackSubmitting"
+                @click="chooseFeedbackImages"
+              >
                 <text class="feedback-image-add-icon">+</text>
                 <text>上传图片</text>
               </button>
             </view>
           </view>
-          <text v-if="feedbackError" class="settings-error">{{ feedbackError }}</text>
+          <text v-if="feedbackError" class="settings-error">{{
+            feedbackError
+          }}</text>
         </view>
 
         <view class="settings-actions feedback-actions">
-          <button class="ghost-button" :disabled="feedbackSubmitting" @click="closeFeedback">
+          <button
+            class="ghost-button"
+            :disabled="feedbackSubmitting"
+            @click="closeFeedback"
+          >
             取消
           </button>
-          <button class="primary-button" :disabled="feedbackSubmitting || !feedbackForm.description.trim()"
-            @click="submitFeedback">
+          <button
+            class="primary-button"
+            :disabled="feedbackSubmitting || !feedbackForm.description.trim()"
+            @click="submitFeedback"
+          >
             {{ feedbackSubmitting ? "提交中" : "提交反馈" }}
           </button>
         </view>
@@ -429,12 +748,19 @@ import {
 import { useAuthStore } from "@/stores/auth";
 import { useStrategyChatStore } from "@/stores/strategyChat";
 import type {
+  CommonUploadFilesResponse,
+  CommonUploadedFile,
+  MaterialChatAttachment,
+  MaterialType,
+} from "@/types/material";
+import type {
   AgentMessage,
   LoginResponse,
   StrategyChatSessionSummary,
   StrategyFileAsset,
   StrategyReportResponse,
 } from "@/types/strategy";
+import MaterialMessageCard from "./components/MaterialMessageCard.vue";
 import MessageMarkdown from "./components/MessageMarkdown.vue";
 import StrategyMessageCard from "./components/StrategyMessageCard.vue";
 import StrategyReportModal from "./components/StrategyReportModal.vue";
@@ -477,12 +803,12 @@ type QuickAction =
   | (QuickActionBase & { type: "upload" })
   | (QuickActionBase & { type: "mode"; mode: ComposerModeId })
   | (QuickActionBase & {
-    type: "prompt";
-    prompt: string;
-    strategy?: boolean;
-  });
+      type: "prompt";
+      prompt: string;
+      strategy?: boolean;
+    });
 
-type ComposerModeId = "strategy";
+type ComposerModeId = "strategy" | "material";
 
 type ComposerMode = {
   id: ComposerModeId;
@@ -506,6 +832,7 @@ type PickedFile = {
   path?: string;
   tempFilePath?: string;
   name?: string;
+  type?: string;
 };
 
 type BoardTrigger = {
@@ -578,9 +905,15 @@ type FeedbackImage = {
   browserFile: Blob | null;
 };
 
+type PendingMaterialAttachment = CommonUploadedFile & {
+  id: string;
+  materialType: MaterialType;
+};
+
 const LOCAL_SETTINGS_KEY = "vehicle_marketing_client_account_settings";
 const DEFAULT_BRAND_LOGO = "/static/svg/logoIcon.svg";
 const STRATEGY_AGENT_CODE = "strategy_agent";
+const MATERIAL_AGENT_CODE = "material_agent";
 const BUSY_ELAPSED_VISIBLE_THRESHOLD_SECONDS = 10;
 const COMPOSER_INPUT_MIN_HEIGHT = 32;
 const COMPOSER_INPUT_DESKTOP_MAX_HEIGHT = 132;
@@ -589,6 +922,85 @@ const COMPOSER_INPUT_DESKTOP_LINE_HEIGHT = 22;
 const COMPOSER_INPUT_MOBILE_LINE_HEIGHT = 24;
 const SESSION_DAY_MS = 24 * 60 * 60 * 1000;
 const FEEDBACK_MAX_IMAGE_COUNT = 6;
+const MATERIAL_DOCUMENT_EXTENSIONS = [
+  "pdf",
+  "txt",
+  "md",
+  "markdown",
+  "csv",
+  "json",
+];
+const MATERIAL_AGENT_DOCUMENT_EXTENSIONS = [
+  "docx",
+  "doc",
+  "xlsx",
+  "xls",
+  "csv",
+  "pptx",
+  "ppt",
+  "odt",
+  "ods",
+  "odp",
+  "epub",
+];
+const MATERIAL_AGENT_IMAGE_EXTENSIONS = [
+  "jpg",
+  "jpeg",
+  "png",
+  "gif",
+  "bmp",
+  "webp",
+  "svg",
+  "ico",
+  "avif",
+  "tiff",
+];
+const MATERIAL_AGENT_VIDEO_EXTENSIONS = ["mp4", "webm", "ogg", "mov", "m4v"];
+const MATERIAL_AGENT_AUDIO_EXTENSIONS = [
+  "mp3",
+  "wav",
+  "ogg",
+  "m4a",
+  "flac",
+  "aac",
+];
+const MATERIAL_AGENT_SUPPORTED_EXTENSIONS = Array.from(
+  new Set([
+    ...MATERIAL_AGENT_IMAGE_EXTENSIONS,
+    ...MATERIAL_AGENT_DOCUMENT_EXTENSIONS,
+    ...MATERIAL_AGENT_VIDEO_EXTENSIONS,
+    ...MATERIAL_AGENT_AUDIO_EXTENSIONS,
+  ]),
+);
+const MATERIAL_AGENT_SUPPORTED_EXTENSION_SET = new Set(
+  MATERIAL_AGENT_SUPPORTED_EXTENSIONS,
+);
+const MATERIAL_ATTACHMENT_MAX_COUNT = 20;
+const MATERIAL_SUPPORTED_EXTENSIONS = [
+  ...MATERIAL_DOCUMENT_EXTENSIONS,
+  "jpg",
+  "jpeg",
+  "png",
+  "webp",
+  "bmp",
+  "gif",
+];
+const MATERIAL_IMAGE_EXTENSION_PATTERN =
+  /\.(?:jpe?g|png|webp|bmp|gif|svg|ico|avif|tiff)$/i;
+const STRATEGY_UPLOAD_ALLOWED_STATUSES = new Set([
+  "collecting_info",
+  "form_draft_generated",
+  "rediagnosing",
+  "form_confirmed",
+  "framework_draft_generated",
+  "framework_refining",
+  "framework_confirmed",
+  "completed",
+]);
+const MATERIAL_MANAGE_PERMISSIONS = [
+  "agent.material.use",
+  "skill.material.manage.use",
+] as const;
 
 const authStore = useAuthStore();
 const chatStore = useStrategyChatStore();
@@ -606,7 +1018,9 @@ const activeReportResponse = ref<StrategyReportResponse | null>(null);
 const mobileStatusBarHeight = ref(0);
 const mobileNavHeight = ref(56);
 const mobileNavContentHeight = ref(44);
+const mobileNavTopOffset = ref(0);
 const mobileRightSafeWidth = ref(58);
+const mobileCapsuleSafeRight = ref(14);
 const boardMenuQuery = ref("");
 const boardMenuTrigger = ref<BoardTrigger | null>(null);
 const boardMenuStyle = ref("left:16px;top:96px;width:320px;");
@@ -655,6 +1069,8 @@ const feedbackForm = reactive({
   description: "",
 });
 const feedbackImages = ref<FeedbackImage[]>([]);
+const pendingMaterialAttachments = ref<PendingMaterialAttachment[]>([]);
+const materialAttachmentUploading = ref(false);
 const isMobileLayout = ref(false);
 const messageInputHeight = computed(() => `${messageInputHeightValue.value}px`);
 const editorWrapStyle = computed(() => {
@@ -704,9 +1120,14 @@ function estimateComposerInputHeight(value: string) {
     ? COMPOSER_INPUT_MOBILE_LINE_HEIGHT
     : COMPOSER_INPUT_DESKTOP_LINE_HEIGHT;
   const wrapColumns = isMobileLayout.value ? 24 : 76;
-  const lines = (value ? value.split(/\r\n|\r|\n/) : [""]).reduce((total, line) => {
-    return total + Math.max(1, Math.ceil(countComposerColumns(line) / wrapColumns));
-  }, 0);
+  const lines = (value ? value.split(/\r\n|\r|\n/) : [""]).reduce(
+    (total, line) => {
+      return (
+        total + Math.max(1, Math.ceil(countComposerColumns(line) / wrapColumns))
+      );
+    },
+    0,
+  );
 
   return Math.min(
     maxHeight,
@@ -729,12 +1150,20 @@ function updateComposerInputHeight() {
 
     const maxHeight = getComposerInputMaxHeight();
     textarea.style.setProperty("height", "auto", "important");
-    textarea.style.setProperty("min-height", `${COMPOSER_INPUT_MIN_HEIGHT}px`, "important");
+    textarea.style.setProperty(
+      "min-height",
+      `${COMPOSER_INPUT_MIN_HEIGHT}px`,
+      "important",
+    );
     textarea.style.setProperty("max-height", `${maxHeight}px`, "important");
 
     if (!draft.value) {
       setComposerInputHeight(COMPOSER_INPUT_MIN_HEIGHT);
-      textarea.style.setProperty("height", `${COMPOSER_INPUT_MIN_HEIGHT}px`, "important");
+      textarea.style.setProperty(
+        "height",
+        `${COMPOSER_INPUT_MIN_HEIGHT}px`,
+        "important",
+      );
       textarea.style.setProperty("overflow-y", "hidden", "important");
       return;
     }
@@ -746,7 +1175,11 @@ function updateComposerInputHeight() {
     );
 
     setComposerInputHeight(height);
-    textarea.style.setProperty("height", `${messageInputHeightValue.value}px`, "important");
+    textarea.style.setProperty(
+      "height",
+      `${messageInputHeightValue.value}px`,
+      "important",
+    );
     textarea.style.setProperty(
       "overflow-y",
       scrollHeight > maxHeight ? "auto" : "hidden",
@@ -835,8 +1268,8 @@ const fallbackChats: Array<{
   title: string;
   active?: boolean;
 }> = [
-    // { date: "最近会话", title: "新的聊天", active: true },
-  ];
+  // { date: "最近会话", title: "新的聊天", active: true },
+];
 
 const quickActions: QuickAction[] = [
   {
@@ -850,6 +1283,12 @@ const quickActions: QuickAction[] = [
     prompt: "开始战略诊断",
     strategy: true,
     requiredAll: [...STRATEGY_DIAGNOSIS_SKILL_PERMISSIONS],
+  },
+  {
+    label: "/ 素材入库",
+    type: "mode",
+    mode: "material",
+    requiredAll: [...MATERIAL_MANAGE_PERMISSIONS],
   },
   // {
   //   label: "/ 上传资料",
@@ -882,71 +1321,74 @@ const quickActions: QuickAction[] = [
   // },
 ];
 
-const strategyModeActions: QuickAction[] = quickActions.filter(
-  (action) => action.label !== "/ 战略诊断",
-);
-
 const composerModes: Record<ComposerModeId, ComposerMode> = {
   strategy: {
     id: "strategy",
     label: "战略诊断",
     placeholder: "描述企业现状或你想诊断的战略方向",
   },
+  material: {
+    id: "material",
+    label: "素材入库",
+    placeholder: "上传素材并补充描述，或检索已入库素材",
+  },
 };
 
-const boardOptions: BoardOption[] = ([
-  {
-    id: "brand-strategy",
-    name: "品牌战略看板",
-    mention: "品牌战略",
-    description: "锚定方向，塑造品牌心智",
-    icon: iconMap.brandStrategy,
-    requiredAll: [
-      "agent.strategy.use",
-      DASHBOARD_PERMISSION_BY_BOARD["brand-strategy"],
-    ],
-  },
-  {
-    id: "key-metrics",
-    name: "核心指标看板",
-    mention: "核心指标",
-    description: "数据驱动业务增长",
-    icon: iconMap.keyMetrics,
-    requiredAll: [DASHBOARD_PERMISSION_BY_BOARD["key-metrics"]],
-  },
-  {
-    id: "marketing-operations",
-    name: "营销运营看板",
-    mention: "营销运营",
-    description: "全链路营销提效增长",
-    icon: iconMap.marketingOperations,
-    requiredAll: [DASHBOARD_PERMISSION_BY_BOARD["marketing-operations"]],
-  },
-  {
-    id: "marketing-calendar",
-    name: "营销日历看板",
-    mention: "营销日历",
-    description: "精准把控营销节点",
-    icon: iconMap.marketingCalendar,
-    requiredAll: [DASHBOARD_PERMISSION_BY_BOARD["marketing-calendar"]],
-  },
-  {
-    id: "market-feedback",
-    name: "市场反馈看板",
-    mention: "市场反馈",
-    description: "倾听用户优化策略",
-    icon: iconMap.marketFeedback,
-    requiredAll: [DASHBOARD_PERMISSION_BY_BOARD["market-feedback"]],
-  },
-  {
-    id: "ecological-partner",
-    name: "生态伙伴看板",
-    mention: "生态伙伴",
-    description: "携手同行共建生态",
-    icon: iconMap.ecologicalPartner,
-    requiredAll: [DASHBOARD_PERMISSION_BY_BOARD["ecological-partner"]],
-  },
-] satisfies Array<Omit<BoardOption, "searchText">>).map((board) => ({
+const boardOptions: BoardOption[] = (
+  [
+    {
+      id: "brand-strategy",
+      name: "品牌战略看板",
+      mention: "品牌战略",
+      description: "锚定方向，塑造品牌心智",
+      icon: iconMap.brandStrategy,
+      requiredAll: [
+        "agent.strategy.use",
+        DASHBOARD_PERMISSION_BY_BOARD["brand-strategy"],
+      ],
+    },
+    {
+      id: "key-metrics",
+      name: "核心指标看板",
+      mention: "核心指标",
+      description: "数据驱动业务增长",
+      icon: iconMap.keyMetrics,
+      requiredAll: [DASHBOARD_PERMISSION_BY_BOARD["key-metrics"]],
+    },
+    {
+      id: "marketing-operations",
+      name: "营销运营看板",
+      mention: "营销运营",
+      description: "全链路营销提效增长",
+      icon: iconMap.marketingOperations,
+      requiredAll: [DASHBOARD_PERMISSION_BY_BOARD["marketing-operations"]],
+    },
+    {
+      id: "marketing-calendar",
+      name: "营销日历看板",
+      mention: "营销日历",
+      description: "精准把控营销节点",
+      icon: iconMap.marketingCalendar,
+      requiredAll: [DASHBOARD_PERMISSION_BY_BOARD["marketing-calendar"]],
+    },
+    {
+      id: "market-feedback",
+      name: "市场反馈看板",
+      mention: "市场反馈",
+      description: "倾听用户优化策略",
+      icon: iconMap.marketFeedback,
+      requiredAll: [DASHBOARD_PERMISSION_BY_BOARD["market-feedback"]],
+    },
+    {
+      id: "ecological-partner",
+      name: "生态伙伴看板",
+      mention: "生态伙伴",
+      description: "携手同行共建生态",
+      icon: iconMap.ecologicalPartner,
+      requiredAll: [DASHBOARD_PERMISSION_BY_BOARD["ecological-partner"]],
+    },
+  ] satisfies Array<Omit<BoardOption, "searchText">>
+).map((board) => ({
   ...board,
   searchText: [board.id, board.name, board.mention, board.description]
     .join(" ")
@@ -963,9 +1405,9 @@ const settingsMenuItems: Array<{
   id: SettingsMenuId;
   label: string;
 }> = [
-    { id: "account", label: "账号设置" },
-    { id: "password", label: "修改密码" },
-  ];
+  { id: "account", label: "账号设置" },
+  { id: "password", label: "修改密码" },
+];
 
 const actionPrompts: Record<string, string> = {
   start_diagnosis: "开始战略诊断",
@@ -989,8 +1431,7 @@ const actionPrompts: Record<string, string> = {
   view_brand_experience_blueprint: "查看品牌与体验蓝图",
   web_search_evidence: "联网搜索企业公开资料并整理战略诊断证据",
   apply_search_to_form: "把最近一次联网搜索结果补充到当前19点战略",
-  apply_search_to_framework:
-    "把最近一次联网搜索结果补充到当前19点战略",
+  apply_search_to_framework: "把最近一次联网搜索结果补充到当前19点战略",
   rediagnose: "重新诊断",
   confirm_framework_update: "确认修改",
   cancel_framework_update: "取消修改",
@@ -1019,7 +1460,9 @@ const isBusy = computed(
 );
 const assistantLoadingText = computed(() => {
   const text = chatStore.uploading
-    ? "正在上传并解析资料"
+    ? isMaterialComposerMode.value
+      ? "正在上传素材"
+      : "正在上传并解析资料"
     : reportModalLoading.value
       ? "正在加载报告"
       : "正在处理";
@@ -1029,6 +1472,12 @@ const assistantLoadingText = computed(() => {
     : text;
 });
 const showMessages = computed(() => chatStore.messages.length > 0);
+const hasPendingMaterialAttachments = computed(
+  () => pendingMaterialAttachments.value.length > 0,
+);
+const canSubmitComposerMessage = computed(
+  () => Boolean(draft.value.trim()) || hasPendingMaterialAttachments.value,
+);
 const latestActionableMessageId = computed(() => {
   for (let index = chatStore.messages.length - 1; index >= 0; index -= 1) {
     const message = chatStore.messages[index];
@@ -1072,13 +1521,16 @@ const displayName = computed(
     settingsUser.value?.email ||
     "未命名用户",
 );
-const userAccountId = computed(() => settingsUser.value?.sub || authStore.user?.sub || "");
+const userAccountId = computed(
+  () => settingsUser.value?.sub || authStore.user?.sub || "",
+);
 const avatarInitial = computed(() => {
   const source = settingsForm.nickname || displayName.value || "车";
   return source.slice(0, 1).toUpperCase();
 });
 const tenantName = computed(
-  () => meContext.value?.tenant?.name || authStore.user?.tenantId || "暂未绑定企业",
+  () =>
+    meContext.value?.tenant?.name || authStore.user?.tenantId || "暂未绑定企业",
 );
 const shortName = computed(() => {
   const name = settingsUser.value?.organizationShortName;
@@ -1093,7 +1545,9 @@ const roleText = computed(() => {
     return "企业超级管理员";
   }
 
-  const visibleRoleNames = roleNames.filter((name) => name !== "企业超级管理员");
+  const visibleRoleNames = roleNames.filter(
+    (name) => name !== "企业超级管理员",
+  );
 
   if (visibleRoleNames.length > 0) {
     return Array.from(new Set(visibleRoleNames)).join("、");
@@ -1106,10 +1560,14 @@ const roleText = computed(() => {
   return "普通成员";
 });
 const organizationText = computed(
-  () => settingsUser.value?.organizationName || settingsUser.value?.departmentName || "暂未设置",
+  () =>
+    settingsUser.value?.organizationName ||
+    settingsUser.value?.departmentName ||
+    "暂未设置",
 );
 const currentPermissionCodes = computed(() => {
-  const permissions = meContext.value?.permissions ?? authStore.user?.permissions ?? [];
+  const permissions =
+    meContext.value?.permissions ?? authStore.user?.permissions ?? [];
 
   return new Set(permissions);
 });
@@ -1159,6 +1617,60 @@ function getString(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : "";
 }
 
+function hasOwnValue(source: Record<string, unknown>, key: string) {
+  return Object.prototype.hasOwnProperty.call(source, key);
+}
+
+function getStringArray(value: unknown) {
+  if (Array.isArray(value)) {
+    return value
+      .map(String)
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  if (typeof value === "string") {
+    return value
+      .split(/[,，、\n]/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  return [];
+}
+
+function hasRecordData(value: Record<string, unknown>) {
+  return Object.keys(value).length > 0;
+}
+
+function hasMaterialCardData(card: Record<string, unknown>) {
+  const data = asRecord(card.data);
+  const materialTable = asRecord(card.materialTable || data.materialTable);
+  const stats = asRecord(card.stats || data.stats);
+
+  return (
+    (Array.isArray(card.drafts) && card.drafts.length > 0) ||
+    (Array.isArray(data.drafts) && data.drafts.length > 0) ||
+    Boolean(card.draft || data.draft) ||
+    (Array.isArray(card.assets) && card.assets.length > 0) ||
+    (Array.isArray(data.assets) && data.assets.length > 0) ||
+    Boolean(card.asset || data.asset) ||
+    hasRecordData(materialTable) ||
+    hasRecordData(stats)
+  );
+}
+
+function isMaterialMessageCard(message: AgentMessage) {
+  const metadata = asRecord(message.metadata);
+  const card = asRecord(metadata.card);
+  const type =
+    getString(card.type) ||
+    getString(asRecord(card.ui).type) ||
+    getString(metadata.type);
+
+  return type.startsWith("material_") || hasMaterialCardData(card);
+}
+
 function getNumber(value: unknown) {
   if (typeof value === "number" && Number.isFinite(value)) {
     return value;
@@ -1173,7 +1685,9 @@ function getNumber(value: unknown) {
 }
 
 function extractUploadedFileName(content: string) {
-  return /^(?:上传资料|已上传资料)[:：]\s*(.+?)\s*$/.exec(content)?.[1]?.trim() || "";
+  return (
+    /^(?:上传资料|已上传资料)[:：]\s*(.+?)\s*$/.exec(content)?.[1]?.trim() || ""
+  );
 }
 
 function toPreviewableStrategyFile(
@@ -1194,7 +1708,8 @@ function toPreviewableStrategyFile(
   return {
     id,
     originalName,
-    mimeType: getString(source.mimeType) || getString(source.contentType) || null,
+    mimeType:
+      getString(source.mimeType) || getString(source.contentType) || null,
     size: getNumber(source.size),
     status: getString(source.status) || "uploaded",
     metadata: asRecord(source.metadata),
@@ -1205,7 +1720,9 @@ function toPreviewableStrategyFile(
   };
 }
 
-function getMessageUploadFile(message: AgentMessage): PreviewableStrategyFile | null {
+function getMessageUploadFile(
+  message: AgentMessage,
+): PreviewableStrategyFile | null {
   if (message.role !== "USER") {
     return null;
   }
@@ -1330,6 +1847,154 @@ function formatFileSize(size?: number | null) {
   return `${(size / 1024 / 1024).toFixed(1)} MB`;
 }
 
+function formatUploadSize(size?: number | null) {
+  return formatFileSize(size) || "未知大小";
+}
+
+function getFileExtension(value?: string | null) {
+  const normalized = (value || "").split(/[?#]/)[0] || "";
+  const index = normalized.lastIndexOf(".");
+
+  return index >= 0 ? normalized.slice(index + 1).toLowerCase() : "";
+}
+
+function isSupportedMaterialAgentExtension(value?: string | null) {
+  const extension = getFileExtension(value);
+
+  return Boolean(
+    extension && MATERIAL_AGENT_SUPPORTED_EXTENSION_SET.has(extension),
+  );
+}
+
+function showUnsupportedMaterialAgentFileToast(skippedCount?: number) {
+  uni.showToast({
+    title: skippedCount
+      ? `已跳过 ${skippedCount} 个不支持格式`
+      : "仅支持素材白名单格式",
+    icon: "none",
+  });
+}
+
+function resolveUploadedMaterialType(file: CommonUploadedFile): MaterialType {
+  const mimeType = (file.mimeType || "").toLowerCase();
+  const extension = getFileExtension(file.originalName || file.url);
+
+  if (mimeType.startsWith("image/")) {
+    return "image";
+  }
+  if (mimeType.startsWith("video/")) {
+    return "video";
+  }
+  if (mimeType.startsWith("audio/")) {
+    return "audio";
+  }
+
+  if (MATERIAL_AGENT_IMAGE_EXTENSIONS.includes(extension)) {
+    return "image";
+  }
+  if (MATERIAL_AGENT_VIDEO_EXTENSIONS.includes(extension)) {
+    return "video";
+  }
+  if (MATERIAL_AGENT_AUDIO_EXTENSIONS.includes(extension)) {
+    return "audio";
+  }
+  if (MATERIAL_AGENT_DOCUMENT_EXTENSIONS.includes(extension)) {
+    return "document";
+  }
+
+  return "document";
+}
+
+function resolveMaterialTypeLabel(type?: MaterialType | null) {
+  if (type === "image") {
+    return "图";
+  }
+  if (type === "video") {
+    return "视频";
+  }
+  if (type === "audio") {
+    return "音频";
+  }
+
+  return "文档";
+}
+
+function isPreviewableMaterialImage(attachment: PendingMaterialAttachment) {
+  return attachment.materialType === "image" && Boolean(attachment.url);
+}
+
+function normalizeUploadedMaterialAttachment(
+  file: CommonUploadedFile,
+  index: number,
+): PendingMaterialAttachment | null {
+  const url = file.url || file.storageUrl || "";
+  if (!url) {
+    return null;
+  }
+
+  return {
+    ...file,
+    id:
+      file.id ||
+      file.sha256 ||
+      `${Date.now()}-${index}-${Math.random().toString(36).slice(2, 8)}`,
+    url,
+    originalName: file.originalName || `material-${index + 1}`,
+    size: Number(file.size) || 0,
+    materialType: resolveUploadedMaterialType(file),
+  };
+}
+
+function appendPendingMaterialAttachments(files: CommonUploadedFile[]) {
+  const normalized = files
+    .map((file, index) => normalizeUploadedMaterialAttachment(file, index))
+    .filter((file): file is PendingMaterialAttachment => Boolean(file));
+  if (!normalized.length) {
+    return;
+  }
+
+  const nextFiles = [...pendingMaterialAttachments.value, ...normalized];
+  if (nextFiles.length > MATERIAL_ATTACHMENT_MAX_COUNT) {
+    uni.showToast({
+      title: `最多添加 ${MATERIAL_ATTACHMENT_MAX_COUNT} 个素材`,
+      icon: "none",
+    });
+  }
+
+  pendingMaterialAttachments.value = nextFiles.slice(
+    0,
+    MATERIAL_ATTACHMENT_MAX_COUNT,
+  );
+  enterComposerMode("material");
+}
+
+function removePendingMaterialAttachment(id: string) {
+  if (isBusy.value) {
+    return;
+  }
+
+  pendingMaterialAttachments.value = pendingMaterialAttachments.value.filter(
+    (attachment) => attachment.id !== id,
+  );
+}
+
+function resetPendingMaterialAttachments() {
+  pendingMaterialAttachments.value = [];
+}
+
+function toMaterialChatAttachments(): MaterialChatAttachment[] {
+  return pendingMaterialAttachments.value.map((attachment) => ({
+    id: attachment.id,
+    url: attachment.url,
+    originalName: attachment.originalName,
+    mimeType: attachment.mimeType,
+    size: attachment.size,
+    storageKey: attachment.storageKey,
+    storageProvider: attachment.storageProvider,
+    sha256: attachment.sha256,
+  }));
+}
+
 function getUploadFileMetaText(message: AgentMessage) {
   const file = getMessageUploadFile(message);
 
@@ -1398,7 +2063,9 @@ async function previewUploadFile(message: AgentMessage) {
   }
 
   try {
-    const blob = await fetchBlob(file.previewUrl || `/strategy/files/${file.id}/preview`);
+    const blob = await fetchBlob(
+      file.previewUrl || `/strategy/files/${file.id}/preview`,
+    );
     const objectUrl = URL.createObjectURL(blob);
     previewObjectUrls.add(objectUrl);
 
@@ -1483,15 +2150,33 @@ const visibleFeatures = computed(() =>
     feature.boardType ? canAccessBoard(feature.boardType) : true,
   ),
 );
-const canUploadMaterial = computed(() =>
+const canUseStrategyUploadMaterial = computed(() =>
   hasAllPermissions(STRATEGY_UPLOAD_MATERIAL_SKILL_PERMISSIONS),
 );
+const canUseMaterialManage = computed(() =>
+  hasAllPermissions(MATERIAL_MANAGE_PERMISSIONS),
+);
+const canUseUploadMaterial = computed(
+  () => canUseStrategyUploadMaterial.value || canUseMaterialManage.value,
+);
+const canUploadMaterial = computed(() => {
+  if (!canUseStrategyUploadMaterial.value) {
+    return false;
+  }
+
+  const status = chatStore.diagnosisStatus;
+  return !status || STRATEGY_UPLOAD_ALLOWED_STATUSES.has(status);
+});
 const sessionChats = computed(() =>
   chatStore.sessions.map((session) => ({
     id: session.id,
     title:
       session.title ||
-      (session.agentCode === "strategy_agent" ? "品牌战略诊断" : "新的聊天"),
+      (session.agentCode === STRATEGY_AGENT_CODE
+        ? "品牌战略诊断"
+        : session.agentCode === MATERIAL_AGENT_CODE
+          ? "素材智能体"
+          : "新的聊天"),
     preview: session.lastMessage?.content || "",
     active: session.id === chatStore.sessionId,
   })),
@@ -1519,7 +2204,10 @@ const sessionChatGroups = computed<SessionChatGroup[]>(() =>
   }, []),
 );
 const filteredBoards = computed(() => {
-  const query = boardMenuQuery.value.trim().toLowerCase().replace(/[\s-]+/g, "");
+  const query = boardMenuQuery.value
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "");
   if (!query) {
     return accessibleBoardOptions.value;
   }
@@ -1534,7 +2222,9 @@ const homePageStyle = computed(
       "--mobile-status-height": `${mobileStatusBarHeight.value}px`,
       "--mobile-nav-height": `${mobileNavHeight.value}px`,
       "--mobile-nav-content-height": `${mobileNavContentHeight.value}px`,
+      "--mobile-nav-top-offset": `${mobileNavTopOffset.value}px`,
       "--mobile-right-safe-width": `${mobileRightSafeWidth.value}px`,
+      "--mobile-capsule-safe-right": `${mobileCapsuleSafeRight.value}px`,
     }) as Record<string, string>,
 );
 const activeComposerModeMeta = computed(() =>
@@ -1544,12 +2234,13 @@ const composerPlaceholder = computed(
   () => activeComposerModeMeta.value?.placeholder || "发消息...",
 );
 const visibleQuickActions = computed(() =>
-  (activeComposerMode.value === "strategy" ? strategyModeActions : quickActions).filter(
-    canUseQuickAction,
-  ),
+  activeComposerMode.value ? [] : quickActions.filter(canUseQuickAction),
 );
 const isStrategyComposerMode = computed(
   () => activeComposerMode.value === "strategy",
+);
+const isMaterialComposerMode = computed(
+  () => activeComposerMode.value === "material",
 );
 
 onLoad(async () => {
@@ -1689,7 +2380,9 @@ function chooseFeedbackImages() {
     sizeType: ["compressed"],
     sourceType: ["album", "camera"],
     success: (res) => {
-      const filePaths = Array.isArray(res.tempFilePaths) ? res.tempFilePaths : [];
+      const filePaths = Array.isArray(res.tempFilePaths)
+        ? res.tempFilePaths
+        : [];
       const tempFiles = normalizeTempFileList(res.tempFiles);
       const pickedImages = Array.from({
         length: Math.max(filePaths.length, tempFiles.length),
@@ -1732,7 +2425,9 @@ function removeFeedbackImage(id: string) {
     return;
   }
 
-  feedbackImages.value = feedbackImages.value.filter((image) => image.id !== id);
+  feedbackImages.value = feedbackImages.value.filter(
+    (image) => image.id !== id,
+  );
 }
 
 async function resolveFeedbackBrowserFiles() {
@@ -1780,12 +2475,15 @@ async function createFeedbackTicket(description: string) {
 
   const browserFiles = await resolveFeedbackBrowserFiles();
   if (browserFiles) {
-    return await uploadBrowserFiles<FeedbackTicketResponse>("/feedback/tickets", {
-      files: browserFiles,
-      formData: {
-        description,
+    return await uploadBrowserFiles<FeedbackTicketResponse>(
+      "/feedback/tickets",
+      {
+        files: browserFiles,
+        formData: {
+          description,
+        },
       },
-    });
+    );
   }
 
   return await uploadFiles<FeedbackTicketResponse>("/feedback/tickets", {
@@ -1847,7 +2545,7 @@ function readLocalSettings(): LocalSettings {
     const parsed =
       typeof raw === "string" && raw
         ? (JSON.parse(raw) as Partial<LocalSettings>)
-        : (raw as Partial<LocalSettings> | undefined) ?? {};
+        : ((raw as Partial<LocalSettings> | undefined) ?? {});
 
     return {
       avatarUrl: authStore.user?.avatarUrl || parsed.avatarUrl || "",
@@ -1922,7 +2620,10 @@ async function fetchMe() {
 
   try {
     const context = await request<MeContext>("/me");
-    if (fetchVersion !== meFetchVersion || avatarVersionAtStart !== avatarEditVersion) {
+    if (
+      fetchVersion !== meFetchVersion ||
+      avatarVersionAtStart !== avatarEditVersion
+    ) {
       return;
     }
 
@@ -2045,11 +2746,24 @@ function resolvePickedFileName(
   return fallbackPath.split(/[\\/]/).pop() || fallbackName;
 }
 
-function resolvePickedAvatarName(
-  file: unknown,
-  fallbackPath: string,
-) {
+function resolvePickedAvatarName(file: unknown, fallbackPath: string) {
   return resolvePickedFileName(file, fallbackPath, "avatar.png");
+}
+
+function resolvePickedMaterialImageName(file: unknown, filePath: string) {
+  const fallbackName = `strategy-material-${Date.now()}.jpg`;
+  const candidate = resolvePickedFileName(file, filePath, fallbackName);
+
+  if (MATERIAL_IMAGE_EXTENSION_PATTERN.test(candidate)) {
+    return candidate;
+  }
+
+  const pathWithoutQuery = filePath.split(/[?#]/)[0] || "";
+  const extension = pathWithoutQuery.match(
+    MATERIAL_IMAGE_EXTENSION_PATTERN,
+  )?.[0];
+
+  return `strategy-material-${Date.now()}${extension || ".jpg"}`;
 }
 
 async function uploadPendingAvatar() {
@@ -2097,7 +2811,10 @@ async function uploadAndPersistAvatar() {
       confirmPassword: settingsForm.confirmPassword,
     };
     const uploadedAvatar = await uploadPendingAvatar();
-    if (uploadVersion !== avatarEditVersion || avatarUploadPromise !== promise) {
+    if (
+      uploadVersion !== avatarEditVersion ||
+      avatarUploadPromise !== promise
+    ) {
       return uploadedAvatar.avatarUrl;
     }
 
@@ -2132,7 +2849,10 @@ async function uploadAndPersistAvatar() {
   try {
     return await promise;
   } catch (err) {
-    if (uploadVersion === avatarEditVersion && avatarUploadPromise === promise) {
+    if (
+      uploadVersion === avatarEditVersion &&
+      avatarUploadPromise === promise
+    ) {
       showSettingsError(err, "头像上传失败");
     }
     throw err;
@@ -2303,6 +3023,7 @@ async function createSession() {
   }
 
   draft.value = "";
+  resetPendingMaterialAttachments();
   closeBoardMenu();
   closeMoreMenu();
   chatStore.startNewConversation();
@@ -2334,7 +3055,7 @@ async function handleFeatureSelect(feature: Feature) {
   if (feature.action === "strategy-chat") {
     try {
       await chatStore.enterStrategy();
-      activeComposerMode.value = "strategy";
+      enterComposerMode("strategy");
       await scrollToBottom();
     } catch (err) {
       showError(err, "进入失败");
@@ -2377,23 +3098,72 @@ function handleQuickAction(action: QuickAction) {
 }
 
 function cancelComposerMode() {
+  if (activeComposerMode.value === "material") {
+    resetPendingMaterialAttachments();
+  }
   activeComposerMode.value = null;
   closeMoreMenu();
 }
 
 function enterComposerMode(mode: ComposerModeId) {
   activeComposerMode.value = mode;
+  closeBoardMenu();
 }
 
 function syncComposerModeWithCurrentSession() {
-  activeComposerMode.value =
-    chatStore.sessionId && chatStore.activeAgentCode === STRATEGY_AGENT_CODE
+  activeComposerMode.value = chatStore.sessionId
+    ? chatStore.activeAgentCode === STRATEGY_AGENT_CODE
       ? "strategy"
-      : null;
+      : chatStore.activeAgentCode === MATERIAL_AGENT_CODE
+        ? "material"
+        : null
+    : null;
+
+  if (activeComposerMode.value !== "material") {
+    resetPendingMaterialAttachments();
+  }
+
+  if (activeComposerMode.value) {
+    closeBoardMenu();
+  }
 }
 
 function closeMoreMenu() {
   // Reserved for the old More menu close path. The More entry is currently removed.
+}
+
+function confirmAction(content: string) {
+  return new Promise<boolean>((resolve) => {
+    uni.showModal({
+      title: "确认操作",
+      content,
+      confirmText: "确认",
+      cancelText: "取消",
+      success: (res) => resolve(Boolean(res.confirm)),
+      fail: () => resolve(false),
+    });
+  });
+}
+
+async function runMaterialCardAction(
+  task: () => Promise<unknown>,
+  successTitle: string,
+  fallback: string,
+) {
+  chatStore.loading = true;
+
+  try {
+    await task();
+    await scrollToBottom();
+    uni.showToast({
+      title: successTitle,
+      icon: "success",
+    });
+  } catch (err) {
+    showError(err, fallback);
+  } finally {
+    chatStore.loading = false;
+  }
 }
 
 async function handleCardAction(
@@ -2401,6 +3171,324 @@ async function handleCardAction(
   payload?: Record<string, unknown>,
 ) {
   if (isBusy.value) {
+    return;
+  }
+
+  const actionPayload = payload ?? {};
+
+  if (action === "material_upload_more") {
+    enterComposerMode("material");
+    chooseMaterial();
+    return;
+  }
+
+  if (action === "material_update_draft") {
+    const draftId = getString(actionPayload.draftId);
+    if (!draftId) {
+      return;
+    }
+
+    const changes: {
+      description?: string;
+      directoryName?: string;
+      materialName?: string;
+      tags?: string[];
+      regenerate?: boolean;
+    } = {};
+
+    if (hasOwnValue(actionPayload, "description")) {
+      changes.description = getString(actionPayload.description);
+    }
+    if (hasOwnValue(actionPayload, "directoryName")) {
+      changes.directoryName = getString(actionPayload.directoryName);
+    }
+    if (hasOwnValue(actionPayload, "materialName")) {
+      changes.materialName = getString(actionPayload.materialName);
+    }
+    if (hasOwnValue(actionPayload, "tags")) {
+      changes.tags = getStringArray(actionPayload.tags);
+    }
+    if (actionPayload.regenerate === true) {
+      changes.regenerate = true;
+    }
+
+    await runMaterialCardAction(
+      () => chatStore.updateMaterialDraft(draftId, changes),
+      changes.regenerate ? "已重新生成" : "已保存",
+      "保存素材草稿失败",
+    );
+    return;
+  }
+
+  if (action === "material_generate_metadata") {
+    const draftIds = Array.isArray(actionPayload.draftIds)
+      ? actionPayload.draftIds.map(String).filter(Boolean)
+      : [];
+    if (!draftIds.length) {
+      return;
+    }
+
+    await runMaterialCardAction(
+      () => chatStore.generateMaterialMetadata(draftIds),
+      "已生成",
+      "生成素材信息失败",
+    );
+    return;
+  }
+
+  if (action === "material_remove_draft") {
+    const draftId = getString(actionPayload.draftId);
+    if (!draftId || !(await confirmAction("确认删除这个临时区素材草稿？"))) {
+      return;
+    }
+
+    await runMaterialCardAction(
+      () => chatStore.removeMaterialDraft(draftId),
+      "已删除",
+      "删除素材草稿失败",
+    );
+    return;
+  }
+
+  if (action === "material_batch_generate_drafts") {
+    const draftIds = Array.isArray(actionPayload.draftIds)
+      ? actionPayload.draftIds.map(String).filter(Boolean)
+      : [];
+    const description = getString(actionPayload.description);
+
+    if (!draftIds.length || !description) {
+      return;
+    }
+
+    await runMaterialCardAction(
+      async () => {
+        for (const draftId of draftIds) {
+          await chatStore.updateMaterialDraft(draftId, {
+            description,
+            regenerate: true,
+          });
+        }
+      },
+      "已生成",
+      "生成素材信息失败",
+    );
+    return;
+  }
+
+  if (action === "material_batch_update_drafts") {
+    const changes = Array.isArray(actionPayload.changes)
+      ? actionPayload.changes
+          .map((item) => {
+            const change = asRecord(item);
+            const draftId = getString(change.draftId);
+
+            if (!draftId) {
+              return null;
+            }
+
+            return {
+              draftId,
+              description: getString(change.description),
+              directoryName: getString(change.directoryName),
+              materialName: getString(change.materialName),
+              tags: getStringArray(change.tags),
+            };
+          })
+          .filter(
+            (
+              change,
+            ): change is {
+              draftId: string;
+              description: string;
+              directoryName: string;
+              materialName: string;
+              tags: string[];
+            } => Boolean(change),
+          )
+      : [];
+
+    if (!changes.length) {
+      return;
+    }
+
+    await runMaterialCardAction(
+      async () => {
+        for (const change of changes) {
+          await chatStore.updateMaterialDraft(change.draftId, {
+            description: change.description,
+            directoryName: change.directoryName,
+            materialName: change.materialName,
+            tags: change.tags,
+          });
+        }
+      },
+      "已保存",
+      "保存素材草稿失败",
+    );
+    return;
+  }
+
+  if (action === "material_batch_remove_drafts") {
+    const draftIds = Array.isArray(actionPayload.draftIds)
+      ? actionPayload.draftIds.map(String).filter(Boolean)
+      : [];
+    if (
+      !draftIds.length ||
+      !(await confirmAction(`确认删除选中的 ${draftIds.length} 个临时区素材草稿？`))
+    ) {
+      return;
+    }
+
+    await runMaterialCardAction(
+      async () => {
+        for (const draftId of draftIds) {
+          await chatStore.removeMaterialDraft(draftId);
+        }
+      },
+      "已批量删除",
+      "批量删除素材草稿失败",
+    );
+    return;
+  }
+
+  if (action === "material_confirm_drafts") {
+    const draftIds = Array.isArray(actionPayload.draftIds)
+      ? actionPayload.draftIds.map(String).filter(Boolean)
+      : [];
+    const changes = Array.isArray(actionPayload.changes)
+      ? actionPayload.changes
+          .map((item) => {
+            const change = asRecord(item);
+            const draftId = getString(change.draftId);
+
+            if (!draftId) {
+              return null;
+            }
+
+            return {
+              draftId,
+              description: getString(change.description),
+              directoryName: getString(change.directoryName),
+              materialName: getString(change.materialName),
+              tags: getStringArray(change.tags),
+            };
+          })
+          .filter(
+            (
+              change,
+            ): change is {
+              draftId: string;
+              description: string;
+              directoryName: string;
+              materialName: string;
+              tags: string[];
+            } => Boolean(change),
+          )
+      : [];
+    if (!draftIds.length) {
+      return;
+    }
+
+    await runMaterialCardAction(
+      () => chatStore.confirmMaterialDrafts(draftIds, changes),
+      "已入库",
+      "确认素材入库失败",
+    );
+    return;
+  }
+
+  if (action === "material_update_asset") {
+    const assetId = getString(actionPayload.assetId);
+    if (!assetId) {
+      return;
+    }
+
+    const changes: {
+      materialName?: string;
+      description?: string;
+      directoryName?: string;
+      tags?: string[];
+    } = {};
+
+    if (hasOwnValue(actionPayload, "materialName")) {
+      changes.materialName = getString(actionPayload.materialName);
+    }
+    if (hasOwnValue(actionPayload, "description")) {
+      changes.description = getString(actionPayload.description);
+    }
+    if (hasOwnValue(actionPayload, "directoryName")) {
+      changes.directoryName = getString(actionPayload.directoryName);
+    }
+    if (hasOwnValue(actionPayload, "tags")) {
+      changes.tags = getStringArray(actionPayload.tags);
+    }
+
+    if (!Object.keys(changes).length) {
+      return;
+    }
+
+    await runMaterialCardAction(
+      () => chatStore.updateMaterialAsset(assetId, changes),
+      "已保存",
+      "保存素材信息失败",
+    );
+    return;
+  }
+
+  if (action === "material_recycle_asset") {
+    const assetId = getString(actionPayload.assetId);
+    const materialName = getString(actionPayload.materialName) || "该素材";
+    if (
+      !assetId ||
+      !(await confirmAction(`确认将“${materialName}”移入回收站？`))
+    ) {
+      return;
+    }
+
+    await runMaterialCardAction(
+      () => chatStore.recycleMaterialAsset(assetId),
+      "已移入回收站",
+      "删除素材失败",
+    );
+    return;
+  }
+
+  if (action === "material_batch_recycle_assets") {
+    const assetIds = Array.isArray(actionPayload.assetIds)
+      ? actionPayload.assetIds.map(String).filter(Boolean)
+      : [];
+    if (
+      !assetIds.length ||
+      !(await confirmAction(
+        `确认将选中的 ${assetIds.length} 个素材移入回收站？`,
+      ))
+    ) {
+      return;
+    }
+
+    await runMaterialCardAction(
+      () => chatStore.batchRecycleMaterialAssets(assetIds),
+      "已移入回收站",
+      "批量删除素材失败",
+    );
+    return;
+  }
+
+  if (action === "material_restore_asset") {
+    const assetId = getString(actionPayload.assetId);
+    const materialName = getString(actionPayload.materialName) || "该素材";
+    if (
+      !assetId ||
+      !(await confirmAction(`确认将“${materialName}”恢复到正式区？`))
+    ) {
+      return;
+    }
+
+    await runMaterialCardAction(
+      () => chatStore.restoreMaterialAsset(assetId),
+      "已恢复",
+      "恢复素材失败",
+    );
     return;
   }
 
@@ -2537,12 +3625,14 @@ async function handleReportModalAction(action: string) {
 }
 
 function handleDraftInput(event: Event) {
-  const detail = (event as Event & {
-    detail?: {
-      value?: string;
-      cursor?: number;
-    };
-  }).detail;
+  const detail = (
+    event as Event & {
+      detail?: {
+        value?: string;
+        cursor?: number;
+      };
+    }
+  ).detail;
   const value = detail?.value ?? draft.value;
   draft.value = value;
   editorCursor.value =
@@ -2643,7 +3733,7 @@ function resolveBoardTriggerAtCursor() {
 async function updateBoardMenu(options: { force?: boolean } = {}) {
   await nextTick();
 
-  if (isBusy.value) {
+  if (isBusy.value || activeComposerMode.value) {
     closeBoardMenu();
     return;
   }
@@ -2651,10 +3741,10 @@ async function updateBoardMenu(options: { force?: boolean } = {}) {
   const cursor = clampCursor(editorCursor.value);
   const trigger = options.force
     ? {
-      start: cursor,
-      end: cursor,
-      query: "",
-    }
+        start: cursor,
+        end: cursor,
+        query: "",
+      }
     : resolveBoardTriggerAtCursor();
 
   if (!trigger) {
@@ -2677,6 +3767,11 @@ function closeBoardMenu() {
 }
 
 function openBoardMenuFromAction() {
+  if (activeComposerMode.value) {
+    closeBoardMenu();
+    return;
+  }
+
   closeMoreMenu();
   clearBoardMenuCloseTimer();
   syncNativeTextareaCursor();
@@ -2816,7 +3911,9 @@ async function sendPreset(content: string, strategy = false) {
   }
 
   try {
-    if (strategy || isStrategyComposerMode.value) {
+    if (isMaterialComposerMode.value) {
+      await chatStore.sendMaterial(content);
+    } else if (strategy || isStrategyComposerMode.value) {
       await chatStore.sendStrategy(content);
     } else {
       await chatStore.sendBase(content);
@@ -2830,16 +3927,30 @@ async function sendPreset(content: string, strategy = false) {
 
 async function sendMessage() {
   const content = draft.value.trim();
-  if (!content || isBusy.value || isComposing.value) {
+  const materialAttachments = isMaterialComposerMode.value
+    ? toMaterialChatAttachments()
+    : [];
+  if (
+    isBusy.value ||
+    materialAttachmentUploading.value ||
+    isComposing.value ||
+    (!content && materialAttachments.length === 0)
+  ) {
     return;
   }
 
   draft.value = "";
+  const previousMaterialAttachments = pendingMaterialAttachments.value;
+  if (materialAttachments.length > 0) {
+    resetPendingMaterialAttachments();
+  }
   closeBoardMenu();
   closeMoreMenu();
 
   try {
-    if (isStrategyComposerMode.value) {
+    if (isMaterialComposerMode.value) {
+      await chatStore.sendMaterial(content, materialAttachments);
+    } else if (isStrategyComposerMode.value) {
       await chatStore.sendStrategy(content);
     } else {
       await chatStore.sendBase(content);
@@ -2848,6 +3959,9 @@ async function sendMessage() {
     await scrollToBottom();
   } catch (err) {
     draft.value = content;
+    if (materialAttachments.length > 0) {
+      pendingMaterialAttachments.value = previousMaterialAttachments;
+    }
     showError(err, "发送失败");
   }
 }
@@ -2880,8 +3994,10 @@ function initMobileChrome() {
 
   mobileStatusBarHeight.value = statusBarHeight;
   mobileNavContentHeight.value = 44;
+  mobileNavTopOffset.value = 0;
   mobileNavHeight.value = statusBarHeight + 56;
   mobileRightSafeWidth.value = 58;
+  mobileCapsuleSafeRight.value = 14;
 
   // #ifdef MP-WEIXIN
   const menuButton = uni.getMenuButtonBoundingClientRect();
@@ -2889,18 +4005,20 @@ function initMobileChrome() {
   const bottomGap = topGap || 6;
 
   mobileNavContentHeight.value = menuButton.height;
+  mobileNavTopOffset.value = topGap;
   mobileNavHeight.value = menuButton.bottom + bottomGap;
   mobileRightSafeWidth.value =
     Math.max(88, systemInfo.windowWidth - menuButton.left) + 12;
+  mobileCapsuleSafeRight.value = mobileRightSafeWidth.value;
   // #endif
 }
 
 function chooseMaterial() {
-  if (isBusy.value) {
+  if (isBusy.value || materialAttachmentUploading.value) {
     return;
   }
 
-  if (!canUploadMaterial.value) {
+  if (!canUseUploadMaterial.value) {
     uni.showToast({
       title: "当前账号暂无上传资料权限",
       icon: "none",
@@ -2909,28 +4027,76 @@ function chooseMaterial() {
   }
 
   closeMoreMenu();
-  const supportedExtensions = [
-    "pdf",
-    "txt",
-    "md",
-    "markdown",
-    "csv",
-    "json",
-    "jpg",
-    "jpeg",
-    "png",
-    "webp",
-    "bmp",
-    "gif",
-  ];
 
-  // #ifdef MP-WEIXIN
-  uni.chooseMessageFile({
-    count: 1,
-    type: "all",
+  const chooseStrategy = () => {
+    if (!canUploadMaterial.value) {
+      uni.showToast({
+        title: "当前诊断阶段暂不支持上传资料",
+        icon: "none",
+      });
+      return;
+    }
+
+    chooseStrategyMaterialFile();
+  };
+
+  const chooseLibrary = () => {
+    if (!canUseMaterialManage.value) {
+      uni.showToast({
+        title: "当前账号暂无素材智能体权限",
+        icon: "none",
+      });
+      return;
+    }
+
+    enterComposerMode("material");
+    chooseMaterialLibraryFile();
+  };
+
+  if (isMaterialComposerMode.value) {
+    chooseLibrary();
+    return;
+  }
+
+  if (isStrategyComposerMode.value) {
+    chooseStrategy();
+    return;
+  }
+
+  if (canUseMaterialManage.value && !canUseStrategyUploadMaterial.value) {
+    chooseLibrary();
+    return;
+  }
+
+  if (!canUseMaterialManage.value) {
+    chooseStrategy();
+    return;
+  }
+
+  uni.showActionSheet({
+    itemList: ["上传到素材库", "上传战略诊断资料"],
     success: (res) => {
-      const file = res.tempFiles[0] as PickedFile | undefined;
-      uploadPickedFile(file);
+      if (res.tapIndex === 0) {
+        chooseLibrary();
+        return;
+      }
+
+      chooseStrategy();
+    },
+  });
+}
+
+function chooseStrategyMaterialFile() {
+  // #ifdef MP-WEIXIN
+  uni.showActionSheet({
+    itemList: ["从手机相册选择图片", "选择 PDF/文档"],
+    success: (res) => {
+      if (res.tapIndex === 0) {
+        chooseStrategyMaterialImage();
+        return;
+      }
+
+      chooseStrategyMaterialDocument();
     },
   });
   return;
@@ -2949,7 +4115,7 @@ function chooseMaterial() {
   if (chooseFile) {
     (chooseFile as NonNullable<typeof chooseFile>)({
       count: 1,
-      extension: supportedExtensions,
+      extension: MATERIAL_SUPPORTED_EXTENSIONS,
       success: (res) => uploadPickedFile(res.tempFiles[0]),
     });
     return;
@@ -2958,7 +4124,9 @@ function chooseMaterial() {
   if (typeof document !== "undefined") {
     const input = document.createElement("input");
     input.type = "file";
-    input.accept = supportedExtensions.map((extension) => `.${extension}`).join(",");
+    input.accept = MATERIAL_SUPPORTED_EXTENSIONS.map(
+      (extension) => `.${extension}`,
+    ).join(",");
     input.style.display = "none";
     input.addEventListener(
       "change",
@@ -2978,6 +4146,165 @@ function chooseMaterial() {
   uni.showToast({
     title: "当前端暂不支持文件选择",
     icon: "none",
+  });
+}
+
+function chooseStrategyMaterialImage() {
+  uni.chooseImage({
+    count: 1,
+    sizeType: ["compressed"],
+    sourceType: ["album"],
+    success: (res) => {
+      const filePaths = Array.isArray(res.tempFilePaths)
+        ? res.tempFilePaths
+        : [];
+      const tempFiles = normalizeTempFileList(res.tempFiles);
+      const tempFile = tempFiles[0];
+      const filePath = filePaths[0] || resolvePickedFilePath(tempFile, "");
+      const tempRecord =
+        tempFile && typeof tempFile === "object"
+          ? (tempFile as PickedFile)
+          : {};
+
+      uploadPickedFile({
+        ...tempRecord,
+        path: filePath || tempRecord.path,
+        name: resolvePickedMaterialImageName(tempFile, filePath),
+      });
+    },
+  });
+}
+
+function chooseStrategyMaterialDocument() {
+  uni.chooseMessageFile({
+    count: 1,
+    type: "file",
+    extension: MATERIAL_DOCUMENT_EXTENSIONS,
+    success: (res) => {
+      const file = res.tempFiles[0] as PickedFile | undefined;
+      uploadPickedFile(file);
+    },
+  });
+}
+
+function getMaterialUploadDescription() {
+  return draft.value.trim();
+}
+
+function clearMaterialUploadDescription(description: string) {
+  if (description && draft.value.trim() === description) {
+    draft.value = "";
+    updateComposerInputHeight();
+  }
+}
+
+function chooseMaterialLibraryFile() {
+  // #ifdef MP-WEIXIN
+  uni.showActionSheet({
+    itemList: ["选择文件/视频/音频", "从手机相册选择图片"],
+    success: (res) => {
+      if (res.tapIndex === 0) {
+        chooseMaterialLibraryMessageFiles();
+        return;
+      }
+
+      chooseMaterialLibraryImages();
+    },
+  });
+  return;
+  // #endif
+
+  // #ifdef H5
+  const h5Uni = uni as unknown as {
+    chooseFile?: (options: {
+      count: number;
+      extension?: string[];
+      success: (res: { tempFiles: PickedFile[] }) => void;
+    }) => void;
+  };
+  const chooseFile = h5Uni.chooseFile;
+
+  if (chooseFile) {
+    (chooseFile as NonNullable<typeof chooseFile>)({
+      count: 20,
+      extension: MATERIAL_AGENT_SUPPORTED_EXTENSIONS,
+      success: (res) => uploadPickedMaterialFiles(res.tempFiles),
+    });
+    return;
+  }
+
+  if (typeof document !== "undefined") {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.multiple = true;
+    input.accept = MATERIAL_AGENT_SUPPORTED_EXTENSIONS.map(
+      (extension) => `.${extension}`,
+    ).join(",");
+    input.style.display = "none";
+    input.addEventListener(
+      "change",
+      () => {
+        const files = Array.from(input.files ?? []);
+        input.remove();
+        uploadPickedMaterialBrowserFiles(files);
+      },
+      { once: true },
+    );
+    document.body.appendChild(input);
+    input.click();
+    return;
+  }
+  // #endif
+
+  uni.showToast({
+    title: "当前端暂不支持文件选择",
+    icon: "none",
+  });
+}
+
+function chooseMaterialLibraryImages() {
+  uni.chooseImage({
+    count: 20,
+    sizeType: ["original", "compressed"],
+    sourceType: ["album"],
+    success: (res) => {
+      const filePaths = Array.isArray(res.tempFilePaths)
+        ? res.tempFilePaths
+        : [];
+      const tempFiles = normalizeTempFileList(res.tempFiles);
+      const pickedFiles = Array.from({
+        length: Math.max(filePaths.length, tempFiles.length),
+      })
+        .map((_, index) => {
+          const tempFile = tempFiles[index];
+          const filePath =
+            filePaths[index] || resolvePickedFilePath(tempFile, "");
+          const tempRecord =
+            tempFile && typeof tempFile === "object"
+              ? (tempFile as PickedFile)
+              : {};
+
+          return {
+            ...tempRecord,
+            path: filePath || tempRecord.path,
+            name: resolvePickedMaterialImageName(tempFile, filePath),
+          };
+        })
+        .filter((file) => file.path || file.tempFilePath);
+
+      uploadPickedMaterialFiles(pickedFiles);
+    },
+  });
+}
+
+function chooseMaterialLibraryMessageFiles() {
+  uni.chooseMessageFile({
+    count: 20,
+    type: "all",
+    extension: MATERIAL_AGENT_SUPPORTED_EXTENSIONS,
+    success: (res) => {
+      uploadPickedMaterialFiles(res.tempFiles as PickedFile[]);
+    },
   });
 }
 
@@ -3029,6 +4356,113 @@ async function uploadPickedFile(file?: PickedFile) {
     });
   } catch (err) {
     showError(err, "上传失败");
+  }
+}
+
+async function uploadPickedMaterialBrowserFiles(files: File[]) {
+  if (!files.length) {
+    uni.showToast({
+      title: "未选择有效文件",
+      icon: "none",
+    });
+    return;
+  }
+
+  const supportedFiles = files.filter((file) =>
+    isSupportedMaterialAgentExtension(file.name),
+  );
+  const skippedCount = files.length - supportedFiles.length;
+
+  if (!supportedFiles.length) {
+    showUnsupportedMaterialAgentFileToast();
+    return;
+  }
+
+  materialAttachmentUploading.value = true;
+  try {
+    const result = await uploadBrowserFiles<CommonUploadFilesResponse>(
+      "/uploads/files",
+      {
+        files: supportedFiles.map((file) => ({
+          file,
+          fileName: file.name,
+          name: "files",
+        })),
+      },
+    );
+    appendPendingMaterialAttachments(result.files);
+    uni.showToast({
+      title: skippedCount ? `已添加，跳过 ${skippedCount} 个` : "素材已添加",
+      icon: skippedCount ? "none" : "success",
+    });
+  } catch (err) {
+    showError(err, "上传素材失败");
+  } finally {
+    materialAttachmentUploading.value = false;
+  }
+}
+
+async function uploadPickedMaterialFiles(files?: PickedFile[] | PickedFile) {
+  const normalizedFiles = Array.isArray(files) ? files : files ? [files] : [];
+  const uploadFileItems = normalizedFiles
+    .map((file, index) => {
+      const filePath = file.path || file.tempFilePath || "";
+      const fileName = resolvePickedFileName(
+        file,
+        filePath,
+        `material-${Date.now()}-${index + 1}`,
+      );
+
+      return {
+        filePath,
+        fileName,
+      };
+    })
+    .filter((file): file is { filePath: string; fileName: string } =>
+      Boolean(file.filePath),
+    );
+
+  if (!uploadFileItems.length) {
+    uni.showToast({
+      title: "未选择有效文件",
+      icon: "none",
+    });
+    return;
+  }
+
+  const supportedUploadFileItems = uploadFileItems.filter(
+    (file) =>
+      isSupportedMaterialAgentExtension(file.fileName) ||
+      isSupportedMaterialAgentExtension(file.filePath),
+  );
+  const skippedCount = uploadFileItems.length - supportedUploadFileItems.length;
+
+  if (!supportedUploadFileItems.length) {
+    showUnsupportedMaterialAgentFileToast();
+    return;
+  }
+
+  materialAttachmentUploading.value = true;
+  try {
+    const result = await uploadFiles<CommonUploadFilesResponse>(
+      "/uploads/files",
+      {
+        files: supportedUploadFileItems.map((file) => ({
+          filePath: file.filePath ?? "",
+          fileName: file.fileName,
+          name: "files",
+        })),
+      },
+    );
+    appendPendingMaterialAttachments(result.files);
+    uni.showToast({
+      title: skippedCount ? `已添加，跳过 ${skippedCount} 个` : "素材已添加",
+      icon: skippedCount ? "none" : "success",
+    });
+  } catch (err) {
+    showError(err, "上传素材失败");
+  } finally {
+    materialAttachmentUploading.value = false;
   }
 }
 
@@ -3123,7 +4557,6 @@ page {
   overflow: hidden;
 }
 
-
 .sidebar {
   position: relative;
   width: 240px;
@@ -3132,7 +4565,10 @@ page {
   overflow: hidden;
   background: linear-gradient(180deg, #f6f7f9 0%, #f2f4f7 100%);
   border-right: 1px solid #edf0f4;
-  transition: width 0.22s ease, flex-basis 0.22s ease, padding 0.22s ease;
+  transition:
+    width 0.22s ease,
+    flex-basis 0.22s ease,
+    padding 0.22s ease;
 }
 
 .PC-layout {
@@ -3216,7 +4652,10 @@ page {
   box-shadow: 0 8px 22px rgb(20 35 70 / 12%);
   overflow: hidden;
   padding: 0;
-  transition: box-shadow 0.18s ease, opacity 0.18s ease, transform 0.18s ease;
+  transition:
+    box-shadow 0.18s ease,
+    opacity 0.18s ease,
+    transform 0.18s ease;
 }
 
 .new-chat:not(:disabled):hover {
@@ -3291,7 +4730,10 @@ page {
   border-radius: 10px;
   box-shadow: none;
   cursor: pointer;
-  transition: background 0.16s ease, box-shadow 0.16s ease, color 0.16s ease;
+  transition:
+    background 0.16s ease,
+    box-shadow 0.16s ease,
+    color 0.16s ease;
 }
 
 .chat-title {
@@ -3331,7 +4773,9 @@ page {
   border-radius: 50%;
   box-shadow: none;
   opacity: 0;
-  transition: background 0.16s ease, opacity 0.16s ease;
+  transition:
+    background 0.16s ease,
+    opacity 0.16s ease;
 }
 
 .chat-item:hover .chat-more,
@@ -3380,7 +4824,7 @@ page {
   box-shadow: none;
 }
 
-.setting-item>text:last-child {
+.setting-item > text:last-child {
   display: block;
   flex: 1;
   min-width: 0;
@@ -3584,7 +5028,9 @@ page {
 }
 
 .feature-card:active {
-  box-shadow: 0 0 0 1px #cfe3ff, 0 5px 14px rgb(43 133 255 / 22%);
+  box-shadow:
+    0 0 0 1px #cfe3ff,
+    0 5px 14px rgb(43 133 255 / 22%);
 }
 
 .feature-visual {
@@ -3632,8 +5078,8 @@ page {
 
 .message-stream {
   box-sizing: border-box;
-  width: min(100%, 800px);
-  max-width: 800px;
+  width: min(100%, 868px);
+  max-width: 868px;
   margin: 0 auto;
   overflow: hidden;
 }
@@ -3665,12 +5111,21 @@ page {
   width: calc(100% - 20px);
 }
 
+.message-row.material {
+  width: 100%;
+}
+
 .message-bubble {
   box-sizing: border-box;
   min-width: 0;
   max-width: min(760px, 82%);
   overflow: hidden;
   padding: 12px 14px 10px;
+}
+
+.message-row.material .message-bubble {
+  width: 100%;
+  max-width: 100%;
 }
 
 .message-row.mine .message-bubble {
@@ -3706,7 +5161,9 @@ page {
 
 .upload-file-card.previewable {
   cursor: pointer;
-  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
 }
 
 .upload-file-card.previewable:hover {
@@ -3842,7 +5299,9 @@ page {
   background: #ffffff;
   border: 1px solid #a9c7ff;
   border-radius: 22px;
-  box-shadow: 0 0 0 1px rgb(31 126 255 / 4%), 0 10px 28px rgb(42 103 255 / 12%);
+  box-shadow:
+    0 0 0 1px rgb(31 126 255 / 4%),
+    0 10px 28px rgb(42 103 255 / 12%);
   transform: translateX(-50%);
 }
 
@@ -3892,6 +5351,110 @@ page {
   min-height: 100% !important;
   max-height: 100% !important;
   overflow-y: auto !important;
+}
+
+.composer-attachments {
+  flex: 0 0 auto;
+  width: 100%;
+  min-height: 52px;
+}
+
+.composer-attachment-scroll {
+  width: 100%;
+  white-space: nowrap;
+}
+
+.composer-attachment-row {
+  display: inline-flex;
+  width: max-content;
+  max-width: 100%;
+  gap: 8px;
+}
+
+.composer-attachment {
+  position: relative;
+  display: inline-flex;
+  width: 238px;
+  height: 52px;
+  box-sizing: border-box;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 28px 6px 7px;
+  vertical-align: top;
+  background: #f8fbff;
+  border: 1px solid #dce9ff;
+  border-radius: 8px;
+}
+
+.composer-attachment.uploading {
+  color: #47617d;
+  background: #f7f8fb;
+  border-color: #e5e8ef;
+}
+
+.composer-attachment-thumb,
+.composer-attachment-file {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  overflow: hidden;
+  border-radius: 7px;
+  background: #e8f2ff;
+}
+
+.composer-attachment-file {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #1267ff;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.composer-attachment-copy {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.composer-attachment-name,
+.composer-attachment-meta {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.composer-attachment-name {
+  color: #172033;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 18px;
+}
+
+.composer-attachment-meta {
+  color: #728096;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.composer-attachment-remove {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  display: flex;
+  width: 18px;
+  height: 18px;
+  align-items: center;
+  justify-content: center;
+  color: #65758b;
+  font-size: 15px;
+  line-height: 18px;
+  background: #ffffff;
+  border: 1px solid #d9e2ef;
+  border-radius: 50%;
 }
 
 .composer-footer {
@@ -4053,7 +5616,9 @@ page {
   height: 1.6px;
   content: "";
   background: currentColor;
-  box-shadow: 0 4px 0 currentColor, 0 8px 0 currentColor;
+  box-shadow:
+    0 4px 0 currentColor,
+    0 8px 0 currentColor;
 }
 
 .tool-icon.split::before {
@@ -4090,7 +5655,12 @@ page {
   left: 4px;
   height: 6px;
   content: "";
-  background: linear-gradient(135deg, transparent 42%, currentColor 43% 58%, transparent 59%);
+  background: linear-gradient(
+    135deg,
+    transparent 42%,
+    currentColor 43% 58%,
+    transparent 59%
+  );
 }
 
 .tool-icon.strategy::before {
@@ -4170,7 +5740,9 @@ page {
   background: #ffffff;
   border: 1px solid #e8eef8;
   border-radius: 12px;
-  box-shadow: 0 16px 44px rgb(24 55 105 / 18%), 0 0 0 1px rgb(18 103 255 / 4%);
+  box-shadow:
+    0 16px 44px rgb(24 55 105 / 18%),
+    0 0 0 1px rgb(18 103 255 / 4%);
 }
 
 .board-menu-title {
@@ -4675,7 +6247,7 @@ page {
   border-radius: 9px 9px 0 0;
 }
 
-.settings-nav-item>text:last-child {
+.settings-nav-item > text:last-child {
   overflow: hidden;
   min-width: 0;
   line-height: 44px;
@@ -4805,14 +6377,14 @@ page {
   gap: 20px;
 }
 
-.form-row>text,
-.readonly-row>text:first-child {
+.form-row > text,
+.readonly-row > text:first-child {
   color: #111111;
   font-size: 16px;
 }
 
 .form-row input,
-.readonly-row>text:last-child {
+.readonly-row > text:last-child {
   min-width: 0;
   max-width: 520px;
   justify-self: stretch;
@@ -4894,7 +6466,9 @@ button[disabled] {
     box-sizing: border-box;
     display: block;
     height: var(--mobile-nav-height);
-    padding-top: var(--mobile-status-height);
+    padding-top: calc(
+      var(--mobile-status-height) + var(--mobile-nav-top-offset)
+    );
     background: #ffffff;
   }
 
@@ -4934,7 +6508,10 @@ button[disabled] {
     height: 2px;
     background: #303030;
     border-radius: 999px;
-    transition: width 0.2s ease, opacity 0.2s ease, transform 0.24s ease;
+    transition:
+      width 0.2s ease,
+      opacity 0.2s ease,
+      transform 0.24s ease;
     transform-origin: center;
   }
 
@@ -4965,7 +6542,6 @@ button[disabled] {
     white-space: nowrap;
   }
 
-
   .workspace {
     height: 100vh;
     height: 100dvh;
@@ -4989,8 +6565,10 @@ button[disabled] {
     opacity: 0;
     box-shadow: 0 0 0 rgb(15 23 42 / 0%);
     transform: translate3d(-104%, 0, 0);
-    transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
-      opacity 0.22s ease, box-shadow 0.28s ease;
+    transition:
+      transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 0.22s ease,
+      box-shadow 0.28s ease;
     will-change: transform, opacity;
   }
 
@@ -5226,8 +6804,18 @@ button[disabled] {
     display: none;
   }
 
-  .editor-wrap {
+  .composer-attachments {
     order: 2;
+    min-height: 50px;
+  }
+
+  .composer-attachment {
+    width: 224px;
+    height: 50px;
+  }
+
+  .editor-wrap {
+    order: 3;
     box-sizing: border-box;
     min-height: 54px;
     max-height: 136px;
@@ -5344,7 +6932,10 @@ button[disabled] {
     flex-direction: row;
     align-items: center;
     gap: 8px;
-    padding: calc(10px + env(safe-area-inset-top)) 64px 10px 14px;
+    padding: calc(
+        10px + var(--mobile-status-height) + var(--mobile-nav-top-offset)
+      )
+      calc(var(--mobile-capsule-safe-right) + 50px) 10px 14px;
     overflow-x: auto;
     border-bottom: 1px solid #eeeeee;
   }
@@ -5357,8 +6948,10 @@ button[disabled] {
   }
 
   .settings-panel-close {
-    top: calc(10px + env(safe-area-inset-top));
-    right: 14px;
+    top: calc(
+      10px + var(--mobile-status-height) + var(--mobile-nav-top-offset)
+    );
+    right: var(--mobile-capsule-safe-right);
     margin: 0;
   }
 
@@ -5385,7 +6978,7 @@ button[disabled] {
     flex-basis: 18px;
   }
 
-  .settings-nav-item>text:last-child {
+  .settings-nav-item > text:last-child {
     line-height: 36px;
   }
 
@@ -5466,7 +7059,7 @@ button[disabled] {
   }
 
   .form-row input,
-  .readonly-row>text:last-child {
+  .readonly-row > text:last-child {
     width: 100%;
     max-width: none;
     justify-self: stretch;

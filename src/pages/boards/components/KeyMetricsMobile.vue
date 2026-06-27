@@ -121,6 +121,7 @@ const emit = defineEmits<{
 const mobileStatusBarHeight = ref(0);
 const mobileNavHeight = ref(56);
 const mobileNavContentHeight = ref(44);
+const mobileNavTopOffset = ref(0);
 const mobileRightSafeWidth = ref(14);
 
 const pageStyle = computed(
@@ -129,6 +130,7 @@ const pageStyle = computed(
       "--mobile-status-height": `${mobileStatusBarHeight.value}px`,
       "--mobile-nav-height": `${mobileNavHeight.value}px`,
       "--mobile-nav-content-height": `${mobileNavContentHeight.value}px`,
+      "--mobile-nav-top-offset": `${mobileNavTopOffset.value}px`,
       "--mobile-right-safe-width": `${mobileRightSafeWidth.value}px`,
     }) as Record<string, string>,
 );
@@ -219,6 +221,7 @@ function initMobileChrome() {
 
   mobileStatusBarHeight.value = statusBarHeight;
   mobileNavContentHeight.value = 44;
+  mobileNavTopOffset.value = 0;
   mobileNavHeight.value = statusBarHeight + 56;
   mobileRightSafeWidth.value = 14;
 
@@ -228,6 +231,7 @@ function initMobileChrome() {
   const bottomGap = topGap || 6;
 
   mobileNavContentHeight.value = menuButton.height;
+  mobileNavTopOffset.value = topGap;
   mobileNavHeight.value = menuButton.bottom + bottomGap;
   mobileRightSafeWidth.value =
     Math.max(88, systemInfo.windowWidth - menuButton.left) + 12;
@@ -253,7 +257,7 @@ function initMobileChrome() {
   z-index: 30;
   box-sizing: border-box;
   height: var(--mobile-nav-height);
-  padding-top: var(--mobile-status-height);
+  padding-top: calc(var(--mobile-status-height) + var(--mobile-nav-top-offset));
   background: #ffffff;
 }
 

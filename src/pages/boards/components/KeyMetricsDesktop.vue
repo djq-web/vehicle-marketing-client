@@ -544,6 +544,7 @@ watch(
   overflow: auto;
 }
 
+/* #ifdef H5 */
 .metrics-board::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -570,6 +571,7 @@ watch(
   background: #d4d4d4;
   border-radius: 999px;
 }
+/* #endif */
 
 .metrics-canvas-wrap {
   position: relative;
