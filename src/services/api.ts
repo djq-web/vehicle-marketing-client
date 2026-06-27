@@ -1,7 +1,7 @@
 const API_BASE_URL = (
   import.meta.env.VITE_API_BASE_URL ||
   (import.meta.env.PROD
-    ? "https://chesimkt.com/api/api/"
+    ? "https://chesimkt.com/api/"
     : "http://localhost:5010/api")
 ).replace(/\/$/, "");
 const DEFAULT_REQUEST_TIMEOUT_MS = Number(
